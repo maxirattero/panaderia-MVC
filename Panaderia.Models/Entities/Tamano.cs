@@ -2,7 +2,7 @@
 
 namespace Panaderia.Models.Entities
 {
-    public class Tamaño
+    public class Tamano
     {
         public int Id { get; set; }
         [Required(ErrorMessage = "El campo es obligatorio.")]
