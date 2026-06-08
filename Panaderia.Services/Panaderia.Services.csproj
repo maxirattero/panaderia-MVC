@@ -6,4 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Panaderia.Models\Panaderia.Models.csproj" />
+  </ItemGroup>
+
 </Project>
