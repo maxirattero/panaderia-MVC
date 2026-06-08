@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="Panaderia.Models/Panaderia.Models.csproj" />
+  <Project Path="Panaderia.MVC/Panaderia.MVC.csproj" />
+  <Project Path="Panaderia.Services/Panaderia.Services.csproj" />
+</Solution>
