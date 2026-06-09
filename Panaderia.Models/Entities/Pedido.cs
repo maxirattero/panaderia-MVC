@@ -13,9 +13,10 @@ namespace Panaderia.Models.Entities
         public DateTime FechaCreacion { get; set; }
         public DateTime? FechaModificacion { get; set; }
         public decimal MontoCobrado { get; set; } = 0;
+        public bool EstaPagado => MontoCobrado >= MontoTotal;
+        public decimal SaldoPendiente => MontoTotal - MontoCobrado;
         public ICollection<DetallePedido> Detalles { get; set; } = new List<DetallePedido>();
         public ICollection<ReporteCaja> Reportes { get; set; } = new List<ReporteCaja>();
         public Cliente Cliente { get; set; } = null!;
-
     }
 }
