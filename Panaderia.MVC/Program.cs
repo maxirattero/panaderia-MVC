@@ -16,6 +16,7 @@ builder.Services.AddScoped<IClienteService, ClienteService>();
 builder.Services.AddScoped<IProductoBaseService, ProductoBaseService>();
 builder.Services.AddScoped<IProductoFinalService, ProductoFinalService>();
 builder.Services.AddScoped<IPedidoService, PedidoService>();
+builder.Services.AddScoped<IReporteCajaService, ReporteCajaService>();
 
 var app = builder.Build();
 
