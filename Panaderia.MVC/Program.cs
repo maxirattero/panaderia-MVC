@@ -13,6 +13,8 @@ builder.Services.AddDbContext<PanaderiaContext>(options =>
 
 builder.Services.AddScoped<IProveedorService, ProveedorService>();
 builder.Services.AddScoped<IClienteService, ClienteService>();
+builder.Services.AddScoped<IProductoBaseService, ProductoBaseService>();
+builder.Services.AddScoped<IProductoFinalService, ProductoFinalService>();
 
 var app = builder.Build();
 
