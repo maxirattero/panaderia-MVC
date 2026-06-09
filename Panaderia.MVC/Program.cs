@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Panaderia.Models.Data;
+using Panaderia.Services.Interfaces;
+using Panaderia.Services.Implementations;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,6 +10,8 @@ builder.Services.AddControllersWithViews();
 
 builder.Services.AddDbContext<PanaderiaContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddScoped<IProveedorService, ProveedorService>();
 
 var app = builder.Build();
 
