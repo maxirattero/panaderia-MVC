@@ -1,5 +1,6 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
@@ -15,11 +16,11 @@ namespace Panaderia.Models.Migrations
                 name: "CategoriasProducto",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Nombre = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    FechaCreacion = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    FechaModificacion = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Nombre = table.Column<string>(type: "text", nullable: false),
+                    FechaCreacion = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    FechaModificacion = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -30,17 +31,17 @@ namespace Panaderia.Models.Migrations
                 name: "Clientes",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Nombre = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Apellido = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Direccion = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Localidad = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Provincia = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Telefono = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Revendedor = table.Column<bool>(type: "bit", nullable: false),
-                    FechaCreacion = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    FechaModificacion = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Nombre = table.Column<string>(type: "text", nullable: false),
+                    Apellido = table.Column<string>(type: "text", nullable: false),
+                    Direccion = table.Column<string>(type: "text", nullable: true),
+                    Localidad = table.Column<string>(type: "text", nullable: true),
+                    Provincia = table.Column<string>(type: "text", nullable: true),
+                    Telefono = table.Column<string>(type: "text", nullable: true),
+                    Revendedor = table.Column<bool>(type: "boolean", nullable: false),
+                    FechaCreacion = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    FechaModificacion = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -51,9 +52,9 @@ namespace Panaderia.Models.Migrations
                 name: "Formatos",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Descripcion = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Descripcion = table.Column<string>(type: "text", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -64,17 +65,17 @@ namespace Panaderia.Models.Migrations
                 name: "Proveedores",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Nombre = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Contacto = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Telefono = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Email = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Direccion = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Notas = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Activo = table.Column<bool>(type: "bit", nullable: false),
-                    FechaCreacion = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    FechaModificacion = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Nombre = table.Column<string>(type: "text", nullable: false),
+                    Contacto = table.Column<string>(type: "text", nullable: true),
+                    Telefono = table.Column<string>(type: "text", nullable: true),
+                    Email = table.Column<string>(type: "text", nullable: true),
+                    Direccion = table.Column<string>(type: "text", nullable: true),
+                    Notas = table.Column<string>(type: "text", nullable: true),
+                    Activo = table.Column<bool>(type: "boolean", nullable: false),
+                    FechaCreacion = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    FechaModificacion = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -85,9 +86,9 @@ namespace Panaderia.Models.Migrations
                 name: "Tamanos",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Descripcion = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Descripcion = table.Column<string>(type: "text", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -98,12 +99,12 @@ namespace Panaderia.Models.Migrations
                 name: "ProductosBase",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    IdCategoria = table.Column<int>(type: "int", nullable: false),
-                    Nombre = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    FechaCreacion = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    FechaModificacion = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    IdCategoria = table.Column<int>(type: "integer", nullable: false),
+                    Nombre = table.Column<string>(type: "text", nullable: false),
+                    FechaCreacion = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    FechaModificacion = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -120,16 +121,16 @@ namespace Panaderia.Models.Migrations
                 name: "Pedidos",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    IdCliente = table.Column<int>(type: "int", nullable: false),
-                    Estado = table.Column<int>(type: "int", nullable: false),
-                    FechaEntrega = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    MontoTotal = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    Notas = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    FechaCreacion = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    FechaModificacion = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    MontoCobrado = table.Column<decimal>(type: "decimal(18,2)", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    IdCliente = table.Column<int>(type: "integer", nullable: false),
+                    Estado = table.Column<int>(type: "integer", nullable: false),
+                    FechaEntrega = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    MontoTotal = table.Column<decimal>(type: "numeric", nullable: false),
+                    Notas = table.Column<string>(type: "text", nullable: true),
+                    FechaCreacion = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    FechaModificacion = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    MontoCobrado = table.Column<decimal>(type: "numeric", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -146,17 +147,17 @@ namespace Panaderia.Models.Migrations
                 name: "ProductosFinales",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    IdProductoBase = table.Column<int>(type: "int", nullable: false),
-                    IdTamano = table.Column<int>(type: "int", nullable: false),
-                    IdFormato = table.Column<int>(type: "int", nullable: false),
-                    PrecioFinal = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    PrecioReventa = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    Stock = table.Column<int>(type: "int", nullable: false),
-                    ImagenURL = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    FechaCreacion = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    FechaModificacion = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    IdProductoBase = table.Column<int>(type: "integer", nullable: false),
+                    IdTamano = table.Column<int>(type: "integer", nullable: false),
+                    IdFormato = table.Column<int>(type: "integer", nullable: false),
+                    PrecioFinal = table.Column<decimal>(type: "numeric", nullable: false),
+                    PrecioReventa = table.Column<decimal>(type: "numeric", nullable: false),
+                    Stock = table.Column<int>(type: "integer", nullable: false),
+                    ImagenURL = table.Column<string>(type: "text", nullable: true),
+                    FechaCreacion = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    FechaModificacion = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -185,15 +186,15 @@ namespace Panaderia.Models.Migrations
                 name: "ReportesCaja",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Fecha = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Tipo = table.Column<int>(type: "int", nullable: false),
-                    Categoria = table.Column<int>(type: "int", nullable: false),
-                    Monto = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    Descripcion = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    IdPedido = table.Column<int>(type: "int", nullable: true),
-                    IdProveedor = table.Column<int>(type: "int", nullable: true)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Fecha = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    Tipo = table.Column<int>(type: "integer", nullable: false),
+                    Categoria = table.Column<int>(type: "integer", nullable: false),
+                    Monto = table.Column<decimal>(type: "numeric", nullable: false),
+                    Descripcion = table.Column<string>(type: "text", nullable: true),
+                    IdPedido = table.Column<int>(type: "integer", nullable: true),
+                    IdProveedor = table.Column<int>(type: "integer", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -214,12 +215,12 @@ namespace Panaderia.Models.Migrations
                 name: "DetallesPedido",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    IdPedido = table.Column<int>(type: "int", nullable: false),
-                    IdProductoFinal = table.Column<int>(type: "int", nullable: false),
-                    Cantidad = table.Column<int>(type: "int", nullable: false),
-                    PrecioUnitario = table.Column<decimal>(type: "decimal(18,2)", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    IdPedido = table.Column<int>(type: "integer", nullable: false),
+                    IdProductoFinal = table.Column<int>(type: "integer", nullable: false),
+                    Cantidad = table.Column<int>(type: "integer", nullable: false),
+                    PrecioUnitario = table.Column<decimal>(type: "numeric", nullable: false)
                 },
                 constraints: table =>
                 {
