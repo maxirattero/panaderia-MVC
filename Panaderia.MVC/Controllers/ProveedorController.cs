@@ -80,6 +80,9 @@ namespace Panaderia.MVC.Controllers
 
             if (ModelState.IsValid)
             {
+                var existe = await _proveedorService.GetByIdAsync(id);
+                if (existe == null) return NotFound();
+
                 await _proveedorService.UpdateAsync(proveedor);
                 return RedirectToAction(nameof(Index));
             }
@@ -95,10 +98,7 @@ namespace Panaderia.MVC.Controllers
             }
 
             var proveedor = await _proveedorService.GetByIdAsync(id.Value);
-            if (proveedor == null)
-            {
-                return NotFound();
-            }
+            if (proveedor == null) return NotFound();
 
             return View(proveedor);
         }
