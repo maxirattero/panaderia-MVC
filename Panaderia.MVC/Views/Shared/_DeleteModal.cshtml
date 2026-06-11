@@ -1,0 +1,20 @@
+﻿<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold" id="deleteModalLabel">Confirmar eliminación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Estás seguro que querés eliminar a <strong id="deleteEntityName"></strong>?</p>
+                <p class="text-muted small">Esta acción no se puede deshacer.</p>
+            </div>
+            <div class="modal-footer border-0 d-flex flex-row justify-content-end gap-2">
+                <button type="button" class="btn btn-mv-tertiary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" id="deleteConfirmBtn" class="btn btn-outline-danger d-flex align-items-center gap-2">
+                    <span class="material-symbols-outlined">delete</span>Eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

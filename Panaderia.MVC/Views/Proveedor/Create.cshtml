@@ -1,5 +1,56 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
+﻿@model Panaderia.Models.Entities.Proveedor
+
 @{
+    ViewData["Title"] = "Nuevo Proveedor";
 }
+
+<!-- Heading -->
+<div class="mb-4">
+<h2 class="font-literata fw-bold" style="color: var(--primary-brown);">Agregar Nuevo Proveedor</h2>
+<p class="text-muted">Completa la información para registrar un nuevo aliado comercial.</p>
+</div>
+
+<div class="card card-custom p-4 mb-4">
+<form asp-action="Create">
+    <div class="row g-4">
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+        <div class="col-12">
+            <label asp-for="Nombre" class="form-label small fw-bold text-muted">Nombre del Proveedor <span class="text-danger">*</span></label>
+            <input asp-for="Nombre" class="form-control" placeholder="Ej. Harinas del Valle" />
+            <span asp-validation-for="Nombre" class="text-danger"></span>
+        </div>
+        <div class="col-12">
+            <label asp-for="Contacto" class="form-label small fw-bold text-muted">Persona de Contacto</label>
+            <input asp-for="Contacto" class="form-control" placeholder="Nombre de la persona encargada" />
+            <span asp-validation-for="Contacto" class="text-danger"></span>
+        </div>
+        <div class="col-md-6">
+            <label asp-for="Telefono" class="form-label small fw-bold text-muted">Teléfono</label>
+            <input asp-for="Telefono" class="form-control" placeholder="+54 000 000000" />
+            <span asp-validation-for="Telefono" class="text-danger"></span>
+        </div>
+        <div class="col-md-6">
+            <label asp-for="Email" class="form-label small fw-bold text-muted">Email</label>
+            <input asp-for="Email" class="form-control" placeholder="contacto@empresa.com" />
+            <span asp-validation-for="Email" class="text-danger"></span>
+        </div>
+        <div class="col-12">
+            <label asp-for="Direccion" class="form-label small fw-bold text-muted">Dirección</label>
+            <input asp-for="Direccion" class="form-control" placeholder="Calle, Número, Ciudad..." />
+            <span asp-validation-for="Direccion" class="text-danger"></span>
+        </div>
+        <div class="col-12">
+            <label asp-for="Notas" class="form-label small fw-bold text-muted">Notas</label>
+            <input asp-for="Notas" class="form-control" placeholder="Horarios de entrega, condiciones de pago, etc." />
+            <span asp-validation-for="Notas" class="text-danger"></span>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="d-flex flex-column flex-md-row justify-content-end gap-3 mt-5 pt-4 border-top">
+    <button type="submit" class="btn btn-mv-primary d-flex align-items-center justify-content-center gap-2"><span class="material-symbols-outlined">save</span>Guardar</button>
+    <a asp-action="Index" class="btn btn-mv-tertiary">Cancelar</a>
+    </div>
+</form>
+</div>

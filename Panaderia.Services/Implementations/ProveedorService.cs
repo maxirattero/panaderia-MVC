@@ -36,8 +36,18 @@ namespace Panaderia.Services.Implementations
         //Actualizar un proveedor existente
         public async Task UpdateAsync(Proveedor proveedor)
         {
-            proveedor.FechaModificacion = DateTime.Now;
-            _context.Proveedores.Update(proveedor);
+            var existe = await _context.Proveedores.FindAsync(proveedor.Id);
+            if (existe == null) return;
+
+            existe.Nombre = proveedor.Nombre;
+            existe.Contacto = proveedor.Contacto;
+            existe.Telefono = proveedor.Telefono;
+            existe.Email = proveedor.Email;
+            existe.Direccion = proveedor.Direccion;
+            existe.Notas = proveedor.Notas;
+            existe.Activo = proveedor.Activo;
+            existe.FechaModificacion = DateTime.UtcNow;
+
             await _context.SaveChangesAsync();
         }
 
