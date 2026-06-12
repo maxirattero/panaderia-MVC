@@ -1,0 +1,64 @@
+﻿@model Panaderia.Models.Entities.Cliente
+
+@{
+    ViewData["Title"] = "Editar Cliente";
+}
+
+<!-- Heading -->
+<div class="mb-4">
+    <h2 class="font-literata fw-bold" style="color: var(--primary-brown);">Editar Cliente</h2>
+</div>
+
+<div class="card card-custom p-4 mb-4">
+    <form asp-action="Edit">
+        <div class="row g-4">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <input asp-for="Id" type="hidden" />
+            <div class="col-md-6">
+                <label asp-for="Nombre" class="form-label small fw-bold text-muted">Nombre <span class="text-danger">*</span></label>
+                <input asp-for="Nombre" class="form-control" placeholder="Ej. Juan" />
+                <span asp-validation-for="Nombre" class="text-danger"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="Apellido" class="form-label small fw-bold text-muted">Apellido <span class="text-danger">*</span></label>
+                <input asp-for="Apellido" class="form-control" placeholder="Ej. García" />
+                <span asp-validation-for="Apellido" class="text-danger"></span>
+            </div>
+            <div class="col-12">
+                <label asp-for="Direccion" class="form-label small fw-bold text-muted">Dirección</label>
+                <input asp-for="Direccion" class="form-control" placeholder="Calle, Número..." />
+                <span asp-validation-for="Direccion" class="text-danger"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="Localidad" class="form-label small fw-bold text-muted">Localidad</label>
+                <input asp-for="Localidad" class="form-control" placeholder="Ej. Marcos Juárez" />
+                <span asp-validation-for="Localidad" class="text-danger"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="Provincia" class="form-label small fw-bold text-muted">Provincia</label>
+                <input asp-for="Provincia" class="form-control" placeholder="Ej. Córdoba" />
+                <span asp-validation-for="Provincia" class="text-danger"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="Telefono" class="form-label small fw-bold text-muted">Teléfono</label>
+                <input asp-for="Telefono" class="form-control" placeholder="+54 000 000000" />
+                <span asp-validation-for="Telefono" class="text-danger"></span>
+            </div>
+            <div class="col-md-6 d-flex align-items-center">
+                <div class="form-check">
+                    <input asp-for="Revendedor" class="form-check-input" type="checkbox" />
+                    <label asp-for="Revendedor" class="form-check-label small fw-bold text-muted">Revendedor</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="d-flex flex-column flex-md-row justify-content-end gap-3 mt-5 pt-4 border-top">
+            <button type="submit" class="btn btn-mv-primary d-flex align-items-center justify-content-center gap-2">
+                <span class="material-symbols-outlined">save</span>Guardar
+            </button>
+            <a asp-action="Index" class="btn btn-mv-tertiary">Cancelar</a>
+        </div>
+    </form>
+</div>

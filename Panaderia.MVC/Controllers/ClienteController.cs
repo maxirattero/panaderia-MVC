@@ -4,22 +4,22 @@ using Panaderia.Services.Interfaces;
 
 namespace Panaderia.MVC.Controllers
 {
-    public class ProveedorController : Controller
+    public class ClienteController : Controller
     {
-        private readonly IProveedorService _proveedorService;
+        private readonly IClienteService _clienteService;
 
-        public ProveedorController(IProveedorService proveedorService)
+        public ClienteController(IClienteService clienteService)
         {
-            _proveedorService = proveedorService;
+            _clienteService = clienteService;
         }
 
-        // GET: Proveedores
+        // GET: Clientes
         public async Task<IActionResult> Index()
         {
-            return View(await _proveedorService.GetAllAsync());
+            return View(await _clienteService.GetAllAsync());
         }
 
-        // GET: Detalles de proveedores
+        // GET: Detalles de Clientes
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null)
@@ -27,35 +27,35 @@ namespace Panaderia.MVC.Controllers
                 return NotFound();
             }
 
-            var proveedor = await _proveedorService.GetByIdAsync(id.Value);
-            if (proveedor == null)
+            var cliente = await _clienteService.GetByIdAsync(id.Value);
+            if (cliente == null)
             {
                 return NotFound();
             }
 
-            return View(proveedor);
+            return View(cliente);
         }
 
-        // GET: Crear proveedor
+        //GET: Crear Cliente
         public IActionResult Create()
         {
             return View();
         }
 
-        // POST: Crear proveedor
+        //POST : Crear Cliente
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(Proveedor proveedor)
+        public async Task<ActionResult> Create(Cliente cliente)
         {
-            if (ModelState.IsValid)
+             if (ModelState.IsValid)
             {
-                await _proveedorService.CreateAsync(proveedor);
+                await _clienteService.CreateAsync(cliente);
                 return RedirectToAction(nameof(Index));
             }
-            return View(proveedor);
+            return View(cliente);
         }
 
-        // GET: Editar proveedor
+        //GET: Editar Cliente
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null)
@@ -63,38 +63,38 @@ namespace Panaderia.MVC.Controllers
                 return NotFound();
             }
 
-            var proveedor = await _proveedorService.GetByIdAsync(id.Value);
-            if (proveedor == null)
+            var cliente = await _clienteService.GetByIdAsync(id.Value);
+            if (cliente == null)
             {
                 return NotFound();
             }
-            return View(proveedor);
+            return View(cliente);
         }
 
-        // POST: Editar proveedor
+        //POST: Editar Cliente
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, Proveedor proveedor)
+        public async Task<IActionResult> Edit(int id, Cliente cliente)
         {
-            if (id != proveedor.Id) return NotFound();
+            if (id != cliente.Id) return NotFound();
 
             if (ModelState.IsValid)
             {
-                var existe = await _proveedorService.GetByIdAsync(id);
+                var existe = await _clienteService.GetByIdAsync(id);
                 if (existe == null) return NotFound();
 
-                await _proveedorService.UpdateAsync(proveedor);
+                await _clienteService.UpdateAsync(cliente);
                 return RedirectToAction(nameof(Index));
             }
-            return View(proveedor);
+            return View(cliente);
         }
 
-        // POST: Eliminar proveedor
+        //POST: Eliminar Cliente
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            await _proveedorService.DeleteAsync(id);
+            await _clienteService.DeleteAsync(id);
             return RedirectToAction(nameof(Index));
         }
     }

@@ -36,8 +36,18 @@ namespace Panaderia.Services.Implementations
         //actualizar un cliente existente
         public async Task UpdateAsync(Cliente cliente)
         {
-            cliente.FechaModificacion = DateTime.Now;
-            _context.Clientes.Update(cliente);
+            var existe = await _context.Clientes.FindAsync(cliente.Id);
+            if (existe == null) return;
+
+            existe.Nombre = cliente.Nombre;
+            existe.Apellido = cliente.Apellido;
+            existe.Direccion = cliente.Direccion;
+            existe.Localidad = cliente.Localidad;
+            existe.Provincia = cliente.Provincia;
+            existe.Telefono = cliente.Telefono;
+            existe.Revendedor = cliente.Revendedor;
+            existe.FechaModificacion = DateTime.UtcNow;
+
             await _context.SaveChangesAsync();
         }
 
