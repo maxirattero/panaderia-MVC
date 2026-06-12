@@ -1,0 +1,139 @@
+﻿@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@model IEnumerable<Panaderia.Models.Entities.Cliente>
+
+@{
+    ViewData["Title"] = "Clientes";
+}
+
+<div class="container-fluid p-4 p-md-5">
+    <!-- Header Section -->
+    <div class="row align-items-end mb-5 gy-4">
+        <div class="col-md-7">
+            <h1 class="display-6 fw-bold text-primary mb-1">Clientes</h1>
+            <p class="text-secondary m-0">Administra los clientes y revendedores de la panadería.</p>
+        </div>
+        <div class="col-md-5 text-md-end">
+            <a asp-action="Create" class="btn btn-mv-tertiary d-inline-flex align-items-center gap-2 shadow">
+                <span class="material-symbols-outlined">person_add</span>
+                Agregar Nuevo Cliente
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters Bar -->
+    <div class="card-custom p-3 mb-4">
+        <div class="row g-3">
+            <div class="col-lg-6">
+                <div class="input-group">
+                    <span class="input-group-text bg-transparent border-end-0">
+                        <span class="material-symbols-outlined text-secondary">filter_list</span>
+                    </span>
+                    <input class="form-control border-start-0 ps-0" placeholder="Filtrar por nombre, apellido, dirección, localidad o teléfono..." type="text" />
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <select class="form-select">
+                    <option>Todos los Tipos</option>
+                    <option>Revendedor</option>
+                    <option>Minorista</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table Card -->
+    <div class="card-custom overflow-hidden mb-5">
+        <div class="table-responsive">
+            <table class="table table-custom table-hover m-0">
+                <thead>
+                    <tr>
+                        <th>Nombre / Apellido</th>
+                        <th>Ubicación</th>
+                        <th>Teléfono</th>
+                        <th>Tipo</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var cliente in Model)
+                    {
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="avatar-circle" style="background-color: var(--mv-surface-variant); color: var(--mv-primary-dark);">
+                                        @cliente.Nombre.Substring(0, 1).ToUpper()
+                                    </div>
+                                    <div class="fw-bold">@cliente.Nombre @cliente.Apellido</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="d-flex flex-column gap-1 small text-secondary">
+                                    @if (cliente.Direccion != null)
+                                    {
+                                        <span class="d-flex align-items-center gap-1">
+                                            <span class="material-symbols-outlined fs-6">home</span>
+                                            @cliente.Direccion
+                                        </span>
+                                    }
+                                    @if (cliente.Localidad != null)
+                                    {
+                                        <span class="d-flex align-items-center gap-1">
+                                            <span class="material-symbols-outlined fs-6">location_on</span>
+                                            @cliente.Localidad
+                                        </span>
+                                    }
+                                </div>
+                            </td>
+                            <td>
+                                @if (cliente.Telefono != null)
+                                {
+                                    <small class="d-flex align-items-center gap-1 text-secondary">
+                                        <span class="material-symbols-outlined fs-6">call</span>
+                                        @cliente.Telefono
+                                    </small>
+                                }
+                            </td>
+                            <td>
+                                @if (cliente.Revendedor)
+                                {
+                                    <span class="status-badge status-active">
+                                        <span class="dot" style="background-color: var(--mv-success);"></span>
+                                        Revendedor
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="status-badge status-inactive">
+                                        <span class="dot" style="background-color: var(--mv-error);"></span>
+                                        Minorista
+                                    </span>
+                                }
+                            </td>
+                            <td class="text-end">
+                                <div class="btn-group">
+                                    <a asp-action="Details" asp-route-id="@cliente.Id" class="btn btn-sm btn-outline-primary" title="Ver Detalles">
+                                        <span class="material-symbols-outlined">visibility</span>
+                                    </a>
+                                    <a asp-action="Edit" asp-route-id="@cliente.Id" class="btn btn-sm btn-outline-success" title="Editar">
+                                        <span class="material-symbols-outlined">edit</span>
+                                    </a>
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-danger"
+                                            title="Eliminar"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#deleteModal"
+                                            data-id="@cliente.Id"
+                                            data-nombre="@cliente.Nombre @cliente.Apellido"
+                                            data-delete-url="@Url.Action("Delete", "Cliente", new { id = cliente.Id })"
+                                            data-token="@Antiforgery.GetAndStoreTokens(Context).RequestToken">
+                                        <span class="material-symbols-outlined">delete</span>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

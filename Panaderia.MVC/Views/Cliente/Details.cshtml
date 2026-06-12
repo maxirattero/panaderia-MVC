@@ -1,0 +1,74 @@
+﻿@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@model Panaderia.Models.Entities.Cliente
+
+@{
+    ViewData["Title"] = "Detalles de Cliente";
+}
+
+<!-- Heading -->
+<div class="mb-4">
+    <h2 class="font-literata fw-bold" style="color: var(--primary-brown);">Detalles de Cliente</h2>
+</div>
+
+<div class="card card-custom p-4 mb-4">
+    <div class="row g-4">
+        <div class="col-md-6">
+            <p class="small fw-bold text-muted mb-1">Nombre</p>
+            <p class="mb-0">@Model.Nombre</p>
+        </div>
+        <div class="col-md-6">
+            <p class="small fw-bold text-muted mb-1">Apellido</p>
+            <p class="mb-0">@Model.Apellido</p>
+        </div>
+        <div class="col-12">
+            <p class="small fw-bold text-muted mb-1">Dirección</p>
+            <p class="mb-0">@Model.Direccion</p>
+        </div>
+        <div class="col-md-6">
+            <p class="small fw-bold text-muted mb-1">Localidad</p>
+            <p class="mb-0">@Model.Localidad</p>
+        </div>
+        <div class="col-md-6">
+            <p class="small fw-bold text-muted mb-1">Provincia</p>
+            <p class="mb-0">@Model.Provincia</p>
+        </div>
+        <div class="col-md-6">
+            <p class="small fw-bold text-muted mb-1">Teléfono</p>
+            <p class="mb-0">@Model.Telefono</p>
+        </div>
+        <div class="col-md-6">
+            <p class="small fw-bold text-muted mb-1">Tipo</p>
+            @if (Model.Revendedor)
+            {
+                <span class="status-badge status-active">
+                    <span class="dot" style="background-color: var(--mv-success);"></span>
+                    Revendedor
+                </span>
+            }
+            else
+            {
+                <span class="status-badge status-inactive">
+                    <span class="dot" style="background-color: var(--mv-error);"></span>
+                    Minorista
+                </span>
+            }
+        </div>
+    </div>
+    <!-- Action Buttons -->
+    <div class="d-flex flex-column flex-md-row justify-content-end gap-3 mt-5 pt-4 border-top">
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-mv-primary d-flex align-items-center justify-content-center gap-2">
+            <span class="material-symbols-outlined">edit</span>Editar
+        </a>
+        <button type="button"
+                class="btn btn-outline-danger d-flex align-items-center justify-content-center gap-2"
+                data-bs-toggle="modal"
+                data-bs-target="#deleteModal"
+                data-id="@Model.Id"
+                data-nombre="@Model.Nombre"
+                data-delete-url="@Url.Action("Delete", "Cliente", new { id = Model.Id })"
+                data-token="@Antiforgery.GetAndStoreTokens(Context).RequestToken">
+            <span class="material-symbols-outlined">delete</span>Eliminar
+        </button>
+        <a asp-action="Index" class="btn btn-mv-tertiary">Volver</a>
+    </div>
+</div>
