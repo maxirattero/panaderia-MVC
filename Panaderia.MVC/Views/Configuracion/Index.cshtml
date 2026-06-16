@@ -1,0 +1,155 @@
+﻿@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@model Panaderia.MVC.Models.ConfiguracionViewModel
+
+@{
+    ViewData["Title"] = "Configuración";
+}
+
+<div class="container-fluid p-4 p-md-5">
+    <!-- Header Section -->
+    <div class="row align-items-end mb-5 gy-4">
+        <div class="col-md-7">
+            <h1 class="display-6 fw-bold text-primary mb-1">Configuración</h1>
+            <p class="text-secondary m-0">Administra las categorías, formatos y tamaños del catálogo.</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+
+        <!-- Categorías -->
+        <div class="col-lg-4">
+            <div class="card-custom overflow-hidden">
+                <div class="p-3 border-bottom">
+                    <h5 class="fw-bold mb-0">Categorías</h5>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-custom table-hover m-0">
+                        <tbody>
+                            @foreach (var categoria in Model.Categorias)
+                            {
+                                <tr>
+                                    <td>@categoria.Nombre</td>
+                                    <td class="text-end">
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-danger"
+                                                title="Eliminar"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#deleteModal"
+                                                data-id="@categoria.Id"
+                                                data-nombre="@categoria.Nombre"
+                                                data-delete-url="@Url.Action("EliminarCategoria", "Configuracion", new { id = categoria.Id })"
+                                                data-token="@Antiforgery.GetAndStoreTokens(Context).RequestToken">
+                                            <span class="material-symbols-outlined">delete</span>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="p-3 border-top">
+                    <form asp-action="CrearCategoria" asp-controller="Configuracion" method="post">
+                        @Html.AntiForgeryToken()
+                        <div class="input-group">
+                            <input type="text" name="nombre" class="form-control" placeholder="Nueva categoría..." />
+                            <button type="submit" class="btn btn-mv-primary d-flex align-items-center gap-1">
+                                <span class="material-symbols-outlined">add</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Formatos -->
+        <div class="col-lg-4">
+            <div class="card-custom overflow-hidden">
+                <div class="p-3 border-bottom">
+                    <h5 class="fw-bold mb-0">Formatos</h5>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-custom table-hover m-0">
+                        <tbody>
+                            @foreach (var formato in Model.Formatos)
+                            {
+                                <tr>
+                                    <td>@formato.Descripcion</td>
+                                    <td class="text-end">
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-danger"
+                                                title="Eliminar"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#deleteModal"
+                                                data-id="@formato.Id"
+                                                data-nombre="@formato.Descripcion"
+                                                data-delete-url="@Url.Action("EliminarFormato", "Configuracion", new { id = formato.Id })"
+                                                data-token="@Antiforgery.GetAndStoreTokens(Context).RequestToken">
+                                            <span class="material-symbols-outlined">delete</span>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="p-3 border-top">
+                    <form asp-action="CrearFormato" asp-controller="Configuracion" method="post">
+                        @Html.AntiForgeryToken()
+                        <div class="input-group">
+                            <input type="text" name="descripcion" class="form-control" placeholder="Nuevo formato..." />
+                            <button type="submit" class="btn btn-mv-primary d-flex align-items-center gap-1">
+                                <span class="material-symbols-outlined">add</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tamaños -->
+        <div class="col-lg-4">
+            <div class="card-custom overflow-hidden">
+                <div class="p-3 border-bottom">
+                    <h5 class="fw-bold mb-0">Tamaños</h5>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-custom table-hover m-0">
+                        <tbody>
+                            @foreach (var tamano in Model.Tamanos)
+                            {
+                                <tr>
+                                    <td>@tamano.Descripcion</td>
+                                    <td class="text-end">
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-danger"
+                                                title="Eliminar"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#deleteModal"
+                                                data-id="@tamano.Id"
+                                                data-nombre="@tamano.Descripcion"
+                                                data-delete-url="@Url.Action("EliminarTamano", "Configuracion", new { id = tamano.Id })"
+                                                data-token="@Antiforgery.GetAndStoreTokens(Context).RequestToken">
+                                            <span class="material-symbols-outlined">delete</span>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="p-3 border-top">
+                    <form asp-action="CrearTamano" asp-controller="Configuracion" method="post">
+                        @Html.AntiForgeryToken()
+                        <div class="input-group">
+                            <input type="text" name="descripcion" class="form-control" placeholder="Nuevo tamaño..." />
+                            <button type="submit" class="btn btn-mv-primary d-flex align-items-center gap-1">
+                                <span class="material-symbols-outlined">add</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>

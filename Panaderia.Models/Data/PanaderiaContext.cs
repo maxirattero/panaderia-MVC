@@ -14,8 +14,7 @@ namespace Panaderia.Models.Data
         public DbSet<Tamano> Tamanos { get; set; }
         public DbSet<Formato> Formatos { get; set; }
         public DbSet<Proveedor> Proveedores { get; set; }
-        public DbSet<ProductoBase> ProductosBase { get; set; }
-        public DbSet<ProductoFinal> ProductosFinales { get; set; }
+        public DbSet<Producto> Productos { get; set; }        
         public DbSet<Cliente> Clientes { get; set; }
         public DbSet<Pedido> Pedidos { get; set; }
         public DbSet<DetallePedido> DetallesPedido { get; set; }
@@ -24,24 +23,19 @@ namespace Panaderia.Models.Data
     protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-            // Configuración de relaciones y restricciones
-            // ProductoBase -> CategoriaProducto
-            modelBuilder.Entity<ProductoBase>()
+            // Configuración de relaciones y restricciones            
+            // Producto -> CategoriaProducto
+            modelBuilder.Entity<Producto>()
                 .HasOne(p => p.Categoria)
                 .WithMany()
                 .HasForeignKey(p => p.IdCategoria);
-            // ProductoFinal -> ProductoBase
-            modelBuilder.Entity<ProductoFinal>()
-                .HasOne(p => p.ProductoBase)
-                .WithMany()
-                .HasForeignKey(p => p.IdProductoBase);
-            // ProductoFinal -> Tamano
-            modelBuilder.Entity<ProductoFinal>()
+            // Producto -> Tamano (opcional)
+            modelBuilder.Entity<Producto>()
                 .HasOne(p => p.Tamano)
                 .WithMany()
                 .HasForeignKey(p => p.IdTamano);
-            // ProductoFinal -> Formato
-            modelBuilder.Entity<ProductoFinal>()
+            // Producto -> Formato (opcional)
+            modelBuilder.Entity<Producto>()
                 .HasOne(p => p.Formato)
                 .WithMany()
                 .HasForeignKey(p => p.IdFormato);
@@ -55,16 +49,16 @@ namespace Panaderia.Models.Data
                 .HasOne(d => d.Pedido)
                 .WithMany(p => p.Detalles)
                 .HasForeignKey(d => d.IdPedido);
-            // DetallePedido -> ProductoFinal
+            // DetallePedido -> Producto
             modelBuilder.Entity<DetallePedido>()
-                .HasOne(d => d.ProductoFinal)
+                .HasOne(d => d.Producto)
                 .WithMany()
-                .HasForeignKey(d => d.IdProductoFinal);
+                .HasForeignKey(d => d.IdProducto);
             // ReporteCaja -> Pedido (opcional)
             modelBuilder.Entity<ReporteCaja>()
                 .HasOne(r => r.Pedido)
                 .WithMany(p => p.Reportes)
-                .HasForeignKey(r => r.IdProveedor);
+                .HasForeignKey(r => r.IdPedido);
             // reporteCaja -> Proveedor (opcional)
             modelBuilder.Entity<ReporteCaja>()
                 .HasOne(r => r.Proveedor)

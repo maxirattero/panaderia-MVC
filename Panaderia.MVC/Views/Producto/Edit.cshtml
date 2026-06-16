@@ -1,0 +1,116 @@
+﻿@model Panaderia.Models.Entities.Producto
+@using Panaderia.Models.Enums
+
+@{
+    ViewData["Title"] = "Editar Producto";
+}
+
+<!-- Heading -->
+<div class="mb-4">
+    <h2 class="font-literata fw-bold" style="color: var(--primary-brown);">Editar Producto</h2>
+</div>
+
+<div class="card card-custom p-4 mb-4">
+    <form asp-action="Edit">
+        <div class="row g-4">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <input asp-for="Id" type="hidden" />
+            <input asp-for="FechaCreacion" type="hidden" />
+
+            <!-- Nombre -->
+            <div class="col-md-6">
+                <label asp-for="Nombre" class="form-label small fw-bold text-muted">Nombre <span class="text-danger">*</span></label>
+                <input asp-for="Nombre" class="form-control" placeholder="Ej. Pan Semi-Integral Semillas Molde" />
+                <span asp-validation-for="Nombre" class="text-danger"></span>
+            </div>
+
+            <!-- Categoría -->
+            <div class="col-md-6">
+                <label asp-for="IdCategoria" class="form-label small fw-bold text-muted">Categoría <span class="text-danger">*</span></label>
+                <select asp-for="IdCategoria" asp-items="ViewBag.Categorias" class="form-select">
+                    <option value="">-- Seleccionar categoría --</option>
+                </select>
+                <span asp-validation-for="IdCategoria" class="text-danger"></span>
+            </div>
+
+            <!-- Masa -->
+            <div class="col-md-6">
+                <label asp-for="Masa" class="form-label small fw-bold text-muted">Masa <span class="text-danger">*</span></label>
+                <select asp-for="Masa" asp-items="Html.GetEnumSelectList<Masa>()" class="form-select">
+                    <option value="">-- Seleccionar masa --</option>
+                </select>
+                <span asp-validation-for="Masa" class="text-danger"></span>
+            </div>
+
+            <!-- Variedad -->
+            <div class="col-md-6">
+                <label asp-for="Variedad" class="form-label small fw-bold text-muted">Variedad</label>
+                <select asp-for="Variedad" asp-items="Html.GetEnumSelectList<Variedad>()" class="form-select">
+                    <option value="">-- Sin variedad --</option>
+                </select>
+                <span asp-validation-for="Variedad" class="text-danger"></span>
+            </div>
+
+            <!-- Formato -->
+            <div class="col-md-6">
+                <label asp-for="IdFormato" class="form-label small fw-bold text-muted">Formato</label>
+                <select asp-for="IdFormato" asp-items="ViewBag.Formatos" class="form-select">
+                    <option value="">-- Sin formato --</option>
+                </select>
+                <span asp-validation-for="IdFormato" class="text-danger"></span>
+            </div>
+
+            <!-- Tamaño -->
+            <div class="col-md-6">
+                <label asp-for="IdTamano" class="form-label small fw-bold text-muted">Tamaño</label>
+                <select asp-for="IdTamano" asp-items="ViewBag.Tamanos" class="form-select">
+                    <option value="">-- Sin tamaño --</option>
+                </select>
+                <span asp-validation-for="IdTamano" class="text-danger"></span>
+            </div>
+
+            <!-- Precio Final -->
+            <div class="col-md-6">
+                <label asp-for="PrecioFinal" class="form-label small fw-bold text-muted">Precio Final <span class="text-danger">*</span></label>
+                <div class="input-group">
+                    <span class="input-group-text">$</span>
+                    <input asp-for="PrecioFinal" class="form-control" type="number" step="0.01" min="0" placeholder="0.00" />
+                </div>
+                <span asp-validation-for="PrecioFinal" class="text-danger"></span>
+            </div>
+
+            <!-- Precio Reventa -->
+            <div class="col-md-6">
+                <label asp-for="PrecioReventa" class="form-label small fw-bold text-muted">Precio Reventa <span class="text-danger">*</span></label>
+                <div class="input-group">
+                    <span class="input-group-text">$</span>
+                    <input asp-for="PrecioReventa" class="form-control" type="number" step="0.01" min="0" placeholder="0.00" />
+                </div>
+                <span asp-validation-for="PrecioReventa" class="text-danger"></span>
+            </div>
+
+            <!-- Stock -->
+            <div class="col-md-6">
+                <label asp-for="Stock" class="form-label small fw-bold text-muted">Stock</label>
+                <input asp-for="Stock" class="form-control" type="number" min="0" placeholder="0" />
+                <span asp-validation-for="Stock" class="text-danger"></span>
+            </div>
+
+            <!-- Imagen URL -->
+            <div class="col-md-6">
+                <label asp-for="ImagenURL" class="form-label small fw-bold text-muted">URL de Imagen</label>
+                <input asp-for="ImagenURL" class="form-control" placeholder="https://..." />
+                <span asp-validation-for="ImagenURL" class="text-danger"></span>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="d-flex flex-column flex-md-row justify-content-end gap-3 mt-5 pt-4 border-top">
+            <button type="submit" class="btn btn-mv-primary d-flex align-items-center justify-content-center gap-2">
+                <span class="material-symbols-outlined">save</span>Guardar
+            </button>
+            <a asp-action="Index" class="btn btn-mv-tertiary">Cancelar</a>
+        </div>
+    </form>
+</div>

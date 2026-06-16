@@ -13,10 +13,12 @@ builder.Services.AddDbContext<PanaderiaContext>(options =>
 
 builder.Services.AddScoped<IProveedorService, ProveedorService>();
 builder.Services.AddScoped<IClienteService, ClienteService>();
-builder.Services.AddScoped<IProductoBaseService, ProductoBaseService>();
-builder.Services.AddScoped<IProductoFinalService, ProductoFinalService>();
 builder.Services.AddScoped<IPedidoService, PedidoService>();
 builder.Services.AddScoped<IReporteCajaService, ReporteCajaService>();
+builder.Services.AddScoped<ICategoriaService, CategoriaService>();
+builder.Services.AddScoped<IFormatoService, FormatoService>();
+builder.Services.AddScoped<ITamanoService, TamanoService>();
+builder.Services.AddScoped<IProductoService, ProductoService>();
 
 var app = builder.Build();
 

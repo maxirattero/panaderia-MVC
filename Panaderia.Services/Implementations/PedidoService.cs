@@ -21,7 +21,7 @@ namespace Panaderia.Services.Implementations
             return await _context.Pedidos
                 .Include(p => p.Cliente)
                 .Include(p => p.Detalles)
-                    .ThenInclude(d => d.ProductoFinal)
+                    .ThenInclude(d => d.Producto)
                 .ToListAsync();
         }
 
@@ -31,7 +31,7 @@ namespace Panaderia.Services.Implementations
             return await _context.Pedidos
                 .Include(p => p.Cliente)
                 .Include(p => p.Detalles)
-                    .ThenInclude(d => d.ProductoFinal)
+                    .ThenInclude(d => d.Producto)
                 .FirstOrDefaultAsync(p => p.Id == id);
         }
 
@@ -41,7 +41,7 @@ namespace Panaderia.Services.Implementations
             return await _context.Pedidos
                 .Include(p => p.Cliente)
                 .Include(p => p.Detalles)
-                    .ThenInclude(d => d.ProductoFinal)
+                    .ThenInclude(d => d.Producto)
                 .Where(p => p.IdCliente == idCliente)
                 .ToListAsync();
         }
@@ -52,7 +52,7 @@ namespace Panaderia.Services.Implementations
             return await _context.Pedidos
                 .Include(p => p.Cliente)
                 .Include(p => p.Detalles)
-                    .ThenInclude(d => d.ProductoFinal)
+                    .ThenInclude(d => d.Producto)
                 .Where(p => p.Estado == estado)
                 .ToListAsync();
         }
@@ -63,7 +63,7 @@ namespace Panaderia.Services.Implementations
             return await _context.Pedidos
                 .Include(p => p.Cliente)
                 .Include(p => p.Detalles)
-                    .ThenInclude(d => d.ProductoFinal)
+                    .ThenInclude(d => d.Producto)
                 .Where(p => p.FechaCreacion.Date == fecha.Date)
                 .ToListAsync();
         }

@@ -1,0 +1,83 @@
+﻿@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@model Panaderia.Models.Entities.Producto
+@using Panaderia.Models.Enums
+
+@{
+    ViewData["Title"] = "Detalles de Producto";
+}
+
+<!-- Heading -->
+<div class="mb-4">
+    <h2 class="font-literata fw-bold" style="color: var(--primary-brown);">Detalles de Producto</h2>
+</div>
+
+<div class="card card-custom p-4 mb-4">
+    <div class="row g-4">
+        <div class="col-md-6">
+            <p class="small fw-bold text-muted mb-1">Nombre</p>
+            <p class="mb-0">@Model.Nombre</p>
+        </div>
+        <div class="col-md-6">
+            <p class="small fw-bold text-muted mb-1">Categoría</p>
+            <p class="mb-0">@Model.Categoria?.Nombre</p>
+        </div>
+        <div class="col-md-6">
+            <p class="small fw-bold text-muted mb-1">Masa</p>
+            <p class="mb-0">@Model.Masa</p>
+        </div>
+        <div class="col-md-6">
+            <p class="small fw-bold text-muted mb-1">Variedad</p>
+            <p class="mb-0">@(Model.Variedad.HasValue ? Model.Variedad.ToString() : "-")</p>
+        </div>
+        <div class="col-md-6">
+            <p class="small fw-bold text-muted mb-1">Formato</p>
+            <p class="mb-0">@(Model.Formato?.Descripcion ?? "-")</p>
+        </div>
+        <div class="col-md-6">
+            <p class="small fw-bold text-muted mb-1">Tamaño</p>
+            <p class="mb-0">@(Model.Tamano?.Descripcion ?? "-")</p>
+        </div>
+        <div class="col-md-6">
+            <p class="small fw-bold text-muted mb-1">Precio Final</p>
+            <p class="mb-0">$@Model.PrecioFinal.ToString("N2")</p>
+        </div>
+        <div class="col-md-6">
+            <p class="small fw-bold text-muted mb-1">Precio Reventa</p>
+            <p class="mb-0">$@Model.PrecioReventa.ToString("N2")</p>
+        </div>
+        <div class="col-md-6">
+            <p class="small fw-bold text-muted mb-1">Stock</p>
+            <p class="mb-0">@Model.Stock</p>
+        </div>
+        <div class="col-md-6">
+            <p class="small fw-bold text-muted mb-1">Imagen URL</p>
+            <p class="mb-0">@(Model.ImagenURL ?? "-")</p>
+        </div>
+        <div class="col-md-6">
+            <p class="small fw-bold text-muted mb-1">Fecha de Creación</p>
+            <p class="mb-0">@Model.FechaCreacion.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</p>
+        </div>
+        <div class="col-md-6">
+            <p class="small fw-bold text-muted mb-1">Última Modificación</p>
+            <p class="mb-0">@(Model.FechaModificacion.HasValue ? Model.FechaModificacion.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm") : "-")</p>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="d-flex flex-column flex-md-row justify-content-end gap-3 mt-5 pt-4 border-top">
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-mv-primary d-flex align-items-center justify-content-center gap-2">
+            <span class="material-symbols-outlined">edit</span>Editar
+        </a>
+        <button type="button"
+                class="btn btn-outline-danger d-flex align-items-center justify-content-center gap-2"
+                data-bs-toggle="modal"
+                data-bs-target="#deleteModal"
+                data-id="@Model.Id"
+                data-nombre="@Model.Nombre"
+                data-delete-url="@Url.Action("Delete", "Producto", new { id = Model.Id })"
+                data-token="@Antiforgery.GetAndStoreTokens(Context).RequestToken">
+            <span class="material-symbols-outlined">delete</span>Eliminar
+        </button>
+        <a asp-action="Index" class="btn btn-mv-tertiary">Volver</a>
+    </div>
+</div>
