@@ -1,0 +1,155 @@
+﻿@using Panaderia.Models.Entities
+@using Panaderia.Models.Enums
+@model PedidoViewModel
+
+<h2>Nuevo Pedido</h2>
+
+<form asp-action="Create" method="post">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="All" class="text-danger"></div>
+
+    <!-- Campos del pedido -->
+    <div class="mb-3">
+        <label asp-for="IdCliente" class="form-label">Cliente</label>
+        <select asp-for="IdCliente" class="form-select">
+            <option value="">-- Seleccionar cliente --</option>
+            @foreach (var c in (IEnumerable<Cliente>)ViewBag.Clientes)
+            {
+                <option value="@c.Id" data-revendedor="@c.Revendedor.ToString().ToLower()">
+                    @c.NombreCompleto
+                </option>
+            }
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="FechaEntrega" class="form-label">Fecha de entrega</label>
+        <input asp-for="FechaEntrega" type="date" class="form-control" />
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Estado" class="form-label">Estado</label>
+        <select asp-for="Estado" asp-items="Html.GetEnumSelectList<EstadoPedido>()" class="form-select"></select>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Notas" class="form-label">Notas</label>
+        <textarea asp-for="Notas" class="form-control"></textarea>
+    </div>
+
+    <!-- Detalles -->
+    <h4>Productos</h4>
+    <table class="table" id="tablaDetalles">
+        <thead>
+            <tr>
+                <th>Producto</th>
+                <th>Cantidad</th>
+                <th>Bolsa</th>
+                <th>Subtotal</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody id="detallesBody">
+            <!-- las filas se agregan por JS -->
+        </tbody>
+    </table>
+
+    <button type="button" class="btn btn-secondary mb-3" id="btnAgregar">+ Agregar producto</button>
+
+    <div>
+        <button type="submit" class="btn btn-primary">Guardar pedido</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">Cancelar</a>
+    </div>
+</form>
+
+<!-- Template de fila (no se envía, lo usa el JS para clonar) -->
+<template id="filaTemplate">
+    <tr>
+        <td>
+            <select name="__PROD__" class="form-select prod-select" required>
+                <option value="">-- Producto --</option>
+                @foreach (var p in (IEnumerable<Producto>)ViewBag.Productos)
+                {
+                    <option value="@p.Id"
+                            data-final="@p.PrecioFinal.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                            data-reventa="@p.PrecioReventa.ToString(System.Globalization.CultureInfo.InvariantCulture)">
+                        @p.Nombre
+                    </option>
+                }
+            </select>
+        </td>
+        <td>
+            <input name="__CANT__" type="number" min="1" value="1" class="form-control cant-input" required />
+        </td>
+        <td>
+            <select name="__BOLSA__" class="form-select bolsa-select" asp-items="Html.GetEnumSelectList<TipoBolsa>()"></select>
+        </td>
+        <td class="subtotal">$0</td>
+        <td>
+            <button type="button" class="btn btn-sm btn-danger btnQuitar">✕</button>
+        </td>
+    </tr>
+</template>
+
+@section Scripts {
+    <script>
+        (function () {
+            const tbody = document.getElementById('detallesBody');
+            const template = document.getElementById('filaTemplate');
+            const btnAgregar = document.getElementById('btnAgregar');
+            const clienteSelect = document.getElementById('IdCliente');
+
+            function clienteEsRevendedor() {
+                const opt = clienteSelect.options[clienteSelect.selectedIndex];
+                return opt && opt.dataset.revendedor === 'true';
+            }
+
+            function recalcularFila(tr) {
+                const prodSelect = tr.querySelector('.prod-select');
+                const cantInput = tr.querySelector('.cant-input');
+                const subtotalCell = tr.querySelector('.subtotal');
+                const opt = prodSelect.options[prodSelect.selectedIndex];
+
+                let precio = 0;
+                if (opt && opt.value) {
+                    precio = clienteEsRevendedor()
+                        ? parseFloat(opt.dataset.reventa)
+                        : parseFloat(opt.dataset.final);
+                }
+                const cant = parseInt(cantInput.value) || 0;
+                subtotalCell.textContent = '$' + (precio * cant).toFixed(2);
+            }
+
+            function reindexar() {
+                tbody.querySelectorAll('tr').forEach((tr, i) => {
+                    tr.querySelector('.prod-select').name = `Detalles[${i}].IdProducto`;
+                    tr.querySelector('.cant-input').name  = `Detalles[${i}].Cantidad`;
+                    tr.querySelector('.bolsa-select').name = `Detalles[${i}].Bolsa`;
+                });
+            }
+
+            function agregarFila() {
+                const tr = template.content.cloneNode(true).querySelector('tr');
+                tbody.appendChild(tr);
+                reindexar();
+
+                tr.querySelector('.prod-select').addEventListener('change', () => recalcularFila(tr));
+                tr.querySelector('.cant-input').addEventListener('input', () => recalcularFila(tr));
+                tr.querySelector('.btnQuitar').addEventListener('click', () => {
+                    tr.remove();
+                    reindexar();
+                });
+            }
+
+            btnAgregar.addEventListener('click', agregarFila);
+
+            // al cambiar el cliente, recalcular todas las filas (revendedor o no)
+            clienteSelect.addEventListener('change', () => {
+                tbody.querySelectorAll('tr').forEach(recalcularFila);
+            });
+
+            // arrancar con una fila visible
+            agregarFila();
+        })();
+    </script>
+}

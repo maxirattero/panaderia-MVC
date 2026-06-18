@@ -9,6 +9,7 @@ namespace Panaderia.Models.Entities
         public string Nombre { get; set; } = string.Empty;
         [Required(ErrorMessage = "El apellido es obligatorio.")]
         public string Apellido { get; set; } = string.Empty;
+        public string NombreCompleto => $"{Nombre} {Apellido}";
         public string? Direccion { get; set; }
         public string? Localidad { get; set; }
         public string? Provincia { get; set; }

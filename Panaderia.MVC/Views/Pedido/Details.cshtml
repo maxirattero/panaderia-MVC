@@ -1,0 +1,129 @@
+﻿@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@model Panaderia.MVC.Models.PedidoDetailsViewModel
+
+@{
+    ViewData["Title"] = "Detalles del pedido";
+}
+
+<div class="mb-4">
+    <h2 class="font-literata fw-bold" style="color: var(--primary-brown);">Detalles del pedido</h2>
+</div>
+
+<div class="card card-custom p-4 mb-4">
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <p class="small fw-bold text-muted mb-1">Cliente</p>
+            <p class="mb-0">@Model.NombreCliente</p>
+        </div>
+        <div class="col-md-6">
+            <p class="small fw-bold text-muted mb-1">Fecha de entrega</p>
+            <p class="mb-0">
+                @(Model.FechaEntrega.HasValue ? Model.FechaEntrega.Value.ToString("dd/MM/yyyy") : "—")
+            </p>
+        </div>
+        <div class="col-md-6">
+            <p class="small fw-bold text-muted mb-1">Estado</p>
+            @{
+                var (badgeClass, badgeLabel) = Model.Estado switch
+                {
+                    Panaderia.Models.Enums.EstadoPedido.Pendiente => ("status-badge status-pending", "Pendiente"),
+                    Panaderia.Models.Enums.EstadoPedido.EnProceso => ("status-badge status-active", "En proceso"),
+                    Panaderia.Models.Enums.EstadoPedido.Entregado => ("status-badge status-inactive", "Entregado"),
+                    Panaderia.Models.Enums.EstadoPedido.Cancelado => ("status-badge status-error", "Cancelado"),
+                    _ => ("status-badge", Model.Estado.ToString())
+                };
+            }
+            <span class="@badgeClass">@badgeLabel</span>
+        </div>
+        <div class="col-md-6">
+            <p class="small fw-bold text-muted mb-1">Notas</p>
+            <p class="mb-0">@(string.IsNullOrWhiteSpace(Model.Notas) ? "—" : Model.Notas)</p>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="p-3 rounded-3 bg-light">
+                <p class="small text-muted mb-1">Total</p>
+                <p class="fs-5 fw-bold mb-0">@Model.MontoTotal.ToString("C", new System.Globalization.CultureInfo("es-AR"))</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="p-3 rounded-3 bg-light">
+                <p class="small text-muted mb-1">Cobrado</p>
+                <p class="fs-5 fw-bold mb-0 text-success">@Model.MontoCobrado.ToString("C", new System.Globalization.CultureInfo("es-AR"))</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="p-3 rounded-3 bg-light">
+                <p class="small text-muted mb-1">Saldo pendiente</p>
+                <p class="fs-5 fw-bold mb-0 @(Model.EstaPagado ? "text-success" : "text-danger")">
+                    @Model.SaldoPendiente.ToString("C", new System.Globalization.CultureInfo("es-AR"))
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-4">
+        <p class="small fw-bold text-muted mb-2">Detalle de productos</p>
+        <table class="table table-sm align-middle">
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th class="text-center">Cantidad</th>
+                    <th class="text-center">Bolsa</th>
+                    <th class="text-end">Precio unit.</th>
+                    <th class="text-end">Subtotal</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var detalle in Model.Detalles)
+                {
+                    <tr>
+                        <td>@detalle.NombreProducto</td>
+                        <td class="text-center">@detalle.Cantidad</td>
+                        <td class="text-center text-muted small">@detalle.Bolsa</td>
+                        <td class="text-end">@detalle.PrecioUnitario.ToString("C", new System.Globalization.CultureInfo("es-AR"))</td>
+                        <td class="text-end">@detalle.Subtotal.ToString("C", new System.Globalization.CultureInfo("es-AR"))</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="d-flex flex-column flex-md-row justify-content-end gap-3 mt-4 pt-4 border-top">
+        <a asp-action="Index" class="btn btn-mv-tertiary">Volver</a>
+
+        @if (!Model.EstaPagado)
+        {
+            <button type="button"
+                    class="btn btn-success d-flex align-items-center justify-content-center gap-2"
+                    data-bs-toggle="modal"
+                    data-bs-target="#cobrarModal"
+                    data-id="@Model.Id"
+                    data-saldo="@Model.SaldoPendiente.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                    data-saldo-label="@Model.SaldoPendiente.ToString("C", new System.Globalization.CultureInfo("es-AR"))"
+                    data-cobrar-url="@Url.Action("RegistrarCobro", "Pedido")"
+                    data-token="@Antiforgery.GetAndStoreTokens(Context).RequestToken">
+                <span class="material-symbols-outlined">payments</span>Registrar cobro
+            </button>
+        }
+
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-mv-primary d-flex align-items-center justify-content-center gap-2">
+            <span class="material-symbols-outlined">edit</span>Editar
+        </a>
+
+        <button type="button"
+                class="btn btn-outline-danger d-flex align-items-center justify-content-center gap-2"
+                data-bs-toggle="modal"
+                data-bs-target="#deleteModal"
+                data-id="@Model.Id"
+                data-nombre="Pedido #@Model.Id"
+                data-delete-url="@Url.Action("Delete", "Pedido", new { id = Model.Id })"
+                data-token="@Antiforgery.GetAndStoreTokens(Context).RequestToken">
+            <span class="material-symbols-outlined">delete</span>Eliminar
+        </button>
+    </div>
+
+</div>

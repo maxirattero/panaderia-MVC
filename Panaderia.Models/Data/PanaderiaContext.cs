@@ -64,6 +64,9 @@ namespace Panaderia.Models.Data
                 .HasOne(r => r.Proveedor)
                 .WithMany()
                 .HasForeignKey(r => r.IdProveedor);
+            //filtro global consulta - soft delete
+            modelBuilder.Entity<Pedido>().HasQueryFilter(p => !p.Anulado);            
+            modelBuilder.Entity<DetallePedido>().HasQueryFilter(d => !d.Pedido.Anulado);
         }
     }
 }

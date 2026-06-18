@@ -34,5 +34,7 @@ namespace Panaderia.Services.Interfaces
 
         //verificar si un pedido existe por id
         Task<bool> ExistsAsync(int id);
+        // Anular pedido
+        Task AnularAsync(int id);
     }
 }

@@ -1,0 +1,35 @@
+﻿<div class="modal fade" id="cobrarModal" tabindex="-1" aria-labelledby="cobrarModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title font-literata fw-bold" id="cobrarModalLabel" style="color: var(--primary-brown);">
+                    Registrar cobro
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <form id="cobrarForm" method="post">
+                <div class="modal-body">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="IdPedido" id="cobrarIdPedido" />
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Monto a cobrar</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" step="0.01" min="0.01" name="Monto" id="cobrarMonto"
+                                   class="form-control" required lang="en" />
+                        </div>
+                    </div>
+                    <p class="small text-muted mb-0">
+                        Saldo pendiente: <strong id="cobrarSaldo"></strong>
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-mv-tertiary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success d-flex align-items-center gap-2">
+                        <span class="material-symbols-outlined">payments</span>Confirmar cobro
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

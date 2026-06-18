@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Panaderia.Models.Enums
+﻿namespace Panaderia.Models.Enums
 {
     public enum EstadoPedido
     {

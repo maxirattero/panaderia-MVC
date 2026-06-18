@@ -81,7 +81,7 @@ namespace Panaderia.Services.Implementations
                 {
                     IdPedido = idPedido,
                     Monto = monto,
-                    Fecha = DateTime.Now,
+                    Fecha = DateTime.UtcNow,
                     Tipo = TipoMovimiento.Ingreso,
                     Categoria = CategoriaMovimiento.Venta
                 };
@@ -100,15 +100,28 @@ namespace Panaderia.Services.Implementations
         //actualizar un pedido existente
         public async Task UpdateAsync(Pedido pedido)
         {
-            pedido.FechaModificacion = DateTime.Now;
-            _context.Pedidos.Update(pedido);
-            await _context.SaveChangesAsync();
+            var existing = await _context.Pedidos.FindAsync(pedido.Id);
+            if (existing != null)
+            {
+                existing.IdCliente = pedido.IdCliente;
+                existing.Estado = pedido.Estado;
+                existing.FechaEntrega = pedido.FechaEntrega;
+                existing.Notas = pedido.Notas;
+                existing.FechaModificacion = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+            }
         }
 
-        //eliminar un pedido por su ID
+        //eliminar un pedido por su ID        
         public async Task DeleteAsync(int id)
         {
-            await _context.Pedidos.Where(p => p.Id == id).ExecuteDeleteAsync();
+            var pedido = await _context.Pedidos
+                .Include(p => p.Detalles)
+                .FirstOrDefaultAsync(p => p.Id == id);
+            if (pedido == null) return;
+
+            _context.Pedidos.Remove(pedido);
+            await _context.SaveChangesAsync();
         }
 
         // Verificar si un pedido existe por su ID
@@ -116,6 +129,16 @@ namespace Panaderia.Services.Implementations
         {
             return await _context.Pedidos.AnyAsync(p => p.Id == id);
 
+        }
+
+        // Anular pedido
+        public async Task AnularAsync(int id)
+        {
+            var pedido = await _context.Pedidos.FindAsync(id);
+            if (pedido == null) return;
+
+            pedido.Anulado = true;
+            await _context.SaveChangesAsync();
         }
     }
 }

@@ -1,0 +1,101 @@
+﻿@model IEnumerable<Panaderia.Models.Entities.Pedido>
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Pedidos</h2>
+    <div>
+        <a asp-action="Produccion" class="btn btn-warning">Producción</a>
+        <a asp-action="Create" class="btn btn-primary">+ Nuevo pedido</a>
+    </div>
+</div>
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+<table class="table table-hover align-middle">
+    <thead>
+        <tr>
+            <th></th>
+            <th>Cliente</th>
+            <th>Entrega</th>
+            <th>Estado</th>
+            <th>Total</th>
+            <th>Saldo</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var p in Model)
+        {
+            <tr>
+                <td>
+                    <button class="btn btn-sm btn-outline-secondary" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#detalle-@p.Id">
+                        ▼
+                    </button>
+                </td>
+                <td>@p.Cliente.NombreCompleto</td>
+                <td>@(p.FechaEntrega?.ToString("dd/MM/yyyy") ?? "-")</td>
+                <td>@p.Estado</td>
+                <td>$@p.MontoTotal</td>
+                <td>$@p.SaldoPendiente</td>
+                <td>
+                    <a asp-action="Details" asp-route-id="@p.Id" class="btn btn-sm btn-info">Detalles</a>
+                    @if (!p.EstaPagado)
+                    {
+                        <button type="button"
+                                class="btn btn-sm btn-success d-flex align-items-center gap-2"
+                                data-bs-toggle="modal"
+                                data-bs-target="#cobrarModal"
+                                data-id="@p.Id"
+                                data-saldo="@p.SaldoPendiente.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                data-saldo-label="@p.SaldoPendiente.ToString("C", new System.Globalization.CultureInfo("es-AR"))"
+                                data-cobrar-url="@Url.Action("RegistrarCobro", "Pedido")">
+                            <span class="material-symbols-outlined">payments</span>Registrar cobro
+                        </button>
+                    }
+                    <a asp-action="Edit" asp-route-id="@p.Id" class="btn btn-sm btn-warning">Editar</a>
+                    <button type="button"
+                            class="btn btn-sm btn-outline-danger"
+                            title="Eliminar"
+                            data-bs-toggle="modal"
+                            data-bs-target="#deleteModal"
+                            data-id="@p.Id"
+                            data-nombre="@p.Cliente.NombreCompleto"
+                            data-delete-url="@Url.Action("Delete", "Pedido", new { id = p.Id })"
+                            data-token="@Antiforgery.GetAndStoreTokens(Context).RequestToken">
+                        <span class="material-symbols-outlined">delete</span>
+                    </button>
+                </td>
+            </tr>
+            <tr class="collapse" id="detalle-@p.Id">
+                <td colspan="7">
+                    <table class="table table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th>Cantidad</th>
+                                <th>Bolsa</th>
+                                <th>Precio unit.</th>
+                                <th>Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var d in p.Detalles)
+                            {
+                                <tr>
+                                    <td>@d.Producto.Nombre</td>
+                                    <td>@d.Cantidad</td>
+                                    <td>@d.Bolsa</td>
+                                    <td>$@d.PrecioUnitario</td>
+                                    <td>$@(d.Cantidad * d.PrecioUnitario)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

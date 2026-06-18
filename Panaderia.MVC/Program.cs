@@ -1,7 +1,8 @@
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Panaderia.Models.Data;
-using Panaderia.Services.Interfaces;
 using Panaderia.Services.Implementations;
+using Panaderia.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,6 +20,9 @@ builder.Services.AddScoped<ICategoriaService, CategoriaService>();
 builder.Services.AddScoped<IFormatoService, FormatoService>();
 builder.Services.AddScoped<ITamanoService, TamanoService>();
 builder.Services.AddScoped<IProductoService, ProductoService>();
+builder.Services.AddDataProtection()
+    .SetApplicationName("PanaderiaMVC")
+    .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "DataProtection-Keys")));
 
 var app = builder.Build();
 

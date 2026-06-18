@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Panaderia.Models.Data;
@@ -11,9 +12,11 @@ using Panaderia.Models.Data;
 namespace Panaderia.Models.Migrations
 {
     [DbContext(typeof(PanaderiaContext))]
-    partial class PanaderiaContextModelSnapshot : ModelSnapshot
+    [Migration("20260616084547_AgregarTipoBolsa")]
+    partial class AgregarTipoBolsa
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -143,9 +146,6 @@ namespace Panaderia.Models.Migrations
                         .HasColumnType("integer");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("Anulado")
-                        .HasColumnType("boolean");
 
                     b.Property<int>("Estado")
                         .HasColumnType("integer");
