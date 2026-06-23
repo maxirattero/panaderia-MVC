@@ -11,18 +11,20 @@ namespace Panaderia.MVC.Controllers
         private readonly ICategoriaService _categoriaService;
         private readonly IFormatoService _formatoService;
         private readonly ITamanoService _tamanoService;
-
+        private readonly IRecetaService _recetaService;
 
         public ProductoController(
             IProductoService productoService,
             ICategoriaService categoriaService,
             IFormatoService formatoService,
-            ITamanoService tamanoService)
+            ITamanoService tamanoService,
+            IRecetaService recetaService)
         {
             _productoService = productoService;
             _categoriaService = categoriaService;
             _formatoService = formatoService;
             _tamanoService = tamanoService;
+            _recetaService = recetaService;
         }
 
         private async Task CargarDropdowns(Producto? producto = null)
@@ -59,6 +61,7 @@ namespace Panaderia.MVC.Controllers
         public async Task<IActionResult> Create()
         {
             await CargarDropdowns();
+            ViewBag.CostoUnidad = 0m;
             return View();
         }
 
@@ -74,6 +77,7 @@ namespace Panaderia.MVC.Controllers
                 return RedirectToAction(nameof(Index));
             }
             await CargarDropdowns(producto);
+            ViewBag.CostoUnidad = 0m;
             return View(producto);
         }
 
@@ -91,6 +95,8 @@ namespace Panaderia.MVC.Controllers
                 return NotFound();
             }
             await CargarDropdowns(producto);
+            var receta = await _recetaService.GetByProductoIdAsync(producto.Id);
+            ViewBag.CostoUnidad = receta?.CostoPorUnidad ?? 0m;
             return View(producto);
         }
 
@@ -110,6 +116,8 @@ namespace Panaderia.MVC.Controllers
                 return RedirectToAction(nameof(Index));
             }
             await CargarDropdowns(producto);
+            var recetaEdit = await _recetaService.GetByProductoIdAsync(producto.Id);
+            ViewBag.CostoUnidad = recetaEdit?.CostoPorUnidad ?? 0m;
             return View(producto);
         }
 

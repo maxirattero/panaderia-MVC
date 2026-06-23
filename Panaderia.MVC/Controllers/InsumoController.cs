@@ -56,6 +56,11 @@ public class InsumoController : Controller
     public async Task<IActionResult> Edit(int id, Insumo insumo)
     {
         if (id != insumo.Id) return NotFound();
+
+        foreach (var key in ModelState.Keys
+            .Where(k => k.StartsWith("UnidadesCompra[") || k.StartsWith("Proveedor")).ToList())
+            ModelState.Remove(key);
+
         if (!ModelState.IsValid)
         {
             await CargarDropdowns();

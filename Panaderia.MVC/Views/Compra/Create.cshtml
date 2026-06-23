@@ -1,0 +1,212 @@
+@model Panaderia.MVC.Models.CompraViewModel
+@using Panaderia.Models.Entities
+
+@{
+    ViewData["Title"] = "Registrar compra";
+    var insumos = (List<Insumo>)ViewBag.Insumos;
+}
+
+<div class="container-fluid p-4 p-md-5" style="max-width: 960px;">
+    <div class="mb-4">
+        <h1 class="display-6 fw-bold titulo-pagina mb-1">Registrar compra</h1>
+        <p class="text-muted">Registrá una nueva compra a proveedor.</p>
+    </div>
+
+    <form asp-action="Create" method="post">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+        <div class="card card-custom p-4 mb-4">
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <label asp-for="IdProveedor" class="form-label small fw-bold text-muted">Proveedor</label>
+                    <select asp-for="IdProveedor" asp-items="ViewBag.Proveedores" class="form-select" required>
+                        <option value="">— Seleccioná un proveedor —</option>
+                    </select>
+                    <span asp-validation-for="IdProveedor" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Fecha" class="form-label small fw-bold text-muted">Fecha</label>
+                    <input asp-for="Fecha" type="date" class="form-control" required />
+                    <span asp-validation-for="Fecha" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="NumeroFactura" class="form-label small fw-bold text-muted">Nº Factura</label>
+                    <input asp-for="NumeroFactura" type="text" class="form-control" placeholder="Opcional" />
+                </div>
+                <div class="col-12">
+                    <label asp-for="Notas" class="form-label small fw-bold text-muted">Notas</label>
+                    <textarea asp-for="Notas" class="form-control" rows="2"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <div class="card card-custom p-4 mb-4">
+            <h6 class="fw-semibold mb-3">Ítems de la compra</h6>
+            <div class="table-responsive mb-2">
+                <table class="table table-sm align-middle mb-0">
+                    <thead style="background-color: #cebaac; color: #281714;">
+                        <tr>
+                            <th style="min-width:180px;">Insumo</th>
+                            <th style="min-width:150px;">Unidad de compra</th>
+                            <th style="width:110px;">Cantidad</th>
+                            <th style="width:130px;">Precio unitario</th>
+                            <th style="width:110px;">Subtotal</th>
+                            <th style="width:50px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="detallesBody"></tbody>
+                </table>
+            </div>
+            <button type="button" id="btnAgregarItem"
+                    class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 mb-3">
+                <span class="material-symbols-outlined" style="font-size:1rem">add</span>
+                Agregar ítem
+            </button>
+            <div class="d-flex justify-content-end">
+                <span class="fw-bold fs-5">Total: <span id="totalGeneral">$ 0,00</span></span>
+            </div>
+        </div>
+
+        <div class="d-flex flex-column flex-md-row justify-content-end gap-3 pt-2 border-top">
+            <button type="submit" class="btn btn-mv-primary d-flex align-items-center justify-content-center gap-2">
+                <span class="material-symbols-outlined">save</span>Registrar compra
+            </button>
+            <a asp-action="Index" class="btn btn-mv-secondary">Cancelar</a>
+        </div>
+    </form>
+</div>
+
+<template id="detalleTemplate">
+    <tr>
+        <td>
+            <select name="__INSUMO__" class="form-select form-select-sm sel-insumo">
+                <option value="">— Insumo —</option>
+                @foreach (var ins in insumos)
+                {
+                    <option value="@ins.Id">@ins.Nombre</option>
+                }
+            </select>
+        </td>
+        <td>
+            <select name="__UNIDAD__" class="form-select form-select-sm sel-unidad">
+                <option value="">— Unidad —</option>
+            </select>
+        </td>
+        <td>
+            <input type="number" name="__CANTIDAD__" class="form-control form-control-sm inp-cantidad"
+                   lang="en" step="0.001" min="0.001" value="1" />
+        </td>
+        <td>
+            <input type="number" name="__PRECIO__" class="form-control form-control-sm inp-precio"
+                   lang="en" step="0.01" min="0" value="0" />
+        </td>
+        <td>
+            <span class="span-subtotal" data-value="0">0,00</span>
+        </td>
+        <td>
+            <button type="button" class="btn btn-sm btn-outline-danger btn-quitar-item" title="Eliminar">✕</button>
+        </td>
+    </tr>
+</template>
+
+@section Scripts {
+<script>
+(function () {
+    const insumosData = @Html.Raw(Json.Serialize(
+        insumos.Select(i => new {
+            id = i.Id,
+            unidades = i.UnidadesCompra.Select(u => new { id = u.Id, nombre = u.Nombre, esPorDefecto = u.EsPorDefecto })
+        })
+    ));
+
+    const tbody      = document.getElementById('detallesBody');
+    const tmpl       = document.getElementById('detalleTemplate');
+    const btnAgregar = document.getElementById('btnAgregarItem');
+    const totalEl    = document.getElementById('totalGeneral');
+    const cultura    = 'es-AR';
+
+    function formatMoneda(val) {
+        return val.toLocaleString(cultura, { style: 'currency', currency: 'ARS', minimumFractionDigits: 2 });
+    }
+
+    function reindexar() {
+        tbody.querySelectorAll('tr').forEach((tr, i) => {
+            tr.querySelectorAll('[name]').forEach(el => {
+                el.name = el.name.replace(/Detalles\[\d+\]/, `Detalles[${i}]`);
+            });
+        });
+    }
+
+    function actualizarSubtotal(tr) {
+        const cantidad = parseFloat(tr.querySelector('.inp-cantidad').value) || 0;
+        const precio   = parseFloat(tr.querySelector('.inp-precio').value)   || 0;
+        const sub      = cantidad * precio;
+        const span     = tr.querySelector('.span-subtotal');
+        span.dataset.value = sub;
+        span.textContent   = sub.toLocaleString(cultura, { minimumFractionDigits: 2 });
+        actualizarTotal();
+    }
+
+    function actualizarTotal() {
+        let total = 0;
+        tbody.querySelectorAll('.span-subtotal').forEach(el => {
+            total += parseFloat(el.dataset.value) || 0;
+        });
+        totalEl.textContent = formatMoneda(total);
+    }
+
+    function poblarUnidades(selUnidad, idInsumo) {
+        const data = insumosData.find(i => i.id === parseInt(idInsumo));
+        selUnidad.innerHTML = '<option value="">— Unidad —</option>';
+        if (!data) return;
+        data.unidades.forEach(u => {
+            const opt = document.createElement('option');
+            opt.value       = u.id;
+            opt.textContent = u.nombre;
+            if (u.esPorDefecto) opt.selected = true;
+            selUnidad.appendChild(opt);
+        });
+    }
+
+    function bindFila(tr) {
+        const selInsumo   = tr.querySelector('.sel-insumo');
+        const selUnidad   = tr.querySelector('.sel-unidad');
+        const inpCantidad = tr.querySelector('.inp-cantidad');
+        const inpPrecio   = tr.querySelector('.inp-precio');
+
+        selInsumo.addEventListener('change', () => {
+            poblarUnidades(selUnidad, selInsumo.value);
+            actualizarSubtotal(tr);
+        });
+        selUnidad.addEventListener('change',  () => actualizarSubtotal(tr));
+        inpCantidad.addEventListener('input', () => actualizarSubtotal(tr));
+        inpPrecio.addEventListener('input',   () => actualizarSubtotal(tr));
+
+        tr.querySelector('.btn-quitar-item').addEventListener('click', () => {
+            tr.remove();
+            reindexar();
+            actualizarTotal();
+        });
+    }
+
+    function agregarFila() {
+        const frag = tmpl.content.cloneNode(true);
+        const tr   = frag.querySelector('tr');
+        const n    = tbody.querySelectorAll('tr').length;
+        tr.querySelectorAll('[name]').forEach(el => {
+            el.name = el.name
+                .replace('__INSUMO__',   `Detalles[${n}].IdInsumo`)
+                .replace('__UNIDAD__',   `Detalles[${n}].IdUnidadCompra`)
+                .replace('__CANTIDAD__', `Detalles[${n}].Cantidad`)
+                .replace('__PRECIO__',   `Detalles[${n}].PrecioUnitario`);
+        });
+        bindFila(tr);
+        tbody.appendChild(frag);
+    }
+
+    btnAgregar.addEventListener('click', agregarFila);
+    agregarFila();
+})();
+</script>
+}

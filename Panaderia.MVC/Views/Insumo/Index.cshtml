@@ -33,6 +33,7 @@
                         <th>Costo/Unidad</th>
                         <th>Proveedor</th>
                         <th>Estado</th>
+                        <th>Stock actual</th>
                         <th class="text-end">Acciones</th>
                     </tr>
                 </thead>
@@ -40,7 +41,7 @@
                     @if (!Model.Any())
                     {
                         <tr>
-                            <td colspan="8" class="text-center text-muted py-4">No hay insumos registrados.</td>
+                            <td colspan="9" class="text-center text-muted py-4">No hay insumos registrados.</td>
                         </tr>
                     }
                     else
@@ -75,6 +76,24 @@
                                             <span class="dot" style="background-color: var(--mv-error);"></span>
                                             Inactivo
                                         </span>
+                                    }
+                                </td>
+                                <td>
+                                    @{
+                                        var stockStr = insumo.StockActual % 1 == 0
+                                            ? insumo.StockActual.ToString("0")
+                                            : insumo.StockActual.ToString("0.###");
+                                        var stockLabel = $"{stockStr} {sufijo}";
+                                        var esBajoStock = insumo.StockMinimo.HasValue
+                                            && insumo.StockActual <= insumo.StockMinimo.Value;
+                                    }
+                                    @if (esBajoStock)
+                                    {
+                                        <span class="badge bg-warning text-dark">@stockLabel</span>
+                                    }
+                                    else
+                                    {
+                                        @stockLabel
                                     }
                                 </td>
                                 <td class="text-end">

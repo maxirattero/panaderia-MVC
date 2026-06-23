@@ -36,6 +36,11 @@
         <span class="material-symbols-outlined">inventory_2</span>
         Insumos
     </a>
+    <a class="nav-link-custom @(ViewContext.RouteData.Values["controller"]?.ToString() == "Compra" ? "active" : "")"
+       asp-controller="Compra" asp-action="Index">
+        <span class="material-symbols-outlined">receipt_long</span>
+        Compras
+    </a>
     <a class="nav-link-custom @(ViewContext.RouteData.Values["controller"]?.ToString() == "Configuracion" ? "active" : "")"
        asp-controller="Configuracion" asp-action="Index">
         <span class="material-symbols-outlined">settings</span>

@@ -1,0 +1,354 @@
+@model Panaderia.Models.Entities.Receta
+@using Panaderia.Models.Entities
+@using Panaderia.Models.Enums
+@using System.Globalization
+@{
+    ViewData["Title"] = "Receta";
+    var insumosLista = (IEnumerable<Insumo>)ViewBag.InsumosLista;
+}
+
+<div class="container-fluid p-4 p-md-5">
+    <div class="card card-custom overflow-hidden" style="max-width: 820px;">
+
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h2 class="titulo-pagina mb-0">
+                <span class="material-symbols-outlined me-2">menu_book</span>
+                Receta: @ViewBag.NombreProducto
+            </h2>
+            @if (Model.Id > 0)
+            {
+                <button type="button"
+                        class="btn btn-outline-danger btn-sm d-flex align-items-center gap-1"
+                        data-bs-toggle="modal" data-bs-target="#modalEliminarReceta">
+                    <span class="material-symbols-outlined" style="font-size:1.1rem">delete</span>
+                    Eliminar receta
+                </button>
+            }
+        </div>
+
+        <div class="card-body p-4">
+            <form asp-controller="Receta" asp-action="Editar"
+                  asp-route-idProducto="@Model.IdProducto" method="post">
+                @Html.AntiForgeryToken()
+                <input asp-for="Id" type="hidden" />
+                <input asp-for="IdProducto" type="hidden" />
+
+                <div class="row g-3 mb-2">
+                    <div class="col-sm-3">
+                        <label asp-for="TamanioLote" class="form-label fw-semibold">
+                            Unidades
+                        </label>
+                        <input asp-for="TamanioLote" id="TamanioLote" type="number"
+                               class="form-control" min="1" />
+                        <span asp-validation-for="TamanioLote" class="text-danger small"></span>
+                    </div>
+                    <div class="col-sm-3">
+                        <label asp-for="PesoUnitario" class="form-label fw-semibold">
+                            Peso unitario (g)
+                        </label>
+                        <input asp-for="PesoUnitario" id="PesoUnitario" type="number"
+                               class="form-control" lang="en" step="0.1" min="0" />
+                        <span asp-validation-for="PesoUnitario" class="text-danger small"></span>
+                    </div>
+                    <div class="col-sm-4 d-flex flex-column justify-content-end">
+                        <div class="text-muted small mb-1">Peso Masa Total</div>
+                        <div class="fs-5 fw-semibold" id="pesoMasaTotal">0 g</div>
+                    </div>
+                </div>
+
+                <hr class="my-3" />
+
+                <h6 class="fw-semibold mb-2">Ingredientes</h6>
+                <div class="table-responsive mb-2">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead style="background-color: #cebaac; color: #281714;">
+                            <tr>
+                                <th style="min-width:180px;">Insumo</th>
+                                <th style="width:110px;">% / Cant.</th>
+                                <th style="width:90px;">Peso / Uds.</th>
+                                <th style="width:100px;" class="text-end">Costo</th>
+                                <th style="width:40px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="detallesBody">
+                            @{ int rowIndex = 0; }
+                            @foreach (var det in Model.Detalles)
+                            {
+                                <tr data-insumo-id="@det.IdInsumo"
+                                    data-porcentaje="@(det.PorcentajePanadero?.ToString(CultureInfo.InvariantCulture) ?? "")"
+                                    data-cantidad-fija="@(det.CantidadFija?.ToString(CultureInfo.InvariantCulture) ?? "")">
+                                    <td>
+                                        <select name="Detalles[@rowIndex].IdInsumo"
+                                                class="form-select form-select-sm insumo-select">
+                                            <option value="">— Insumo —</option>
+                                            @foreach (var ins in insumosLista)
+                                            {
+                                                <option value="@ins.Id"
+                                                        data-costo="@ins.CostoPorUnidadBase.ToString("F10", CultureInfo.InvariantCulture)"
+                                                        data-unidad="@ins.UnidadBase">
+                                                    @ins.Nombre
+                                                </option>
+                                            }
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <input type="number"
+                                               name="Detalles[@rowIndex].PorcentajePanadero"
+                                               class="form-control form-control-sm porcentaje-input"
+                                               lang="en" step="0.01" min="0" placeholder="%" />
+                                        <input type="number"
+                                               name="Detalles[@rowIndex].CantidadFija"
+                                               class="form-control form-control-sm cantidad-fija-input"
+                                               lang="en" step="1" min="0" placeholder="cant/ud"
+                                               style="display:none;" />
+                                    </td>
+                                    <td><span class="resultado-label text-muted small">—</span></td>
+                                    <td class="text-end costo-linea">$0.00</td>
+                                    <td>
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-danger btn-quitar"
+                                                title="Quitar">✕</button>
+                                    </td>
+                                </tr>
+                                rowIndex++;
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <button type="button" id="btnAgregar"
+                        class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 mb-4">
+                    <span class="material-symbols-outlined" style="font-size:1rem">add</span>
+                    Agregar ingrediente
+                </button>
+
+                <div class="d-flex gap-4 mb-4 p-3 rounded" style="background-color: #f5efe9;">
+                    <div>
+                        <div class="text-muted small">Costo del lote</div>
+                        <strong id="costoLote" class="fs-5">$0.00</strong>
+                    </div>
+                    <div>
+                        <div class="text-muted small">Costo por unidad</div>
+                        <strong id="costoUnidad" class="fs-5">$0.00</strong>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-mv-primary">Guardar</button>
+                    <a asp-controller="Producto" asp-action="Index"
+                       class="btn btn-mv-secondary">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<template id="filaTemplate">
+    <tr>
+        <td>
+            <select name="__INSUMO__" class="form-select form-select-sm insumo-select">
+                <option value="">— Insumo —</option>
+                @foreach (var ins in insumosLista)
+                {
+                    <option value="@ins.Id"
+                            data-costo="@ins.CostoPorUnidadBase.ToString("F10", CultureInfo.InvariantCulture)"
+                            data-unidad="@ins.UnidadBase">
+                        @ins.Nombre
+                    </option>
+                }
+            </select>
+        </td>
+        <td>
+            <input type="number" name="__PCT__"
+                   class="form-control form-control-sm porcentaje-input"
+                   lang="en" step="0.01" min="0" placeholder="%" />
+            <input type="number" name="__FIJA__"
+                   class="form-control form-control-sm cantidad-fija-input"
+                   lang="en" step="1" min="0" placeholder="cant/ud"
+                   style="display:none;" />
+        </td>
+        <td><span class="resultado-label text-muted small">—</span></td>
+        <td class="text-end costo-linea">$0.00</td>
+        <td>
+            <button type="button" class="btn btn-sm btn-outline-danger btn-quitar"
+                    title="Quitar">✕</button>
+        </td>
+    </tr>
+</template>
+
+@if (Model.Id > 0)
+{
+    <div class="modal fade" id="modalEliminarReceta" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Eliminar receta</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>¿Confirmás que querés eliminar la receta de
+                       <strong>@ViewBag.NombreProducto</strong>?</p>
+                    <p class="text-muted small mb-0">Esta acción no se puede deshacer.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                            data-bs-dismiss="modal">Cancelar</button>
+                    <form asp-controller="Receta" asp-action="Delete"
+                          method="post" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@Model.Id" />
+                        <button type="submit" class="btn btn-danger">Eliminar</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+<script>
+(function () {
+    const tbody         = document.getElementById('detallesBody');
+    const tmpl          = document.getElementById('filaTemplate');
+    const btnAgregar    = document.getElementById('btnAgregar');
+    const costoLoteEl   = document.getElementById('costoLote');
+    const costoUnidEl   = document.getElementById('costoUnidad');
+    const pesoMasaEl    = document.getElementById('pesoMasaTotal');
+    const loteInput     = document.getElementById('TamanioLote');
+    const pesoUnitInput = document.getElementById('PesoUnitario');
+
+    function getPesoMasa() {
+        const lote = parseFloat(loteInput.value)    || 0;
+        const peso = parseFloat(pesoUnitInput.value) || 0;
+        return lote * peso;
+    }
+
+    function getSumaPct() {
+        let suma = 0;
+        tbody.querySelectorAll('tr').forEach(tr => {
+            const pct = tr.querySelector('.porcentaje-input');
+            if (!pct.disabled) suma += parseFloat(pct.value) || 0;
+        });
+        return suma;
+    }
+
+    function adaptarFila(tr, unidad) {
+        const esPeso    = (unidad === 'Gramos' || unidad === 'Mililitros');
+        const pctInput  = tr.querySelector('.porcentaje-input');
+        const fijaInput = tr.querySelector('.cantidad-fija-input');
+        pctInput.style.display  = esPeso ? '' : 'none';
+        pctInput.disabled       = !esPeso;
+        fijaInput.style.display = esPeso ? 'none' : '';
+        fijaInput.disabled      = esPeso;
+    }
+
+    function actualizarFila(tr) {
+        const sel    = tr.querySelector('.insumo-select');
+        const opt    = sel.options[sel.selectedIndex];
+        const costo  = parseFloat(opt?.dataset?.costo ?? '0') || 0;
+        const unidad = opt?.dataset?.unidad ?? '';
+        const esPeso = (unidad === 'Gramos' || unidad === 'Mililitros');
+        const lote   = parseFloat(loteInput.value) || 1;
+
+        let costoLinea = 0;
+        let resultado  = '—';
+
+        if (esPeso) {
+            const pesoMasa = getPesoMasa();
+            const sumaPct  = getSumaPct();
+            const pct      = parseFloat(tr.querySelector('.porcentaje-input').value) || 0;
+            const gramos   = sumaPct > 0 ? (pesoMasa / sumaPct * pct) : 0;
+            const sufijo   = unidad === 'Mililitros' ? 'ml' : 'g';
+            costoLinea     = costo * gramos;
+            resultado      = gramos.toFixed(1) + ' ' + sufijo;
+        } else {
+            const cantFija = parseFloat(tr.querySelector('.cantidad-fija-input').value) || 0;
+            costoLinea     = costo * cantFija * lote;
+            resultado      = (cantFija * lote).toFixed(0) + ' u';
+        }
+
+        tr.querySelector('.resultado-label').textContent = resultado;
+        tr.querySelector('.costo-linea').textContent     = '$' + costoLinea.toFixed(2);
+    }
+
+    function recalcularTodo() {
+        const pesoMasa = getPesoMasa();
+        const lote     = parseFloat(loteInput.value) || 1;
+
+        pesoMasaEl.textContent = pesoMasa.toFixed(1) + ' g';
+
+        tbody.querySelectorAll('tr').forEach(tr => actualizarFila(tr));
+
+        let totalCosto = 0;
+        tbody.querySelectorAll('tr').forEach(tr => {
+            totalCosto += parseFloat(
+                tr.querySelector('.costo-linea').textContent.replace('$', '')
+            ) || 0;
+        });
+
+        costoLoteEl.textContent = '$' + totalCosto.toFixed(2);
+        costoUnidEl.textContent = '$' + (totalCosto / lote).toFixed(2);
+    }
+
+    function reindexar() {
+        tbody.querySelectorAll('tr').forEach((tr, i) => {
+            tr.querySelector('.insumo-select').name       = `Detalles[${i}].IdInsumo`;
+            tr.querySelector('.porcentaje-input').name    = `Detalles[${i}].PorcentajePanadero`;
+            tr.querySelector('.cantidad-fija-input').name = `Detalles[${i}].CantidadFija`;
+        });
+    }
+
+    function bindFila(tr) {
+        tr.querySelector('.insumo-select').addEventListener('change', () => {
+            const opt    = tr.querySelector('.insumo-select').options[
+                           tr.querySelector('.insumo-select').selectedIndex];
+            const unidad = opt?.dataset?.unidad ?? '';
+            adaptarFila(tr, unidad);
+            tr.querySelector('.porcentaje-input').value    = '';
+            tr.querySelector('.cantidad-fija-input').value = '';
+            recalcularTodo();
+        });
+        tr.querySelector('.porcentaje-input')
+          .addEventListener('input', recalcularTodo);
+        tr.querySelector('.cantidad-fija-input')
+          .addEventListener('input', recalcularTodo);
+        tr.querySelector('.btn-quitar').addEventListener('click', () => {
+            tr.remove();
+            reindexar();
+            recalcularTodo();
+        });
+    }
+
+    function agregarFila() {
+        const frag = tmpl.content.cloneNode(true);
+        const tr   = frag.querySelector('tr');
+        bindFila(tr);
+        tbody.appendChild(frag);
+        reindexar();
+    }
+
+    tbody.querySelectorAll('tr').forEach(tr => {
+        const id   = tr.dataset.insumoId;
+        const pct  = tr.dataset.porcentaje;
+        const fija = tr.dataset.cantidadFija;
+        if (id) {
+            const sel    = tr.querySelector('.insumo-select');
+            sel.value    = id;
+            const opt    = sel.options[sel.selectedIndex];
+            const unidad = opt?.dataset?.unidad ?? '';
+            adaptarFila(tr, unidad);
+            if (pct)  tr.querySelector('.porcentaje-input').value    = pct;
+            if (fija) tr.querySelector('.cantidad-fija-input').value = fija;
+        }
+        bindFila(tr);
+    });
+
+    btnAgregar.addEventListener('click', agregarFila);
+    loteInput.addEventListener('input',     recalcularTodo);
+    pesoUnitInput.addEventListener('input', recalcularTodo);
+
+    reindexar();
+    recalcularTodo();
+})();
+</script>
+}

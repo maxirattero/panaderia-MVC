@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Panaderia.Models.Data;
@@ -11,9 +12,11 @@ using Panaderia.Models.Data;
 namespace Panaderia.Models.Migrations
 {
     [DbContext(typeof(PanaderiaContext))]
-    partial class PanaderiaContextModelSnapshot : ModelSnapshot
+    [Migration("20260623105840_RenombrarPesoHarinaAPesoUnitario")]
+    partial class RenombrarPesoHarinaAPesoUnitario
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -85,73 +88,6 @@ namespace Panaderia.Models.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Clientes");
-                });
-
-            modelBuilder.Entity("Panaderia.Models.Entities.CompraDetalle", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<decimal>("Cantidad")
-                        .HasColumnType("numeric");
-
-                    b.Property<int>("IdCompra")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("IdInsumo")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("IdUnidadCompra")
-                        .HasColumnType("integer");
-
-                    b.Property<decimal>("PrecioUnitario")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal>("Subtotal")
-                        .HasColumnType("numeric");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("IdCompra");
-
-                    b.HasIndex("IdInsumo");
-
-                    b.HasIndex("IdUnidadCompra");
-
-                    b.ToTable("ComprasDetalle");
-                });
-
-            modelBuilder.Entity("Panaderia.Models.Entities.CompraProveedor", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("Fecha")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("IdProveedor")
-                        .HasColumnType("integer");
-
-                    b.Property<decimal>("MontoTotal")
-                        .HasColumnType("numeric");
-
-                    b.Property<string>("Notas")
-                        .HasColumnType("text");
-
-                    b.Property<string>("NumeroFactura")
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("IdProveedor");
-
-                    b.ToTable("ComprasProveedor");
                 });
 
             modelBuilder.Entity("Panaderia.Models.Entities.DetallePedido", b =>
@@ -234,12 +170,6 @@ namespace Panaderia.Models.Migrations
                         .HasColumnType("text");
 
                     b.Property<decimal>("PrecioCompra")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal>("StockActual")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("StockMinimo")
                         .HasColumnType("numeric");
 
                     b.Property<int>("UnidadBase")
@@ -506,72 +436,6 @@ namespace Panaderia.Models.Migrations
                     b.ToTable("Tamanos");
                 });
 
-            modelBuilder.Entity("Panaderia.Models.Entities.UnidadCompra", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("EsPorDefecto")
-                        .HasColumnType("boolean");
-
-                    b.Property<decimal>("FactorConversion")
-                        .HasColumnType("numeric");
-
-                    b.Property<int>("IdInsumo")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Nombre")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("IdInsumo");
-
-                    b.ToTable("UnidadesCompra");
-                });
-
-            modelBuilder.Entity("Panaderia.Models.Entities.CompraDetalle", b =>
-                {
-                    b.HasOne("Panaderia.Models.Entities.CompraProveedor", "Compra")
-                        .WithMany("Detalles")
-                        .HasForeignKey("IdCompra")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Panaderia.Models.Entities.Insumo", "Insumo")
-                        .WithMany()
-                        .HasForeignKey("IdInsumo")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Panaderia.Models.Entities.UnidadCompra", "UnidadCompra")
-                        .WithMany()
-                        .HasForeignKey("IdUnidadCompra")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Compra");
-
-                    b.Navigation("Insumo");
-
-                    b.Navigation("UnidadCompra");
-                });
-
-            modelBuilder.Entity("Panaderia.Models.Entities.CompraProveedor", b =>
-                {
-                    b.HasOne("Panaderia.Models.Entities.Proveedor", "Proveedor")
-                        .WithMany()
-                        .HasForeignKey("IdProveedor")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Proveedor");
-                });
-
             modelBuilder.Entity("Panaderia.Models.Entities.DetallePedido", b =>
                 {
                     b.HasOne("Panaderia.Models.Entities.Pedido", "Pedido")
@@ -678,27 +542,6 @@ namespace Panaderia.Models.Migrations
                     b.Navigation("Pedido");
 
                     b.Navigation("Proveedor");
-                });
-
-            modelBuilder.Entity("Panaderia.Models.Entities.UnidadCompra", b =>
-                {
-                    b.HasOne("Panaderia.Models.Entities.Insumo", "Insumo")
-                        .WithMany("UnidadesCompra")
-                        .HasForeignKey("IdInsumo")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Insumo");
-                });
-
-            modelBuilder.Entity("Panaderia.Models.Entities.CompraProveedor", b =>
-                {
-                    b.Navigation("Detalles");
-                });
-
-            modelBuilder.Entity("Panaderia.Models.Entities.Insumo", b =>
-                {
-                    b.Navigation("UnidadesCompra");
                 });
 
             modelBuilder.Entity("Panaderia.Models.Entities.Pedido", b =>

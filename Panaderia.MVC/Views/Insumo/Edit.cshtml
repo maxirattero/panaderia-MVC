@@ -45,6 +45,12 @@
                         <option value="">— Sin proveedor —</option>
                     </select>
                 </div>
+                <div class="col-md-6">
+                    <label asp-for="StockMinimo" class="form-label small fw-bold text-muted">Stock mínimo</label>
+                    <input asp-for="StockMinimo" type="number" lang="en" step="0.001" min="0" class="form-control" />
+                    <div class="text-muted small mt-1">Se usará para alertas visuales de stock bajo.</div>
+                    <span asp-validation-for="StockMinimo" class="text-danger"></span>
+                </div>
                 <div class="col-12">
                     <label asp-for="Notas" class="form-label small fw-bold text-muted">Notas</label>
                     <textarea asp-for="Notas" class="form-control" rows="2"></textarea>
@@ -57,7 +63,65 @@
                 </div>
             </div>
 
-            <div class="d-flex flex-column flex-md-row justify-content-end gap-3 mt-5 pt-4 border-top">
+            <hr class="my-4" />
+
+            <h6 class="fw-semibold mb-2">Unidades de compra</h6>
+            <div class="table-responsive mb-2">
+                <table class="table table-sm align-middle mb-0">
+                    <thead style="background-color: #cebaac; color: #281714;">
+                        <tr>
+                            <th style="min-width:150px;">Nombre</th>
+                            <th style="width:160px;">Factor de conversión</th>
+                            <th style="width:90px;" class="text-center">Por defecto</th>
+                            <th style="width:50px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="unidadesBody">
+                        @{ int uIdx = 0; }
+                        @foreach (var u in Model.UnidadesCompra)
+                        {
+                            <tr>
+                                <input type="hidden" name="UnidadesCompra[@uIdx].Id" value="@u.Id" />
+                                <input type="hidden" name="UnidadesCompra[@uIdx].IdInsumo" value="@u.IdInsumo" />
+                                <td>
+                                    <input type="text"
+                                           name="UnidadesCompra[@uIdx].Nombre"
+                                           value="@u.Nombre"
+                                           class="form-control form-control-sm"
+                                           placeholder="ej. kg, bolsa 25kg" />
+                                </td>
+                                <td>
+                                    <input type="number"
+                                           name="UnidadesCompra[@uIdx].FactorConversion"
+                                           value="@u.FactorConversion.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                           class="form-control form-control-sm"
+                                           lang="en" step="0.001" min="0.001" />
+                                </td>
+                                <td class="text-center">
+                                    <input type="checkbox"
+                                           name="UnidadesCompra[@uIdx].EsPorDefecto"
+                                           value="true"
+                                           class="form-check-input"
+                                           @(u.EsPorDefecto ? "checked" : "") />
+                                </td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-outline-danger btn-quitar-unidad"
+                                            title="Eliminar">✕</button>
+                                </td>
+                            </tr>
+                            uIdx++;
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <button type="button" id="btnAgregarUnidad"
+                    class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 mb-4">
+                <span class="material-symbols-outlined" style="font-size:1rem">add</span>
+                Agregar unidad
+            </button>
+
+            <div class="d-flex flex-column flex-md-row justify-content-end gap-3 mt-2 pt-4 border-top">
                 <button type="submit" class="btn btn-mv-primary d-flex align-items-center justify-content-center gap-2">
                     <span class="material-symbols-outlined">save</span>Guardar cambios
                 </button>
@@ -66,3 +130,71 @@
         </form>
     </div>
 </div>
+
+<template id="unidadTemplate">
+    <tr>
+        <input type="hidden" name="__ID__" value="0" />
+        <input type="hidden" name="__IDINSUMO__" value="@Model.Id" />
+        <td>
+            <input type="text" name="__NOMBRE__"
+                   class="form-control form-control-sm"
+                   placeholder="ej. kg, bolsa 25kg" />
+        </td>
+        <td>
+            <input type="number" name="__FACTOR__"
+                   class="form-control form-control-sm"
+                   lang="en" step="0.001" min="0.001" />
+        </td>
+        <td class="text-center">
+            <input type="checkbox" name="__DEFAULT__" value="true" class="form-check-input" />
+        </td>
+        <td>
+            <button type="button" class="btn btn-sm btn-outline-danger btn-quitar-unidad"
+                    title="Eliminar">✕</button>
+        </td>
+    </tr>
+</template>
+
+@section Scripts {
+<script>
+(function () {
+    const tbody      = document.getElementById('unidadesBody');
+    const tmpl       = document.getElementById('unidadTemplate');
+    const btnAgregar = document.getElementById('btnAgregarUnidad');
+
+    function reindexar() {
+        tbody.querySelectorAll('tr').forEach((tr, i) => {
+            tr.querySelectorAll('input').forEach(inp => {
+                inp.name = inp.name.replace(/UnidadesCompra\[\d+\]/, `UnidadesCompra[${i}]`);
+            });
+        });
+    }
+
+    function bindFila(tr) {
+        tr.querySelector('.btn-quitar-unidad').addEventListener('click', () => {
+            tr.remove();
+            reindexar();
+        });
+    }
+
+    function agregarFila() {
+        const frag = tmpl.content.cloneNode(true);
+        const tr   = frag.querySelector('tr');
+        const n    = tbody.querySelectorAll('tr').length;
+        tr.querySelectorAll('input').forEach(inp => {
+            inp.name = inp.name
+                .replace('__ID__',       `UnidadesCompra[${n}].Id`)
+                .replace('__IDINSUMO__', `UnidadesCompra[${n}].IdInsumo`)
+                .replace('__NOMBRE__',   `UnidadesCompra[${n}].Nombre`)
+                .replace('__FACTOR__',   `UnidadesCompra[${n}].FactorConversion`)
+                .replace('__DEFAULT__',  `UnidadesCompra[${n}].EsPorDefecto`);
+        });
+        bindFila(tr);
+        tbody.appendChild(frag);
+    }
+
+    tbody.querySelectorAll('tr').forEach(tr => bindFila(tr));
+    btnAgregar.addEventListener('click', agregarFila);
+})();
+</script>
+}

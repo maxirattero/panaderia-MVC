@@ -105,6 +105,12 @@
                                     <a asp-action="Edit" asp-route-id="@producto.Id" class="btn btn-sm btn-outline-success" title="Editar">
                                         <span class="material-symbols-outlined">edit</span>
                                     </a>
+                                    <a asp-controller="Receta" asp-action="Editar"
+                                       asp-route-idProducto="@producto.Id"
+                                       class="btn btn-sm btn-outline-secondary"
+                                       title="Receta">
+                                        <span class="material-symbols-outlined">menu_book</span>
+                                    </a>
                                     <button type="button"
                                             class="btn btn-sm btn-outline-danger"
                                             title="Eliminar"

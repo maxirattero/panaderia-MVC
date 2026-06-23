@@ -20,6 +20,11 @@ namespace Panaderia.Models.Data
         public DbSet<DetallePedido> DetallesPedido { get; set; }
         public DbSet<ReporteCaja> ReportesCaja { get; set; }
         public DbSet<Insumo> Insumos { get; set; }
+        public DbSet<UnidadCompra> UnidadesCompra { get; set; }
+        public DbSet<CompraProveedor> ComprasProveedor { get; set; }
+        public DbSet<CompraDetalle> ComprasDetalle { get; set; }
+        public DbSet<Receta> Recetas { get; set; }
+        public DbSet<RecetaDetalle> RecetaDetalles { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -71,6 +76,57 @@ namespace Panaderia.Models.Data
                 .WithMany()
                 .HasForeignKey(i => i.IdProveedor)
                 .OnDelete(DeleteBehavior.SetNull);
+            // UnidadCompra -> Insumo (cascade)
+            modelBuilder.Entity<UnidadCompra>()
+                .HasOne(u => u.Insumo)
+                .WithMany(i => i.UnidadesCompra)
+                .HasForeignKey(u => u.IdInsumo)
+                .OnDelete(DeleteBehavior.Cascade);
+            // Receta -> Producto (índice único: un producto, una receta)
+            modelBuilder.Entity<Receta>()
+                .HasIndex(r => r.IdProducto)
+                .IsUnique();
+            modelBuilder.Entity<Receta>()
+                .HasOne(r => r.Producto)
+                .WithMany()
+                .HasForeignKey(r => r.IdProducto)
+                .OnDelete(DeleteBehavior.Restrict);
+            // RecetaDetalle -> Receta (cascade)
+            modelBuilder.Entity<RecetaDetalle>()
+                .HasOne(d => d.Receta)
+                .WithMany(r => r.Detalles)
+                .HasForeignKey(d => d.IdReceta)
+                .OnDelete(DeleteBehavior.Cascade);
+            // RecetaDetalle -> Insumo (restrict)
+            modelBuilder.Entity<RecetaDetalle>()
+                .HasOne(d => d.Insumo)
+                .WithMany()
+                .HasForeignKey(d => d.IdInsumo)
+                .OnDelete(DeleteBehavior.Restrict);
+            // CompraProveedor -> Proveedor (restrict)
+            modelBuilder.Entity<CompraProveedor>()
+                .HasOne(c => c.Proveedor)
+                .WithMany()
+                .HasForeignKey(c => c.IdProveedor)
+                .OnDelete(DeleteBehavior.Restrict);
+            // CompraDetalle -> CompraProveedor (cascade)
+            modelBuilder.Entity<CompraDetalle>()
+                .HasOne(d => d.Compra)
+                .WithMany(c => c.Detalles)
+                .HasForeignKey(d => d.IdCompra)
+                .OnDelete(DeleteBehavior.Cascade);
+            // CompraDetalle -> Insumo (restrict)
+            modelBuilder.Entity<CompraDetalle>()
+                .HasOne(d => d.Insumo)
+                .WithMany()
+                .HasForeignKey(d => d.IdInsumo)
+                .OnDelete(DeleteBehavior.Restrict);
+            // CompraDetalle -> UnidadCompra (restrict)
+            modelBuilder.Entity<CompraDetalle>()
+                .HasOne(d => d.UnidadCompra)
+                .WithMany()
+                .HasForeignKey(d => d.IdUnidadCompra)
+                .OnDelete(DeleteBehavior.Restrict);
             //filtro global consulta - soft delete
             modelBuilder.Entity<Pedido>().HasQueryFilter(p => !p.Anulado);
             modelBuilder.Entity<DetallePedido>().HasQueryFilter(d => !d.Pedido.Anulado);

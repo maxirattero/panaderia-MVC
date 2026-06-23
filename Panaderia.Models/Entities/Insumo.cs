@@ -30,6 +30,11 @@ public class Insumo
 
     public bool Activo { get; set; } = true;
 
+    [Range(0, double.MaxValue, ErrorMessage = "Debe ser mayor o igual a cero.")]
+    public decimal StockActual { get; set; } = 0;
+
+    public decimal? StockMinimo { get; set; }
+
     public DateTime FechaCreacion { get; set; }
 
     public DateTime? FechaModificacion { get; set; }
@@ -37,4 +42,6 @@ public class Insumo
     [NotMapped]
     public decimal CostoPorUnidadBase =>
         CantidadRendimiento > 0 ? PrecioCompra / CantidadRendimiento : 0m;
+
+    public List<UnidadCompra> UnidadesCompra { get; set; } = new();
 }

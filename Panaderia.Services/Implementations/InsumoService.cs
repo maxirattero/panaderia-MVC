@@ -18,6 +18,7 @@ public class InsumoService : IInsumoService
     {
         return await _context.Insumos
             .Include(i => i.Proveedor)
+            .Include(i => i.UnidadesCompra)
             .OrderBy(i => i.Nombre)
             .ToListAsync();
     }
@@ -26,6 +27,7 @@ public class InsumoService : IInsumoService
     {
         return await _context.Insumos
             .Include(i => i.Proveedor)
+            .Include(i => i.UnidadesCompra)
             .FirstOrDefaultAsync(i => i.Id == id);
     }
 
@@ -37,7 +39,9 @@ public class InsumoService : IInsumoService
 
     public async Task UpdateAsync(Insumo insumo)
     {
-        var existe = await _context.Insumos.FirstOrDefaultAsync(i => i.Id == insumo.Id);
+        var existe = await _context.Insumos
+            .Include(i => i.UnidadesCompra)
+            .FirstOrDefaultAsync(i => i.Id == insumo.Id);
         if (existe == null) return;
 
         existe.Nombre = insumo.Nombre;
@@ -47,7 +51,18 @@ public class InsumoService : IInsumoService
         existe.IdProveedor = insumo.IdProveedor;
         existe.Notas = insumo.Notas;
         existe.Activo = insumo.Activo;
+        existe.StockMinimo = insumo.StockMinimo;
         existe.FechaModificacion = DateTime.UtcNow;
+
+        _context.UnidadesCompra.RemoveRange(existe.UnidadesCompra);
+        existe.UnidadesCompra.Clear();
+        foreach (var u in insumo.UnidadesCompra ?? new())
+            existe.UnidadesCompra.Add(new UnidadCompra
+            {
+                Nombre           = u.Nombre,
+                FactorConversion = u.FactorConversion,
+                EsPorDefecto     = u.EsPorDefecto
+            });
 
         await _context.SaveChangesAsync();
     }

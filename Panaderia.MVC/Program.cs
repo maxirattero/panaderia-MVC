@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Panaderia.Models.Data;
@@ -21,6 +22,8 @@ builder.Services.AddScoped<IFormatoService, FormatoService>();
 builder.Services.AddScoped<ITamanoService, TamanoService>();
 builder.Services.AddScoped<IProductoService, ProductoService>();
 builder.Services.AddScoped<IInsumoService, InsumoService>();
+builder.Services.AddScoped<IRecetaService, RecetaService>();
+builder.Services.AddScoped<ICompraService, CompraService>();
 builder.Services.AddDataProtection()
     .SetApplicationName("PanaderiaMVC")
     .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "DataProtection-Keys")));
@@ -36,6 +39,16 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+var invariantCulture = CultureInfo.InvariantCulture;
+app.UseRequestLocalization(new RequestLocalizationOptions
+{
+    DefaultRequestCulture =
+        new Microsoft.AspNetCore.Localization.RequestCulture(invariantCulture),
+    SupportedCultures   = new[] { invariantCulture },
+    SupportedUICultures = new[] { invariantCulture }
+});
+
 app.UseRouting();
 
 app.UseAuthorization();
