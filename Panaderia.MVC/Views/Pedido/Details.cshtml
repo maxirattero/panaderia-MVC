@@ -6,7 +6,7 @@
 }
 
 <div class="mb-4">
-    <h2 class="font-literata fw-bold" style="color: var(--primary-brown);">Detalles del pedido</h2>
+    <h2 class="font-literata fw-bold titulo-pagina">Detalles del pedido</h2>
 </div>
 
 <div class="card card-custom p-4 mb-4">
@@ -28,9 +28,7 @@
                 var (badgeClass, badgeLabel) = Model.Estado switch
                 {
                     Panaderia.Models.Enums.EstadoPedido.Pendiente => ("status-badge status-pending", "Pendiente"),
-                    Panaderia.Models.Enums.EstadoPedido.EnProceso => ("status-badge status-active", "En proceso"),
-                    Panaderia.Models.Enums.EstadoPedido.Entregado => ("status-badge status-inactive", "Entregado"),
-                    Panaderia.Models.Enums.EstadoPedido.Cancelado => ("status-badge status-error", "Cancelado"),
+                    Panaderia.Models.Enums.EstadoPedido.Entregado => ("status-badge status-active", "Entregado"),
                     _ => ("status-badge", Model.Estado.ToString())
                 };
             }
@@ -42,25 +40,11 @@
         </div>
     </div>
 
-    <div class="row g-3 mb-4">
+    <div class="row g-3 mb-4 justify-content-end">
         <div class="col-md-4">
             <div class="p-3 rounded-3 bg-light">
                 <p class="small text-muted mb-1">Total</p>
                 <p class="fs-5 fw-bold mb-0">@Model.MontoTotal.ToString("C", new System.Globalization.CultureInfo("es-AR"))</p>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="p-3 rounded-3 bg-light">
-                <p class="small text-muted mb-1">Cobrado</p>
-                <p class="fs-5 fw-bold mb-0 text-success">@Model.MontoCobrado.ToString("C", new System.Globalization.CultureInfo("es-AR"))</p>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="p-3 rounded-3 bg-light">
-                <p class="small text-muted mb-1">Saldo pendiente</p>
-                <p class="fs-5 fw-bold mb-0 @(Model.EstaPagado ? "text-success" : "text-danger")">
-                    @Model.SaldoPendiente.ToString("C", new System.Globalization.CultureInfo("es-AR"))
-                </p>
             </div>
         </div>
     </div>
@@ -93,12 +77,14 @@
     </div>
 
     <div class="d-flex flex-column flex-md-row justify-content-end gap-3 mt-4 pt-4 border-top">
-        <a asp-action="Index" class="btn btn-mv-tertiary">Volver</a>
+        <a asp-action="Index" class="btn btn-mv-primary d-flex align-items-center justify-content-center gap-2">
+            <span class="material-symbols-outlined">arrow_back</span>Volver
+        </a>
 
         @if (!Model.EstaPagado)
         {
             <button type="button"
-                    class="btn btn-success d-flex align-items-center justify-content-center gap-2"
+                    class="btn btn-mv-primary d-flex align-items-center justify-content-center gap-2"
                     data-bs-toggle="modal"
                     data-bs-target="#cobrarModal"
                     data-id="@Model.Id"
@@ -115,7 +101,7 @@
         </a>
 
         <button type="button"
-                class="btn btn-outline-danger d-flex align-items-center justify-content-center gap-2"
+                class="btn btn-mv-primary d-flex align-items-center justify-content-center gap-2"
                 data-bs-toggle="modal"
                 data-bs-target="#deleteModal"
                 data-id="@Model.Id"

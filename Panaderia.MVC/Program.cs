@@ -20,6 +20,7 @@ builder.Services.AddScoped<ICategoriaService, CategoriaService>();
 builder.Services.AddScoped<IFormatoService, FormatoService>();
 builder.Services.AddScoped<ITamanoService, TamanoService>();
 builder.Services.AddScoped<IProductoService, ProductoService>();
+builder.Services.AddScoped<IInsumoService, InsumoService>();
 builder.Services.AddDataProtection()
     .SetApplicationName("PanaderiaMVC")
     .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "DataProtection-Keys")));

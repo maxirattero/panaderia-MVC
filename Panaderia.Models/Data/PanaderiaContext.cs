@@ -18,7 +18,8 @@ namespace Panaderia.Models.Data
         public DbSet<Cliente> Clientes { get; set; }
         public DbSet<Pedido> Pedidos { get; set; }
         public DbSet<DetallePedido> DetallesPedido { get; set; }
-        public DbSet<ReporteCaja> ReportesCaja { get; set; }    
+        public DbSet<ReporteCaja> ReportesCaja { get; set; }
+        public DbSet<Insumo> Insumos { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -64,8 +65,14 @@ namespace Panaderia.Models.Data
                 .HasOne(r => r.Proveedor)
                 .WithMany()
                 .HasForeignKey(r => r.IdProveedor);
+            // Insumo -> Proveedor (opcional)
+            modelBuilder.Entity<Insumo>()
+                .HasOne(i => i.Proveedor)
+                .WithMany()
+                .HasForeignKey(i => i.IdProveedor)
+                .OnDelete(DeleteBehavior.SetNull);
             //filtro global consulta - soft delete
-            modelBuilder.Entity<Pedido>().HasQueryFilter(p => !p.Anulado);            
+            modelBuilder.Entity<Pedido>().HasQueryFilter(p => !p.Anulado);
             modelBuilder.Entity<DetallePedido>().HasQueryFilter(d => !d.Pedido.Anulado);
         }
     }

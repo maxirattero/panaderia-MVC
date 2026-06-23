@@ -1,0 +1,66 @@
+@model Panaderia.Models.Entities.Insumo
+@using Panaderia.Models.Enums
+
+@{
+    ViewData["Title"] = "Nuevo Insumo";
+}
+
+<div style="max-width: 700px;">
+    <div class="mb-4">
+        <h1 class="display-6 fw-bold titulo-pagina mb-1">Nuevo Insumo</h1>
+        <p class="text-muted">Registrá un nuevo insumo o materia prima.</p>
+    </div>
+
+    <div class="card card-custom p-4 mb-4">
+        <form asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+            <div class="row g-4">
+                <div class="col-12">
+                    <label asp-for="Nombre" class="form-label small fw-bold text-muted">Nombre</label>
+                    <input asp-for="Nombre" type="text" class="form-control" />
+                    <span asp-validation-for="Nombre" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="UnidadBase" class="form-label small fw-bold text-muted">Unidad base</label>
+                    <select asp-for="UnidadBase" asp-items="Html.GetEnumSelectList<UnidadMedida>()" class="form-select"></select>
+                    <span asp-validation-for="UnidadBase" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="PrecioCompra" class="form-label small fw-bold text-muted">Precio de compra</label>
+                    <input asp-for="PrecioCompra" type="number" lang="en" step="0.01" min="0" class="form-control" />
+                    <span asp-validation-for="PrecioCompra" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="CantidadRendimiento" class="form-label small fw-bold text-muted">Cantidad rendimiento</label>
+                    <input asp-for="CantidadRendimiento" type="number" lang="en" step="0.001" min="0.001" class="form-control" />
+                    <span asp-validation-for="CantidadRendimiento" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="IdProveedor" class="form-label small fw-bold text-muted">Proveedor</label>
+                    <select asp-for="IdProveedor" asp-items="ViewBag.Proveedores" class="form-select">
+                        <option value="">— Sin proveedor —</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label asp-for="Notas" class="form-label small fw-bold text-muted">Notas</label>
+                    <textarea asp-for="Notas" class="form-control" rows="2"></textarea>
+                </div>
+                <div class="col-12">
+                    <div class="form-check">
+                        <input asp-for="Activo" type="checkbox" class="form-check-input" />
+                        <label asp-for="Activo" class="form-check-label">Activo</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex flex-column flex-md-row justify-content-end gap-3 mt-5 pt-4 border-top">
+                <button type="submit" class="btn btn-mv-primary d-flex align-items-center justify-content-center gap-2">
+                    <span class="material-symbols-outlined">save</span>Guardar
+                </button>
+                <a asp-action="Index" class="btn btn-mv-secondary">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>

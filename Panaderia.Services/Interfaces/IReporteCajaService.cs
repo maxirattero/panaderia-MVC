@@ -32,5 +32,8 @@ namespace Panaderia.Services.Interfaces
 
         //metodo de saldo actual de caja
         Task<decimal> GetSaldoAsync();
+
+        //obtener un reporte de caja por id
+        Task<ReporteCaja?> GetByIdAsync(int id);
     }
 }

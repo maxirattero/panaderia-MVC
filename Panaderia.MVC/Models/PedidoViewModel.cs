@@ -8,6 +8,7 @@ namespace Panaderia.MVC.Models
         public int IdCliente { get; set; }
         public EstadoPedido Estado { get; set; }
         public DateTime? FechaEntrega { get; set; }
+        public DateTime FechaCreacion { get; set; }
         public string? Notas { get; set; }
         public List<DetallePedidoViewModel> Detalles { get; set; } = new();
     }

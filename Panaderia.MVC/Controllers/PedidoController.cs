@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Panaderia.Models.DTOs;
 using Panaderia.Models.Entities;
+using Panaderia.Models.Enums;
 using Panaderia.MVC.Models;
 using Panaderia.Services.Interfaces;
 
@@ -22,9 +24,28 @@ namespace Panaderia.MVC.Controllers
             _productoService = productoService;
         }
 
+        public async Task<IActionResult> Produccion()
+        {
+            var (porProducto, porBolsa) = await _pedidoService.GetResumenProduccionAsync();
+            var vm = new ProduccionViewModel
+            {
+                PorProducto = porProducto,
+                PorBolsa = porBolsa
+            };
+            return View(vm);
+        }
+
+        public async Task<IActionResult> Imprimir(bool conDetalles = false)
+        {
+            var pedidos = await _pedidoService.GetByEstadoAsync(EstadoPedido.Pendiente);
+            ViewBag.ConDetalles = conDetalles;
+            return View(pedidos);
+        }
+
         public async Task<IActionResult> Index()
         {
-            var pedidos = await _pedidoService.GetAllAsync();
+            var pedidos = await _pedidoService.GetByEstadoAsync(EstadoPedido.Pendiente);
+            ViewBag.TotalVendidoSemana = await _pedidoService.GetTotalVendidoSemanaAsync();
             return View(pedidos);
         }
 
@@ -69,8 +90,11 @@ namespace Panaderia.MVC.Controllers
         [HttpGet]
         public async Task<IActionResult> Create()
         {
+            var hoy = DateTime.UtcNow.Date;
+            int dias = ((int)DayOfWeek.Saturday - (int)hoy.DayOfWeek + 7) % 7;
+            var proximoSabado = hoy.AddDays(dias);
             await CargarDropdowns();
-            return View(new PedidoViewModel());
+            return View(new PedidoViewModel { FechaEntrega = proximoSabado });
         }
 
         [HttpPost]
@@ -97,7 +121,7 @@ namespace Panaderia.MVC.Controllers
             var pedido = new Pedido
             {
                 IdCliente = vm.IdCliente,
-                Estado = vm.Estado,
+                Estado = EstadoPedido.Pendiente,
                 FechaEntrega = vm.FechaEntrega.HasValue
                     ? DateTime.SpecifyKind(vm.FechaEntrega.Value, DateTimeKind.Utc)
                     : null,
@@ -128,6 +152,86 @@ namespace Panaderia.MVC.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        [HttpGet]
+        public async Task<IActionResult> Edit(int id)
+        {
+            var pedido = await _pedidoService.GetByIdAsync(id);
+            if (pedido == null) return NotFound();
+
+            var vm = new PedidoViewModel
+            {
+                Id = pedido.Id,
+                IdCliente = pedido.IdCliente,
+                Estado = pedido.Estado,
+                FechaEntrega = pedido.FechaEntrega,
+                FechaCreacion = pedido.FechaCreacion,
+                Notas = pedido.Notas,
+                Detalles = pedido.Detalles.Select(d => new DetallePedidoViewModel
+                {
+                    IdProducto = d.IdProducto,
+                    Cantidad = d.Cantidad,
+                    Bolsa = d.Bolsa
+                }).ToList()
+            };
+
+            await CargarDropdowns();
+            return View(vm);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(PedidoViewModel vm)
+        {
+            if (vm.Detalles == null || !vm.Detalles.Any())
+                ModelState.AddModelError("", "El pedido debe tener al menos un producto.");
+
+            if (!ModelState.IsValid)
+            {
+                await CargarDropdowns();
+                return View(vm);
+            }
+
+            var cliente = await _clienteService.GetByIdAsync(vm.IdCliente);
+            if (cliente == null)
+            {
+                ModelState.AddModelError("", "Cliente no válido.");
+                await CargarDropdowns();
+                return View(vm);
+            }
+
+            var detalles = new List<DetallePedido>();
+            foreach (var d in vm.Detalles)
+            {
+                var producto = await _productoService.GetByIdAsync(d.IdProducto);
+                if (producto == null) continue;
+
+                var precio = cliente.Revendedor ? producto.PrecioReventa : producto.PrecioFinal;
+                detalles.Add(new DetallePedido
+                {
+                    IdProducto = d.IdProducto,
+                    Cantidad = d.Cantidad,
+                    PrecioUnitario = precio,
+                    Bolsa = d.Bolsa
+                });
+            }
+
+            var pedido = new Pedido
+            {
+                Id = vm.Id,
+                IdCliente = vm.IdCliente,
+                Estado = vm.Estado,
+                FechaEntrega = vm.FechaEntrega.HasValue
+                    ? DateTime.SpecifyKind(vm.FechaEntrega.Value, DateTimeKind.Utc)
+                    : null,
+                Notas = vm.Notas,
+                MontoTotal = detalles.Sum(d => d.Cantidad * d.PrecioUnitario),
+                Detalles = detalles
+            };
+
+            await _pedidoService.UpdateAsync(pedido);
+            return RedirectToAction(nameof(Index));
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> RegistrarCobro(RegistrarCobroViewModel vm)
@@ -144,6 +248,23 @@ namespace Panaderia.MVC.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        public async Task<IActionResult> MarcarEntregado(int id)
+        {
+            var pedido = await _pedidoService.GetByIdAsync(id);
+            if (pedido == null) return NotFound();
+
+            if (pedido.MontoCobrado < pedido.MontoTotal)
+            {
+                TempData["Error"] = "No se puede marcar como entregado: el pedido no está cobrado en su totalidad.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            await _pedidoService.MarcarEntregadoAsync(id);
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
         {
             var pedido = await _pedidoService.GetByIdAsync(id);
@@ -155,7 +276,18 @@ namespace Panaderia.MVC.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
+            await _pedidoService.DeleteAsync(id);
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Anular(int id)
+        {
+            var pedido = await _pedidoService.GetByIdAsync(id);
+            if (pedido == null) return NotFound();
             await _pedidoService.AnularAsync(id);
+            TempData["Success"] = "Pedido anulado correctamente.";
             return RedirectToAction(nameof(Index));
         }
     }

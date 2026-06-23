@@ -14,10 +14,10 @@
     <style>
         :root {
         --mv-primary: #5d4037;
-        --mv-primary-dark: #442a22;
+        --mv-primary-dark: #855330;
         --mv-secondary: #635e53;
         --mv-tertiary: #802b0d;
-        --mv-background: #fff8f6;
+        --mv-background: #e7ddd6;
         --mv-surface: #ffffff;
         --mv-surface-variant: #fbdcd5;
         --mv-surface-low: #fff0ed;
@@ -70,7 +70,7 @@
         }
 
         .nav-link-custom:hover {
-        background-color: var(--mv-surface-variant);
+        background-color: #d6c5ba;
         color: var(--mv-primary-dark);
         }
 
@@ -83,8 +83,7 @@
 
         .top-app-bar {
         height: 64px;
-        background-color: rgba(255, 248, 246, 0.8);
-        backdrop-filter: blur(8px);
+        background-color: #e7ddd6;
         border-bottom: 1px solid var(--mv-outline);
         position: sticky;
         top: 0;
@@ -122,6 +121,20 @@
         color: white;
         }
 
+        .btn-mv-secondary {
+        background-color: transparent;
+        border: 1px solid var(--mv-primary-dark);
+        color: var(--mv-primary-dark);
+        border-radius: 0.75rem;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        }
+
+        .btn-mv-secondary:hover {
+        background-color: var(--mv-primary-dark);
+        color: #fff;
+        }
+
         .search-container {
         position: relative;
         max-width: 400px;
@@ -152,8 +165,8 @@
         }
 
         .table-custom thead th {
-        background-color: var(--mv-surface-low);
-        color: var(--mv-primary-dark);
+        background-color: #cebaac;
+        color: #281714;
         font-family: 'Literata', serif;
         font-weight: 600;
         border-bottom: 1px solid var(--mv-outline);
@@ -184,6 +197,15 @@
         .status-inactive {
         background-color: rgba(186, 26, 26, 0.1);
         color: var(--mv-error);
+        }
+
+        .status-pending {
+        background-color: rgba(202, 138, 4, 0.12);
+        color: #a16207;
+        }
+
+        .titulo-pagina {
+        color: var(--mv-primary-dark);
         }
 
         .dot {

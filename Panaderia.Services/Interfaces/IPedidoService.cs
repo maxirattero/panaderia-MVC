@@ -1,4 +1,5 @@
-﻿using Panaderia.Models.Entities;
+﻿using Panaderia.Models.DTOs;
+using Panaderia.Models.Entities;
 using Panaderia.Models.Enums;
 
 namespace Panaderia.Services.Interfaces
@@ -36,5 +37,11 @@ namespace Panaderia.Services.Interfaces
         Task<bool> ExistsAsync(int id);
         // Anular pedido
         Task AnularAsync(int id);
+        // Resumen de producción (pedidos no entregados)
+        Task<(List<ResumenProductoItem> PorProducto, List<ResumenBolsaItem> PorBolsa)> GetResumenProduccionAsync();
+        // Marcar pedido como entregado
+        Task MarcarEntregadoAsync(int id);
+        // Total vendido en la semana actual (domingo a sábado)
+        Task<decimal> GetTotalVendidoSemanaAsync();
     }
 }

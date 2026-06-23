@@ -1,68 +1,72 @@
-﻿@using Panaderia.Models.Entities
+@using Panaderia.Models.Entities
 @using Panaderia.Models.Enums
 @model PedidoViewModel
 
-<h2>Nuevo Pedido</h2>
+@{
+    ViewData["Title"] = "Nuevo Pedido";
+}
 
-<form asp-action="Create" method="post">
-    @Html.AntiForgeryToken()
-    <div asp-validation-summary="All" class="text-danger"></div>
+<div style="max-width: 1060px;">
+<div class="mb-4">
+    <h1 class="display-6 fw-bold titulo-pagina mb-1">Nuevo Pedido</h1>
+    <p class="text-muted">Completa la información para registrar un nuevo pedido.</p>
+</div>
 
-    <!-- Campos del pedido -->
-    <div class="mb-3">
-        <label asp-for="IdCliente" class="form-label">Cliente</label>
-        <select asp-for="IdCliente" class="form-select">
-            <option value="">-- Seleccionar cliente --</option>
-            @foreach (var c in (IEnumerable<Cliente>)ViewBag.Clientes)
-            {
-                <option value="@c.Id" data-revendedor="@c.Revendedor.ToString().ToLower()">
-                    @c.NombreCompleto
-                </option>
-            }
-        </select>
-    </div>
+<div class="card card-custom p-4 mb-4">
+    <form asp-action="Create" method="post">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="All" class="text-danger mb-3"></div>
 
-    <div class="mb-3">
-        <label asp-for="FechaEntrega" class="form-label">Fecha de entrega</label>
-        <input asp-for="FechaEntrega" type="date" class="form-control" />
-    </div>
+        <div class="row g-4">
+            <div class="col-md-6">
+                <label asp-for="IdCliente" class="form-label small fw-bold text-muted">Cliente</label>
+                <select asp-for="IdCliente" class="form-select">
+                    <option value="">-- Seleccionar cliente --</option>
+                    @foreach (var c in (IEnumerable<Cliente>)ViewBag.Clientes)
+                    {
+                        <option value="@c.Id" data-revendedor="@c.Revendedor.ToString().ToLower()">
+                            @c.NombreCompleto
+                        </option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="FechaEntrega" class="form-label small fw-bold text-muted">Fecha de entrega</label>
+                <input asp-for="FechaEntrega" type="date" class="form-control" />
+            </div>
+            <div class="col-12">
+                <label asp-for="Notas" class="form-label small fw-bold text-muted">Notas</label>
+                <textarea asp-for="Notas" class="form-control"></textarea>
+            </div>
+        </div>
 
-    <div class="mb-3">
-        <label asp-for="Estado" class="form-label">Estado</label>
-        <select asp-for="Estado" asp-items="Html.GetEnumSelectList<EstadoPedido>()" class="form-select"></select>
-    </div>
+        <h4 class="font-literata fw-bold mt-4 mb-3">Productos</h4>
+        <table class="table" id="tablaDetalles">
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th style="width: 90px;">Cantidad</th>
+                    <th style="width: 140px;">Bolsa</th>
+                    <th style="width: 110px;">Subtotal</th>
+                    <th style="width: 50px;"></th>
+                </tr>
+            </thead>
+            <tbody id="detallesBody">
+            </tbody>
+        </table>
 
-    <div class="mb-3">
-        <label asp-for="Notas" class="form-label">Notas</label>
-        <textarea asp-for="Notas" class="form-control"></textarea>
-    </div>
+        <button type="button" class="btn btn-mv-primary mb-3" id="btnAgregar">+ Agregar producto</button>
 
-    <!-- Detalles -->
-    <h4>Productos</h4>
-    <table class="table" id="tablaDetalles">
-        <thead>
-            <tr>
-                <th>Producto</th>
-                <th>Cantidad</th>
-                <th>Bolsa</th>
-                <th>Subtotal</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody id="detallesBody">
-            <!-- las filas se agregan por JS -->
-        </tbody>
-    </table>
+        <div class="d-flex flex-column flex-md-row justify-content-end gap-3 mt-5 pt-4 border-top">
+            <button type="submit" class="btn btn-mv-primary d-flex align-items-center justify-content-center gap-2">
+                <span class="material-symbols-outlined">save</span>Guardar pedido
+            </button>
+            <a asp-action="Index" class="btn btn-mv-primary">Cancelar</a>
+        </div>
+    </form>
+</div>
+</div>
 
-    <button type="button" class="btn btn-secondary mb-3" id="btnAgregar">+ Agregar producto</button>
-
-    <div>
-        <button type="submit" class="btn btn-primary">Guardar pedido</button>
-        <a asp-action="Index" class="btn btn-outline-secondary">Cancelar</a>
-    </div>
-</form>
-
-<!-- Template de fila (no se envía, lo usa el JS para clonar) -->
 <template id="filaTemplate">
     <tr>
         <td>
@@ -143,12 +147,10 @@
 
             btnAgregar.addEventListener('click', agregarFila);
 
-            // al cambiar el cliente, recalcular todas las filas (revendedor o no)
             clienteSelect.addEventListener('change', () => {
                 tbody.querySelectorAll('tr').forEach(recalcularFila);
             });
 
-            // arrancar con una fila visible
             agregarFila();
         })();
     </script>

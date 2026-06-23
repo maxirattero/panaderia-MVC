@@ -1,11 +1,37 @@
-﻿@model IEnumerable<Panaderia.Models.Entities.Pedido>
+@model IEnumerable<Panaderia.Models.Entities.Pedido>
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h2>Pedidos</h2>
-    <div>
-        <a asp-action="Produccion" class="btn btn-warning">Producción</a>
-        <a asp-action="Create" class="btn btn-primary">+ Nuevo pedido</a>
+<div class="container-fluid p-4 p-md-5">
+<div class="row align-items-end mb-5 gy-4">
+    <div class="col-md-7">
+        <h1 class="display-6 fw-bold titulo-pagina mb-1">Pedidos</h1>
+        <p class="text-secondary m-0">Gestiona los pedidos pendientes de la panadería.</p>
+    </div>
+    <div class="col-md-5 text-md-end">
+        <a asp-action="Produccion" class="btn btn-mv-primary d-inline-flex align-items-center gap-2 shadow me-2">
+            <span class="material-symbols-outlined">factory</span>Producción
+        </a>
+        <a asp-action="Create" class="btn btn-mv-primary d-inline-flex align-items-center gap-2 shadow">
+            <span class="material-symbols-outlined">add</span>Nuevo pedido
+        </a>
+        <div class="dropdown d-inline-block ms-2">
+            <button class="btn btn-mv-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <span class="material-symbols-outlined">print</span> Imprimir
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="@Url.Action("Imprimir", "Pedido", new { conDetalles = false })" target="_blank">Solo pedidos</a></li>
+                <li><a class="dropdown-item" href="@Url.Action("Imprimir", "Pedido", new { conDetalles = true })" target="_blank">Con detalles de productos</a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<div class="d-flex justify-content-end mb-4">
+    <div class="card-custom p-3">
+        <div class="d-flex align-items-center gap-3">
+            <span class="small fw-bold text-muted">Vendido esta semana</span>
+            <span class="fs-4 fw-bold titulo-pagina">@(((decimal)ViewBag.TotalVendidoSemana).ToString("C", new System.Globalization.CultureInfo("es-AR")))</span>
+        </div>
     </div>
 </div>
 
@@ -13,89 +39,153 @@
 {
     <div class="alert alert-danger">@TempData["Error"]</div>
 }
-<table class="table table-hover align-middle">
-    <thead>
-        <tr>
-            <th></th>
-            <th>Cliente</th>
-            <th>Entrega</th>
-            <th>Estado</th>
-            <th>Total</th>
-            <th>Saldo</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var p in Model)
-        {
-            <tr>
-                <td>
-                    <button class="btn btn-sm btn-outline-secondary" type="button"
-                            data-bs-toggle="collapse" data-bs-target="#detalle-@p.Id">
-                        ▼
-                    </button>
-                </td>
-                <td>@p.Cliente.NombreCompleto</td>
-                <td>@(p.FechaEntrega?.ToString("dd/MM/yyyy") ?? "-")</td>
-                <td>@p.Estado</td>
-                <td>$@p.MontoTotal</td>
-                <td>$@p.SaldoPendiente</td>
-                <td>
-                    <a asp-action="Details" asp-route-id="@p.Id" class="btn btn-sm btn-info">Detalles</a>
-                    @if (!p.EstaPagado)
-                    {
-                        <button type="button"
-                                class="btn btn-sm btn-success d-flex align-items-center gap-2"
-                                data-bs-toggle="modal"
-                                data-bs-target="#cobrarModal"
-                                data-id="@p.Id"
-                                data-saldo="@p.SaldoPendiente.ToString(System.Globalization.CultureInfo.InvariantCulture)"
-                                data-saldo-label="@p.SaldoPendiente.ToString("C", new System.Globalization.CultureInfo("es-AR"))"
-                                data-cobrar-url="@Url.Action("RegistrarCobro", "Pedido")">
-                            <span class="material-symbols-outlined">payments</span>Registrar cobro
-                        </button>
-                    }
-                    <a asp-action="Edit" asp-route-id="@p.Id" class="btn btn-sm btn-warning">Editar</a>
-                    <button type="button"
-                            class="btn btn-sm btn-outline-danger"
-                            title="Eliminar"
-                            data-bs-toggle="modal"
-                            data-bs-target="#deleteModal"
-                            data-id="@p.Id"
-                            data-nombre="@p.Cliente.NombreCompleto"
-                            data-delete-url="@Url.Action("Delete", "Pedido", new { id = p.Id })"
-                            data-token="@Antiforgery.GetAndStoreTokens(Context).RequestToken">
-                        <span class="material-symbols-outlined">delete</span>
-                    </button>
-                </td>
-            </tr>
-            <tr class="collapse" id="detalle-@p.Id">
-                <td colspan="7">
-                    <table class="table table-sm mb-0">
-                        <thead>
-                            <tr>
-                                <th>Producto</th>
-                                <th>Cantidad</th>
-                                <th>Bolsa</th>
-                                <th>Precio unit.</th>
-                                <th>Subtotal</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var d in p.Detalles)
+
+<div class="card-custom p-3 mb-4">
+    <div class="row g-3">
+        <div class="col-lg-6">
+            <div class="input-group">
+                <span class="input-group-text bg-transparent border-end-0">
+                    <span class="material-symbols-outlined text-secondary">filter_list</span>
+                </span>
+                <input class="form-control border-start-0 ps-0" placeholder="Filtrar por cliente..." type="text" />
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <select class="form-select">
+                <option>Todos</option>
+                <option>Cobrados</option>
+                <option>Con saldo pendiente</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<div class="card-custom overflow-hidden mb-5">
+    <div class="table-responsive">
+        <table class="table table-custom table-hover m-0">
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>Cliente</th>
+                    <th>Entrega</th>
+                    <th>Estado</th>
+                    <th>Total</th>
+                    <th>Notas</th>
+                    <th class="text-end">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var p in Model)
+                {
+                    <tr>
+                        <td>
+                            <button class="btn btn-sm btn-outline-secondary" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#detalle-@p.Id">
+                                <span class="material-symbols-outlined">expand_more</span>
+                            </button>
+                        </td>
+                        <td>@p.Cliente.NombreCompleto</td>
+                        <td>@(p.FechaEntrega?.ToString("dd/MM/yyyy") ?? "-")</td>
+                        <td>@p.Estado</td>
+                        <td>
+                            $@p.MontoTotal
+                            @if (p.EstaPagado)
                             {
-                                <tr>
-                                    <td>@d.Producto.Nombre</td>
-                                    <td>@d.Cantidad</td>
-                                    <td>@d.Bolsa</td>
-                                    <td>$@d.PrecioUnitario</td>
-                                    <td>$@(d.Cantidad * d.PrecioUnitario)</td>
-                                </tr>
+                                <div class="mt-1"><span class="status-badge status-active">Cobrado</span></div>
                             }
-                        </tbody>
-                    </table>
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>
+                        </td>
+                        <td>
+                            @if (!string.IsNullOrWhiteSpace(p.Notas))
+                            {
+                                <span class="text-secondary small">@p.Notas</span>
+                            }
+                            else
+                            {
+                                <span class="text-secondary">-</span>
+                            }
+                        </td>
+                        <td>
+                            <div class="d-flex gap-1 justify-content-end align-items-center">
+                                <a asp-action="Details" asp-route-id="@p.Id"
+                                   class="btn btn-sm btn-outline-primary"
+                                   title="Ver detalles">
+                                    <span class="material-symbols-outlined">visibility</span>
+                                </a>
+                                @if (!p.EstaPagado)
+                                {
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-warning"
+                                            title="Registrar cobro"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#cobrarModal"
+                                            data-id="@p.Id"
+                                            data-saldo="@p.SaldoPendiente.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                            data-saldo-label="@p.SaldoPendiente.ToString("C", new System.Globalization.CultureInfo("es-AR"))"
+                                            data-cobrar-url="@Url.Action("RegistrarCobro", "Pedido")">
+                                        <span class="material-symbols-outlined">payments</span>
+                                    </button>
+                                }
+                                @if (p.Estado == Panaderia.Models.Enums.EstadoPedido.Pendiente)
+                                {
+                                    <form asp-action="MarcarEntregado" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@p.Id" />
+                                        <button type="submit"
+                                                class="btn btn-sm btn-outline-dark"
+                                                title="Marcar entregado">
+                                            <span class="material-symbols-outlined">check_circle</span>
+                                        </button>
+                                    </form>
+                                }
+                                <a asp-action="Edit" asp-route-id="@p.Id"
+                                   class="btn btn-sm btn-outline-success"
+                                   title="Editar">
+                                    <span class="material-symbols-outlined">edit</span>
+                                </a>
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-danger"
+                                        title="Eliminar"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#deleteModal"
+                                        data-id="@p.Id"
+                                        data-nombre="@p.Cliente.NombreCompleto"
+                                        data-delete-url="@Url.Action("Delete", "Pedido", new { id = p.Id })"
+                                        data-token="@Antiforgery.GetAndStoreTokens(Context).RequestToken">
+                                    <span class="material-symbols-outlined">delete</span>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr class="collapse" id="detalle-@p.Id">
+                        <td colspan="7">
+                            <table class="table table-sm mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Producto</th>
+                                        <th>Cantidad</th>
+                                        <th>Bolsa</th>
+                                        <th>Precio unit.</th>
+                                        <th>Subtotal</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var d in p.Detalles)
+                                    {
+                                        <tr>
+                                            <td>@d.Producto.Nombre</td>
+                                            <td>@d.Cantidad</td>
+                                            <td>@d.Bolsa</td>
+                                            <td>$@d.PrecioUnitario</td>
+                                            <td>$@(d.Cantidad * d.PrecioUnitario)</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+</div>

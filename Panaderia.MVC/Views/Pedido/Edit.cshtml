@@ -1,0 +1,201 @@
+@using Panaderia.Models.Entities
+@using Panaderia.Models.Enums
+@model PedidoViewModel
+
+@{
+    ViewData["Title"] = "Editar Pedido";
+}
+
+<div style="max-width: 1060px;">
+    <div class="mb-4">
+        <h1 class="display-6 fw-bold titulo-pagina mb-1">Editar Pedido</h1>
+        <p class="text-muted">Modificá los datos del pedido.</p>
+    </div>
+
+    <div class="card card-custom p-4 mb-4">
+        <form asp-action="Edit" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="Id" />
+            <input type="hidden" asp-for="FechaCreacion" />
+            <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <label asp-for="IdCliente" class="form-label small fw-bold text-muted">Cliente</label>
+                    <select asp-for="IdCliente" class="form-select">
+                        <option value="">-- Seleccionar cliente --</option>
+                        @foreach (var c in (IEnumerable<Cliente>)ViewBag.Clientes)
+                        {
+                            <option value="@c.Id" data-revendedor="@c.Revendedor.ToString().ToLower()">
+                                @c.NombreCompleto
+                            </option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="FechaEntrega" class="form-label small fw-bold text-muted">Fecha de entrega</label>
+                    <input asp-for="FechaEntrega" type="date" class="form-control" />
+                </div>
+                <div class="col-12">
+                    <label asp-for="Notas" class="form-label small fw-bold text-muted">Notas</label>
+                    <textarea asp-for="Notas" class="form-control"></textarea>
+                </div>
+            </div>
+
+            <h4 class="font-literata fw-bold mt-4 mb-3">Productos</h4>
+            <table class="table" id="tablaDetalles">
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th style="width: 90px;">Cantidad</th>
+                        <th style="width: 140px;">Bolsa</th>
+                        <th style="width: 110px;">Subtotal</th>
+                        <th style="width: 50px;"></th>
+                    </tr>
+                </thead>
+                <tbody id="detallesBody"></tbody>
+            </table>
+
+            <button type="button" class="btn btn-mv-primary mb-3" id="btnAgregar">+ Agregar producto</button>
+
+            <div class="d-flex flex-column flex-md-row justify-content-end gap-3 mt-5 pt-4 border-top">
+                <button type="submit" class="btn btn-mv-primary d-flex align-items-center justify-content-center gap-2">
+                    <span class="material-symbols-outlined">save</span>Guardar cambios
+                </button>
+                <a asp-action="Index" class="btn btn-mv-primary">Cancelar</a>
+                <button type="button"
+                        class="btn btn-outline-danger d-flex align-items-center justify-content-center gap-2"
+                        data-bs-toggle="modal" data-bs-target="#anularModal">
+                    <span class="material-symbols-outlined">block</span>Anular pedido
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="anularModal" tabindex="-1" aria-labelledby="anularModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="anularModalLabel">¿Anular este pedido?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Anular este pedido? Si tenía cobros registrados, se eliminará el ingreso correspondiente en Caja. Esta acción no se puede deshacer.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form asp-action="Anular" asp-route-id="@Model.Id" method="post">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger d-flex align-items-center gap-2">
+                        <span class="material-symbols-outlined">block</span>Anular pedido
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<template id="filaTemplate">
+    <tr>
+        <td>
+            <select name="__PROD__" class="form-select prod-select" required>
+                <option value="">-- Producto --</option>
+                @foreach (var p in (IEnumerable<Producto>)ViewBag.Productos)
+                {
+                    <option value="@p.Id"
+                            data-final="@p.PrecioFinal.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                            data-reventa="@p.PrecioReventa.ToString(System.Globalization.CultureInfo.InvariantCulture)">
+                        @p.Nombre
+                    </option>
+                }
+            </select>
+        </td>
+        <td>
+            <input name="__CANT__" type="number" min="1" value="1" class="form-control cant-input" required />
+        </td>
+        <td>
+            <select name="__BOLSA__" class="form-select bolsa-select" asp-items="Html.GetEnumSelectList<TipoBolsa>()"></select>
+        </td>
+        <td class="subtotal">$0</td>
+        <td>
+            <button type="button" class="btn btn-sm btn-danger btnQuitar">✕</button>
+        </td>
+    </tr>
+</template>
+
+@section Scripts {
+    <script>
+        const initialDetalles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Detalles,
+            new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
+
+        (function () {
+            const tbody = document.getElementById('detallesBody');
+            const template = document.getElementById('filaTemplate');
+            const btnAgregar = document.getElementById('btnAgregar');
+            const clienteSelect = document.getElementById('IdCliente');
+
+            function clienteEsRevendedor() {
+                const opt = clienteSelect.options[clienteSelect.selectedIndex];
+                return opt && opt.dataset.revendedor === 'true';
+            }
+
+            function recalcularFila(tr) {
+                const prodSelect = tr.querySelector('.prod-select');
+                const cantInput = tr.querySelector('.cant-input');
+                const subtotalCell = tr.querySelector('.subtotal');
+                const opt = prodSelect.options[prodSelect.selectedIndex];
+
+                let precio = 0;
+                if (opt && opt.value) {
+                    precio = clienteEsRevendedor()
+                        ? parseFloat(opt.dataset.reventa)
+                        : parseFloat(opt.dataset.final);
+                }
+                const cant = parseInt(cantInput.value) || 0;
+                subtotalCell.textContent = '$' + (precio * cant).toFixed(2);
+            }
+
+            function reindexar() {
+                tbody.querySelectorAll('tr').forEach((tr, i) => {
+                    tr.querySelector('.prod-select').name = `Detalles[${i}].IdProducto`;
+                    tr.querySelector('.cant-input').name  = `Detalles[${i}].Cantidad`;
+                    tr.querySelector('.bolsa-select').name = `Detalles[${i}].Bolsa`;
+                });
+            }
+
+            function agregarFila(data) {
+                const tr = template.content.cloneNode(true).querySelector('tr');
+                tbody.appendChild(tr);
+
+                if (data) {
+                    tr.querySelector('.prod-select').value = data.idProducto;
+                    tr.querySelector('.cant-input').value = data.cantidad;
+                    tr.querySelector('.bolsa-select').value = data.bolsa;
+                }
+
+                reindexar();
+                recalcularFila(tr);
+
+                tr.querySelector('.prod-select').addEventListener('change', () => recalcularFila(tr));
+                tr.querySelector('.cant-input').addEventListener('input', () => recalcularFila(tr));
+                tr.querySelector('.btnQuitar').addEventListener('click', () => {
+                    tr.remove();
+                    reindexar();
+                });
+            }
+
+            btnAgregar.addEventListener('click', () => agregarFila(null));
+
+            clienteSelect.addEventListener('change', () => {
+                tbody.querySelectorAll('tr').forEach(recalcularFila);
+            });
+
+            if (initialDetalles.length > 0) {
+                initialDetalles.forEach(agregarFila);
+            } else {
+                agregarFila(null);
+            }
+        })();
+    </script>
+}

@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Panaderia.Models.Data;
+using Panaderia.Models.DTOs;
 using Panaderia.Models.Entities;
 using Panaderia.Models.Enums;
 using Panaderia.Services.Interfaces;
@@ -77,15 +78,20 @@ namespace Panaderia.Services.Implementations
                 pedido.MontoCobrado += monto;
                 _context.Pedidos.Update(pedido);
 
-                var reporte = new ReporteCaja
+                bool yaExiste = await _context.ReportesCaja
+                    .AnyAsync(r => r.IdPedido == pedido.Id && r.Categoria == CategoriaMovimiento.Venta);
+                if (!yaExiste)
                 {
-                    IdPedido = idPedido,
-                    Monto = monto,
-                    Fecha = DateTime.UtcNow,
-                    Tipo = TipoMovimiento.Ingreso,
-                    Categoria = CategoriaMovimiento.Venta
-                };
-                await _context.ReportesCaja.AddAsync(reporte);
+                    _context.ReportesCaja.Add(new ReporteCaja
+                    {
+                        Fecha = DateTime.UtcNow,
+                        Tipo = TipoMovimiento.Ingreso,
+                        Categoria = CategoriaMovimiento.Venta,
+                        Monto = pedido.MontoCobrado,
+                        Descripcion = $"Venta - Pedido #{pedido.Id}",
+                        IdPedido = pedido.Id
+                    });
+                }
                 await _context.SaveChangesAsync();
             }
         }
@@ -100,16 +106,31 @@ namespace Panaderia.Services.Implementations
         //actualizar un pedido existente
         public async Task UpdateAsync(Pedido pedido)
         {
-            var existing = await _context.Pedidos.FindAsync(pedido.Id);
-            if (existing != null)
+            var existing = await _context.Pedidos
+                .Include(p => p.Detalles)
+                .FirstOrDefaultAsync(p => p.Id == pedido.Id);
+            if (existing == null) return;
+
+            existing.IdCliente = pedido.IdCliente;
+            existing.FechaEntrega = pedido.FechaEntrega;
+            existing.Notas = pedido.Notas;
+            existing.MontoTotal = pedido.MontoTotal;
+            existing.FechaModificacion = DateTime.UtcNow;
+
+            _context.DetallesPedido.RemoveRange(existing.Detalles);
+            existing.Detalles.Clear();
+            foreach (var d in pedido.Detalles)
             {
-                existing.IdCliente = pedido.IdCliente;
-                existing.Estado = pedido.Estado;
-                existing.FechaEntrega = pedido.FechaEntrega;
-                existing.Notas = pedido.Notas;
-                existing.FechaModificacion = DateTime.UtcNow;
-                await _context.SaveChangesAsync();
+                existing.Detalles.Add(new DetallePedido
+                {
+                    IdProducto = d.IdProducto,
+                    Cantidad = d.Cantidad,
+                    PrecioUnitario = d.PrecioUnitario,
+                    Bolsa = d.Bolsa
+                });
             }
+
+            await _context.SaveChangesAsync();
         }
 
         //eliminar un pedido por su ID        
@@ -138,7 +159,66 @@ namespace Panaderia.Services.Implementations
             if (pedido == null) return;
 
             pedido.Anulado = true;
+
+            var repVenta = await _context.ReportesCaja
+                .FirstOrDefaultAsync(r => r.IdPedido == id && r.Categoria == CategoriaMovimiento.Venta);
+            if (repVenta != null)
+                _context.ReportesCaja.Remove(repVenta);
+
             await _context.SaveChangesAsync();
+        }
+
+        // Marcar pedido como entregado
+        public async Task MarcarEntregadoAsync(int id)
+        {
+            var pedido = await _context.Pedidos.FindAsync(id);
+            if (pedido == null) return;
+
+            pedido.Estado = EstadoPedido.Entregado;
+            pedido.FechaModificacion = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<decimal> GetTotalVendidoSemanaAsync()
+        {
+            var hoy = DateTime.UtcNow.Date;
+            int diasDesdeDomingo = (int)hoy.DayOfWeek;
+            var inicioSemana = DateTime.SpecifyKind(hoy.AddDays(-diasDesdeDomingo), DateTimeKind.Utc);
+            var finSemana = inicioSemana.AddDays(7);
+
+            return await _context.Pedidos
+                .Where(p => p.FechaEntrega >= inicioSemana && p.FechaEntrega < finSemana)
+                .SumAsync(p => (decimal?)p.MontoTotal) ?? 0m;
+        }
+
+        // Resumen de producción (pedidos no entregados, anulados excluidos por query filter)
+        public async Task<(List<ResumenProductoItem> PorProducto, List<ResumenBolsaItem> PorBolsa)> GetResumenProduccionAsync()
+        {
+            var detalles = await _context.DetallesPedido
+                .Include(d => d.Producto)
+                    .ThenInclude(p => p.Categoria)
+                .Where(d => d.Pedido.Estado != EstadoPedido.Entregado)
+                .ToListAsync();
+
+            var porProducto = detalles
+                .GroupBy(d => d.IdProducto)
+                .Select(g => new
+                {
+                    Producto = g.First().Producto,
+                    Cantidad = g.Sum(d => d.Cantidad)
+                })
+                .OrderBy(x => x.Producto.Categoria?.Nombre)
+                .ThenBy(x => x.Producto.Masa)
+                .Select(x => new ResumenProductoItem(x.Producto.Nombre, x.Cantidad))
+                .ToList();
+
+            var porBolsa = detalles
+                .GroupBy(d => d.Bolsa)
+                .OrderBy(g => g.Key)
+                .Select(g => new ResumenBolsaItem(g.Key, g.Sum(d => d.Cantidad)))
+                .ToList();
+
+            return (porProducto, porBolsa);
         }
     }
 }
