@@ -33,11 +33,6 @@ if (!string.IsNullOrEmpty(databaseUrl))
         CommandTimeout         = 60,
         Multiplexing           = false
     };
-    Console.WriteLine($"[DB-DEBUG] Host={npgsqlBuilder.Host}");
-    Console.WriteLine($"[DB-DEBUG] Port={npgsqlBuilder.Port}");
-    Console.WriteLine($"[DB-DEBUG] Database={npgsqlBuilder.Database}");
-    Console.WriteLine($"[DB-DEBUG] Username={npgsqlBuilder.Username}");
-    Console.WriteLine($"[DB-DEBUG] Password length={npgsqlBuilder.Password?.Length ?? 0}");
     connectionString = npgsqlBuilder.ConnectionString;
 }
 else
