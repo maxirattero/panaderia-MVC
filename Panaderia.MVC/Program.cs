@@ -24,7 +24,14 @@ if (!string.IsNullOrEmpty(databaseUrl))
         Username               = userInfo[0],
         Password               = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "",
         SslMode                = Npgsql.SslMode.Require,
-        TrustServerCertificate = true
+        TrustServerCertificate = true,
+        // Supabase pooler (Supavisor) compatibility
+        Pooling                = true,
+        MaxPoolSize            = 10,
+        MaxAutoPrepare         = 0,
+        Timeout                = 30,
+        CommandTimeout         = 60,
+        Multiplexing           = false
     };
     Console.WriteLine($"[DB-DEBUG] Host={npgsqlBuilder.Host}");
     Console.WriteLine($"[DB-DEBUG] Port={npgsqlBuilder.Port}");
