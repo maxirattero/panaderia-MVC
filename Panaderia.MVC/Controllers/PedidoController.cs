@@ -347,7 +347,7 @@ namespace Panaderia.MVC.Controllers
             if (pedido == null) return NotFound();
             await _pedidoService.AnularAsync(id);
             TempData["Success"] = "Pedido anulado correctamente.";
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction(nameof(Index)); 
         }
     }
 }
