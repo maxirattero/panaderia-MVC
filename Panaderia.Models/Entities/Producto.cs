@@ -1,5 +1,5 @@
 ﻿using Panaderia.Models.Enums;
-using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
 namespace Panaderia.Models.Entities
@@ -12,8 +12,30 @@ namespace Panaderia.Models.Entities
         public Variedad? Variedad { get; set; }
         public int? IdFormato { get; set; }
         public int? IdTamano { get; set; }
-        [Required(ErrorMessage = "El nombre del producto es obligatorio.")]
-        public string Nombre { get; set; } = string.Empty;
+        public string? Nombre { get; set; }
+
+        [NotMapped]
+        public string NombreVisible
+        {
+            get
+            {
+                if (!string.IsNullOrWhiteSpace(Nombre))
+                    return Nombre;
+
+                var partes = new List<string>();
+                if (Categoria != null) partes.Add(Categoria.Nombre);
+                else if (IdCategoria > 0) partes.Add($"Cat.{IdCategoria}");
+
+                partes.Add(Masa.ToString());
+
+                if (Variedad.HasValue) partes.Add(Variedad.Value.ToString());
+                if (Formato != null) partes.Add(Formato.Descripcion);
+                else if (IdFormato.HasValue) partes.Add($"Fmt.{IdFormato}");
+
+                return string.Join(" ", partes);
+            }
+        }
+
         public decimal PrecioFinal { get; set; }
         public decimal PrecioReventa { get; set; }
         public int Stock { get; set; }

@@ -24,9 +24,10 @@ builder.Services.AddScoped<IProductoService, ProductoService>();
 builder.Services.AddScoped<IInsumoService, InsumoService>();
 builder.Services.AddScoped<IRecetaService, RecetaService>();
 builder.Services.AddScoped<ICompraService, CompraService>();
+builder.Services.AddScoped<ISubRecetaService, SubRecetaService>();
 builder.Services.AddDataProtection()
-    .SetApplicationName("PanaderiaMVC")
-    .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "DataProtection-Keys")));
+    .PersistKeysToDbContext<PanaderiaContext>()
+    .SetApplicationName("MasaViva");
 
 var app = builder.Build();
 

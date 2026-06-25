@@ -63,10 +63,10 @@
                             <td>
                                 <div class="d-flex align-items-center gap-3">
                                     <div class="avatar-circle" style="background-color: var(--mv-surface-variant); color: var(--mv-primary-dark);">
-                                        @producto.Nombre.Substring(0, 1).ToUpper()
+                                        @producto.NombreVisible.Substring(0, 1).ToUpper()
                                     </div>
                                     <div>
-                                        <div class="fw-bold">@producto.Nombre</div>
+                                        <div class="fw-bold">@producto.NombreVisible</div>
                                         <small class="text-secondary">
                                             @(producto.Variedad.HasValue ? $"{producto.Masa} · {producto.Variedad}" : producto.Masa.ToString())
                                         </small>
@@ -117,7 +117,7 @@
                                             data-bs-toggle="modal"
                                             data-bs-target="#deleteModal"
                                             data-id="@producto.Id"
-                                            data-nombre="@producto.Nombre"
+                                            data-nombre="@producto.NombreVisible"
                                             data-delete-url="@Url.Action("Delete", "Producto", new { id = producto.Id })"
                                             data-token="@Antiforgery.GetAndStoreTokens(Context).RequestToken">
                                         <span class="material-symbols-outlined">delete</span>

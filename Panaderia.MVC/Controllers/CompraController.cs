@@ -57,7 +57,8 @@ public class CompraController : Controller
                 IdInsumo       = d.IdInsumo,
                 IdUnidadCompra = d.IdUnidadCompra,
                 Cantidad       = d.Cantidad,
-                PrecioUnitario = d.PrecioUnitario
+                PrecioUnitario = d.PrecioUnitario,
+                CostoEnvio     = d.CostoEnvio
             }).ToList()
         };
 

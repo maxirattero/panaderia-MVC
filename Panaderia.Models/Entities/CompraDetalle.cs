@@ -22,6 +22,7 @@ public class CompraDetalle
     public decimal PrecioUnitario { get; set; }
 
     public decimal Subtotal { get; set; } = 0;
+    public decimal CostoEnvio { get; set; } = 0;
 
     [ValidateNever]
     public CompraProveedor Compra { get; set; } = null!;

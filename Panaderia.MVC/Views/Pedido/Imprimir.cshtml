@@ -68,7 +68,7 @@
                         @foreach (var d in p.Detalles)
                         {
                             <tr>
-                                <td>@d.Producto.Nombre</td>
+                                <td>@d.Producto.NombreVisible</td>
                                 <td>@d.Cantidad</td>
                                 <td>@d.Bolsa</td>
                                 <td>@d.PrecioUnitario.ToString("C", new System.Globalization.CultureInfo("es-AR"))</td>

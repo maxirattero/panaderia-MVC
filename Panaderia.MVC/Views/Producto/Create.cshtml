@@ -18,9 +18,13 @@
 
             <!-- Nombre -->
             <div class="col-md-6">
-                <label asp-for="Nombre" class="form-label small fw-bold text-muted">Nombre <span class="text-danger">*</span></label>
-                <input asp-for="Nombre" class="form-control" placeholder="Ej. Pan Semi-Integral Semillas Molde" />
+                <label asp-for="Nombre" class="form-label small fw-bold text-muted">Nombre personalizado</label>
+                <input asp-for="Nombre" class="form-control" placeholder="Ej. Pan Semi-Integral Semillas Molde"
+                       data-val="false" />
                 <span asp-validation-for="Nombre" class="text-danger"></span>
+                <div class="text-muted small mt-1">
+                    Opcional. Si lo dejás vacío, se usará: Categoría + Masa + Variedad + Formato.
+                </div>
             </div>
 
             <!-- Categoría -->

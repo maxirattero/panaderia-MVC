@@ -27,7 +27,7 @@ public class Receta
     public decimal PesoMasaTotal => TamanioLote * PesoUnitario;
 
     [NotMapped]
-    private decimal SumaPorcentajes =>
+    public decimal SumaPorcentajes =>
         Detalles?.Where(d => d.PorcentajePanadero.HasValue)
                  .Sum(d => d.PorcentajePanadero!.Value) ?? 0m;
 
@@ -35,12 +35,32 @@ public class Receta
     public decimal CostoTotal =>
         SumaPorcentajes == 0 ? 0m :
         Detalles?.Sum(d =>
-            d.Insumo is null ? 0m :
-            d.PorcentajePanadero.HasValue
-                ? d.Insumo.CostoPorUnidadBase
-                    * (PesoMasaTotal / SumaPorcentajes * d.PorcentajePanadero.Value)
-                : d.Insumo.CostoPorUnidadBase * (d.CantidadFija ?? 0m) * TamanioLote
-        ) ?? 0m;
+        {
+            if (d.Insumo is not null && d.PorcentajePanadero.HasValue)
+                return d.Insumo.CostoPorUnidadBase
+                       * (PesoMasaTotal / SumaPorcentajes * d.PorcentajePanadero.Value);
+
+            if (d.Insumo is not null && d.CantidadFija.HasValue)
+                return d.Insumo.CostoPorUnidadBase * d.CantidadFija.Value * TamanioLote;
+
+            if (d.SubReceta is not null && d.PorcentajePanadero.HasValue)
+            {
+                var gramosSubReceta = PesoMasaTotal / SumaPorcentajes * d.PorcentajePanadero.Value;
+                var sumaPctSub = d.SubReceta.Detalles?
+                    .Where(sd => sd.PorcentajePanadero.HasValue)
+                    .Sum(sd => sd.PorcentajePanadero!.Value) ?? 0m;
+                if (sumaPctSub == 0) return 0m;
+                return d.SubReceta.Detalles?.Sum(sd =>
+                    sd.Insumo is null ? 0m :
+                    sd.PorcentajePanadero.HasValue
+                        ? sd.Insumo.CostoPorUnidadBase
+                          * (gramosSubReceta / sumaPctSub * sd.PorcentajePanadero.Value)
+                        : sd.Insumo.CostoPorUnidadBase * (sd.CantidadFija ?? 0m) * TamanioLote
+                ) ?? 0m;
+            }
+
+            return 0m;
+        }) ?? 0m;
 
     [NotMapped]
     public decimal CostoPorUnidad =>

@@ -1,0 +1,120 @@
+@model IEnumerable<Panaderia.Models.Entities.SubReceta>
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@{
+    ViewData["Title"] = "Sub-recetas";
+}
+
+<div class="container-fluid p-4 p-md-5">
+    <div class="row align-items-end mb-5 gy-4">
+        <div class="col-md-7">
+            <h1 class="display-6 fw-bold titulo-pagina mb-1">Sub-recetas</h1>
+            <p class="text-secondary m-0">Bases de ingredientes reutilizables en recetas.</p>
+        </div>
+        <div class="col-md-5 text-md-end">
+            <a asp-action="Create" class="btn btn-mv-primary d-inline-flex align-items-center gap-2 shadow">
+                <span class="material-symbols-outlined">add</span>
+                Nueva sub-receta
+            </a>
+        </div>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="card card-custom overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-custom table-hover m-0">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Ingredientes</th>
+                        <th>Margen de seguridad</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-4">No hay sub-recetas registradas.</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var s in Model)
+                        {
+                            <tr>
+                                <td class="fw-bold">@s.Nombre</td>
+                                <td>@s.Detalles.Count ingrediente@(s.Detalles.Count == 1 ? "" : "s")</td>
+                                <td>@((s.MargenSeguridad * 100).ToString("0.##"))%</td>
+                                <td class="text-end">
+                                    <div class="d-flex gap-1 justify-content-end">
+                                        <a asp-action="Edit" asp-route-id="@s.Id"
+                                           class="btn btn-sm btn-outline-success" title="Editar">
+                                            <span class="material-symbols-outlined">edit</span>
+                                        </a>
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-danger"
+                                                title="Eliminar"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#deleteModal"
+                                                data-nombre="@s.Nombre"
+                                                data-delete-url="@Url.Action("Delete", "SubReceta", new { id = s.Id })"
+                                                data-token="@Antiforgery.GetAndStoreTokens(Context).RequestToken">
+                                            <span class="material-symbols-outlined">delete</span>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Eliminar sub-receta</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Confirmás que querés eliminar <strong id="modalNombre"></strong>?</p>
+                <p class="text-muted small mb-0">Esta acción no se puede deshacer.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form id="deleteForm" method="post">
+                    <input type="hidden" id="deleteToken" name="__RequestVerificationToken" />
+                    <button type="submit" class="btn btn-danger">Eliminar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+document.getElementById('deleteModal').addEventListener('show.bs.modal', function (e) {
+    const btn = e.relatedTarget;
+    document.getElementById('modalNombre').textContent = btn.dataset.nombre;
+    document.getElementById('deleteForm').action       = btn.dataset.deleteUrl;
+    document.getElementById('deleteToken').value       = btn.dataset.token;
+});
+</script>
+}

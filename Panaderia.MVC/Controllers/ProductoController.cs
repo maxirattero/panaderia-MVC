@@ -70,6 +70,7 @@ namespace Panaderia.MVC.Controllers
         [ValidateAntiForgeryToken]
         public async Task<ActionResult> Create(Producto producto)
         {
+            ModelState.Remove(nameof(Producto.Nombre));
             if (ModelState.IsValid)
             {
                 producto.FechaCreacion = DateTime.UtcNow;
@@ -107,6 +108,7 @@ namespace Panaderia.MVC.Controllers
         {
             if (id != producto.Id) return NotFound();
 
+            ModelState.Remove(nameof(Producto.Nombre));
             if (ModelState.IsValid)
             {
                 var existe = await _productoService.GetByIdAsync(id);

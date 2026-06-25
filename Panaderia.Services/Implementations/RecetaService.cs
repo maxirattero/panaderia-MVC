@@ -19,6 +19,14 @@ public class RecetaService : IRecetaService
         return await _context.Recetas
             .Include(r => r.Detalles)
                 .ThenInclude(d => d.Insumo)
+            .Include(r => r.Detalles)
+                .ThenInclude(d => d.SubReceta)
+                    .ThenInclude(s => s.Detalles)
+                        .ThenInclude(sd => sd.Insumo)
+            .Include(r => r.Producto)
+                .ThenInclude(p => p.Categoria)
+            .Include(r => r.Producto)
+                .ThenInclude(p => p.Formato)
             .FirstOrDefaultAsync(r => r.IdProducto == idProducto);
     }
 
@@ -46,6 +54,7 @@ public class RecetaService : IRecetaService
                 existing.Detalles.Add(new RecetaDetalle
                 {
                     IdInsumo           = d.IdInsumo,
+                    IdSubReceta        = d.IdSubReceta,
                     PorcentajePanadero = d.PorcentajePanadero,
                     CantidadFija       = d.CantidadFija
                 });

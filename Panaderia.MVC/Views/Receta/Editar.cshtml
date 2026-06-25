@@ -4,7 +4,25 @@
 @using System.Globalization
 @{
     ViewData["Title"] = "Receta";
-    var insumosLista = (IEnumerable<Insumo>)ViewBag.InsumosLista;
+    var insumosLista    = (IEnumerable<Insumo>)ViewBag.InsumosLista;
+    var subRecetasLista = (IEnumerable<SubReceta>)ViewBag.SubRecetasLista;
+}
+
+@functions {
+    decimal ComputarCostoPorGramo(SubReceta sr)
+    {
+        var sumaPct = sr.Detalles?
+            .Where(d => d.PorcentajePanadero.HasValue)
+            .Sum(d => d.PorcentajePanadero!.Value) ?? 0m;
+        if (sumaPct == 0) return 0m;
+        var costo = sr.Detalles?.Sum(d =>
+            d.Insumo is null ? 0m :
+            d.PorcentajePanadero.HasValue
+                ? d.Insumo.CostoPorUnidadBase * (100m / sumaPct * d.PorcentajePanadero.Value)
+                : 0m
+        ) ?? 0m;
+        return costo / 100m;
+    }
 }
 
 <div class="container-fluid p-4 p-md-5">
@@ -63,7 +81,7 @@
                     <table class="table table-sm align-middle mb-0">
                         <thead style="background-color: #cebaac; color: #281714;">
                             <tr>
-                                <th style="min-width:180px;">Insumo</th>
+                                <th style="min-width:180px;">Insumo / Sub-receta</th>
                                 <th style="width:110px;">% / Cant.</th>
                                 <th style="width:90px;">Peso / Uds.</th>
                                 <th style="width:100px;" class="text-end">Costo</th>
@@ -74,53 +92,96 @@
                             @{ int rowIndex = 0; }
                             @foreach (var det in Model.Detalles)
                             {
-                                <tr data-insumo-id="@det.IdInsumo"
-                                    data-porcentaje="@(det.PorcentajePanadero?.ToString(CultureInfo.InvariantCulture) ?? "")"
-                                    data-cantidad-fija="@(det.CantidadFija?.ToString(CultureInfo.InvariantCulture) ?? "")">
-                                    <td>
-                                        <select name="Detalles[@rowIndex].IdInsumo"
-                                                class="form-select form-select-sm insumo-select">
-                                            <option value="">— Insumo —</option>
-                                            @foreach (var ins in insumosLista)
-                                            {
-                                                <option value="@ins.Id"
-                                                        data-costo="@ins.CostoPorUnidadBase.ToString("F10", CultureInfo.InvariantCulture)"
-                                                        data-unidad="@ins.UnidadBase">
-                                                    @ins.Nombre
-                                                </option>
-                                            }
-                                        </select>
-                                    </td>
-                                    <td>
-                                        <input type="number"
-                                               name="Detalles[@rowIndex].PorcentajePanadero"
-                                               class="form-control form-control-sm porcentaje-input"
-                                               lang="en" step="0.01" min="0" placeholder="%" />
-                                        <input type="number"
-                                               name="Detalles[@rowIndex].CantidadFija"
-                                               class="form-control form-control-sm cantidad-fija-input"
-                                               lang="en" step="1" min="0" placeholder="cant/ud"
-                                               style="display:none;" />
-                                    </td>
-                                    <td><span class="resultado-label text-muted small">—</span></td>
-                                    <td class="text-end costo-linea">$0.00</td>
-                                    <td>
-                                        <button type="button"
-                                                class="btn btn-sm btn-outline-danger btn-quitar"
-                                                title="Quitar">✕</button>
-                                    </td>
-                                </tr>
+                                if (det.IdSubReceta.HasValue)
+                                {
+                                    <tr data-tipo="subreceta"
+                                        data-subreceta-id="@det.IdSubReceta"
+                                        data-porcentaje="@(det.PorcentajePanadero?.ToString(CultureInfo.InvariantCulture) ?? "")">
+                                        <td>
+                                            <select name="Detalles[@rowIndex].IdSubReceta"
+                                                    class="form-select form-select-sm subreceta-select">
+                                                <option value="">— Sub-receta —</option>
+                                                @foreach (var sr in subRecetasLista)
+                                                {
+                                                    <option value="@sr.Id">@sr.Nombre</option>
+                                                }
+                                            </select>
+                                            <input type="hidden" name="Detalles[@rowIndex].IdInsumo"
+                                                   class="inp-subreceta-id-hidden" value="" />
+                                        </td>
+                                        <td>
+                                            <input type="number" name="Detalles[@rowIndex].PorcentajePanadero"
+                                                   class="form-control form-control-sm porcentaje-input"
+                                                   lang="en" step="0.01" min="0" placeholder="%" />
+                                            <input type="hidden" name="Detalles[@rowIndex].CantidadFija"
+                                                   class="inp-fija-hidden" value="" />
+                                        </td>
+                                        <td><span class="resultado-label text-muted small">—</span></td>
+                                        <td class="text-end costo-linea">$0.00</td>
+                                        <td>
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-danger btn-quitar"
+                                                    title="Quitar">✕</button>
+                                        </td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    <tr data-insumo-id="@det.IdInsumo"
+                                        data-porcentaje="@(det.PorcentajePanadero?.ToString(CultureInfo.InvariantCulture) ?? "")"
+                                        data-cantidad-fija="@(det.CantidadFija?.ToString(CultureInfo.InvariantCulture) ?? "")">
+                                        <td>
+                                            <select name="Detalles[@rowIndex].IdInsumo"
+                                                    class="form-select form-select-sm insumo-select">
+                                                <option value="">— Insumo —</option>
+                                                @foreach (var ins in insumosLista)
+                                                {
+                                                    <option value="@ins.Id"
+                                                            data-costo="@ins.CostoPorUnidadBase.ToString("F10", CultureInfo.InvariantCulture)"
+                                                            data-unidad="@ins.UnidadBase">
+                                                        @ins.Nombre
+                                                    </option>
+                                                }
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <input type="number"
+                                                   name="Detalles[@rowIndex].PorcentajePanadero"
+                                                   class="form-control form-control-sm porcentaje-input"
+                                                   lang="en" step="0.01" min="0" placeholder="%" />
+                                            <input type="number"
+                                                   name="Detalles[@rowIndex].CantidadFija"
+                                                   class="form-control form-control-sm cantidad-fija-input"
+                                                   lang="en" step="1" min="0" placeholder="cant/ud"
+                                                   style="display:none;" />
+                                        </td>
+                                        <td><span class="resultado-label text-muted small">—</span></td>
+                                        <td class="text-end costo-linea">$0.00</td>
+                                        <td>
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-danger btn-quitar"
+                                                    title="Quitar">✕</button>
+                                        </td>
+                                    </tr>
+                                }
                                 rowIndex++;
                             }
                         </tbody>
                     </table>
                 </div>
 
-                <button type="button" id="btnAgregar"
-                        class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 mb-4">
-                    <span class="material-symbols-outlined" style="font-size:1rem">add</span>
-                    Agregar ingrediente
-                </button>
+                <div class="d-flex gap-2 mb-4">
+                    <button type="button" id="btnAgregar"
+                            class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1">
+                        <span class="material-symbols-outlined" style="font-size:1rem">add</span>
+                        Agregar ingrediente
+                    </button>
+                    <button type="button" id="btnAgregarSubReceta"
+                            class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1">
+                        <span class="material-symbols-outlined" style="font-size:1rem">science</span>
+                        Agregar sub-receta
+                    </button>
+                </div>
 
                 <div class="d-flex gap-4 mb-4 p-3 rounded" style="background-color: #f5efe9;">
                     <div>
@@ -139,6 +200,12 @@
                        class="btn btn-mv-secondary">Cancelar</a>
                 </div>
             </form>
+            <div class="mt-3">
+                <button id="btnImprimir" type="button"
+                        class="btn btn-outline-secondary d-inline-flex align-items-center gap-2">
+                    <span class="material-symbols-outlined">print</span>Imprimir receta
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -166,6 +233,33 @@
                    class="form-control form-control-sm cantidad-fija-input"
                    lang="en" step="1" min="0" placeholder="cant/ud"
                    style="display:none;" />
+        </td>
+        <td><span class="resultado-label text-muted small">—</span></td>
+        <td class="text-end costo-linea">$0.00</td>
+        <td>
+            <button type="button" class="btn btn-sm btn-outline-danger btn-quitar"
+                    title="Quitar">✕</button>
+        </td>
+    </tr>
+</template>
+
+<template id="filaSubRecetaTemplate">
+    <tr data-tipo="subreceta">
+        <td>
+            <select name="__SUBRECETA__" class="form-select form-select-sm subreceta-select">
+                <option value="">— Sub-receta —</option>
+                @foreach (var sr in subRecetasLista)
+                {
+                    <option value="@sr.Id">@sr.Nombre</option>
+                }
+            </select>
+            <input type="hidden" name="__INSUMO_HIDDEN__" class="inp-subreceta-id-hidden" value="" />
+        </td>
+        <td>
+            <input type="number" name="__PCT__"
+                   class="form-control form-control-sm porcentaje-input"
+                   lang="en" step="0.01" min="0" placeholder="%" />
+            <input type="hidden" name="__FIJA_HIDDEN__" class="inp-fija-hidden" value="" />
         </td>
         <td><span class="resultado-label text-muted small">—</span></td>
         <td class="text-end costo-linea">$0.00</td>
@@ -210,24 +304,32 @@
 (function () {
     const tbody         = document.getElementById('detallesBody');
     const tmpl          = document.getElementById('filaTemplate');
+    const tmplSub       = document.getElementById('filaSubRecetaTemplate');
     const btnAgregar    = document.getElementById('btnAgregar');
+    const btnAgregarSub = document.getElementById('btnAgregarSubReceta');
     const costoLoteEl   = document.getElementById('costoLote');
     const costoUnidEl   = document.getElementById('costoUnidad');
     const pesoMasaEl    = document.getElementById('pesoMasaTotal');
     const loteInput     = document.getElementById('TamanioLote');
     const pesoUnitInput = document.getElementById('PesoUnitario');
 
+    const subRecetasData = @Html.Raw(Json.Serialize(
+        subRecetasLista.Select(sr => new {
+            id            = sr.Id,
+            nombre        = sr.Nombre,
+            costoPorGramo = ComputarCostoPorGramo(sr)
+        })
+    ));
+
     function getPesoMasa() {
-        const lote = parseFloat(loteInput.value)    || 0;
-        const peso = parseFloat(pesoUnitInput.value) || 0;
-        return lote * peso;
+        return (parseFloat(loteInput.value) || 0) * (parseFloat(pesoUnitInput.value) || 0);
     }
 
     function getSumaPct() {
         let suma = 0;
         tbody.querySelectorAll('tr').forEach(tr => {
             const pct = tr.querySelector('.porcentaje-input');
-            if (!pct.disabled) suma += parseFloat(pct.value) || 0;
+            if (pct && !pct.disabled) suma += parseFloat(pct.value) || 0;
         });
         return suma;
     }
@@ -243,6 +345,20 @@
     }
 
     function actualizarFila(tr) {
+        if (tr.dataset.tipo === 'subreceta') {
+            const sel        = tr.querySelector('.subreceta-select');
+            const idSr       = parseInt(sel.value) || 0;
+            const srData     = subRecetasData.find(s => s.id === idSr);
+            const pct        = parseFloat(tr.querySelector('.porcentaje-input').value) || 0;
+            const pesoMasa   = getPesoMasa();
+            const sumaPct    = getSumaPct();
+            const gramos     = sumaPct > 0 ? (pesoMasa / sumaPct * pct) : 0;
+            const costoLinea = srData ? srData.costoPorGramo * gramos : 0;
+            tr.querySelector('.resultado-label').textContent = gramos.toFixed(1) + ' g';
+            tr.querySelector('.costo-linea').textContent     = '$' + costoLinea.toFixed(2);
+            return;
+        }
+
         const sel    = tr.querySelector('.insumo-select');
         const opt    = sel.options[sel.selectedIndex];
         const costo  = parseFloat(opt?.dataset?.costo ?? '0') || 0;
@@ -292,9 +408,16 @@
 
     function reindexar() {
         tbody.querySelectorAll('tr').forEach((tr, i) => {
-            tr.querySelector('.insumo-select').name       = `Detalles[${i}].IdInsumo`;
-            tr.querySelector('.porcentaje-input').name    = `Detalles[${i}].PorcentajePanadero`;
-            tr.querySelector('.cantidad-fija-input').name = `Detalles[${i}].CantidadFija`;
+            if (tr.dataset.tipo === 'subreceta') {
+                tr.querySelector('.subreceta-select').name        = `Detalles[${i}].IdSubReceta`;
+                tr.querySelector('.inp-subreceta-id-hidden').name = `Detalles[${i}].IdInsumo`;
+                tr.querySelector('.porcentaje-input').name        = `Detalles[${i}].PorcentajePanadero`;
+                tr.querySelector('.inp-fija-hidden').name         = `Detalles[${i}].CantidadFija`;
+            } else {
+                tr.querySelector('.insumo-select').name       = `Detalles[${i}].IdInsumo`;
+                tr.querySelector('.porcentaje-input').name    = `Detalles[${i}].PorcentajePanadero`;
+                tr.querySelector('.cantidad-fija-input').name = `Detalles[${i}].CantidadFija`;
+            }
         });
     }
 
@@ -319,6 +442,16 @@
         });
     }
 
+    function bindSubRecetaFila(tr) {
+        tr.querySelector('.subreceta-select').addEventListener('change', recalcularTodo);
+        tr.querySelector('.porcentaje-input').addEventListener('input', recalcularTodo);
+        tr.querySelector('.btn-quitar').addEventListener('click', () => {
+            tr.remove();
+            reindexar();
+            recalcularTodo();
+        });
+    }
+
     function agregarFila() {
         const frag = tmpl.content.cloneNode(true);
         const tr   = frag.querySelector('tr');
@@ -327,28 +460,52 @@
         reindexar();
     }
 
+    function agregarSubRecetaFila() {
+        const frag = tmplSub.content.cloneNode(true);
+        const tr   = frag.querySelector('tr');
+        bindSubRecetaFila(tr);
+        tbody.appendChild(frag);
+        reindexar();
+    }
+
     tbody.querySelectorAll('tr').forEach(tr => {
-        const id   = tr.dataset.insumoId;
-        const pct  = tr.dataset.porcentaje;
-        const fija = tr.dataset.cantidadFija;
-        if (id) {
-            const sel    = tr.querySelector('.insumo-select');
-            sel.value    = id;
-            const opt    = sel.options[sel.selectedIndex];
-            const unidad = opt?.dataset?.unidad ?? '';
-            adaptarFila(tr, unidad);
-            if (pct)  tr.querySelector('.porcentaje-input').value    = pct;
-            if (fija) tr.querySelector('.cantidad-fija-input').value = fija;
+        if (tr.dataset.tipo === 'subreceta') {
+            const id  = tr.dataset.subrecetaId;
+            const pct = tr.dataset.porcentaje;
+            if (id) {
+                tr.querySelector('.subreceta-select').value = id;
+                if (pct) tr.querySelector('.porcentaje-input').value = pct;
+            }
+            bindSubRecetaFila(tr);
+        } else {
+            const id   = tr.dataset.insumoId;
+            const pct  = tr.dataset.porcentaje;
+            const fija = tr.dataset.cantidadFija;
+            if (id) {
+                const sel    = tr.querySelector('.insumo-select');
+                sel.value    = id;
+                const opt    = sel.options[sel.selectedIndex];
+                const unidad = opt?.dataset?.unidad ?? '';
+                adaptarFila(tr, unidad);
+                if (pct)  tr.querySelector('.porcentaje-input').value    = pct;
+                if (fija) tr.querySelector('.cantidad-fija-input').value = fija;
+            }
+            bindFila(tr);
         }
-        bindFila(tr);
     });
 
     btnAgregar.addEventListener('click', agregarFila);
+    btnAgregarSub.addEventListener('click', agregarSubRecetaFila);
     loteInput.addEventListener('input',     recalcularTodo);
     pesoUnitInput.addEventListener('input', recalcularTodo);
 
     reindexar();
     recalcularTodo();
+
+    document.getElementById('btnImprimir').addEventListener('click', () => {
+        const cantidad = loteInput.value || 1;
+        window.open('/Receta/ImprimirReceta?idProducto=@Model.IdProducto&cantidad=' + cantidad, '_blank');
+    });
 })();
 </script>
 }

@@ -41,6 +41,11 @@
         <span class="material-symbols-outlined">receipt_long</span>
         Compras
     </a>
+    <a class="nav-link-custom @(ViewContext.RouteData.Values["controller"]?.ToString() == "SubReceta" ? "active" : "")"
+       asp-controller="SubReceta" asp-action="Index">
+        <span class="material-symbols-outlined">science</span>
+        Sub-recetas
+    </a>
     <a class="nav-link-custom @(ViewContext.RouteData.Values["controller"]?.ToString() == "Configuracion" ? "active" : "")"
        asp-controller="Configuracion" asp-action="Index">
         <span class="material-symbols-outlined">settings</span>

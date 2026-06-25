@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Panaderia.Models.Data;
@@ -11,9 +12,11 @@ using Panaderia.Models.Data;
 namespace Panaderia.Models.Migrations
 {
     [DbContext(typeof(PanaderiaContext))]
-    partial class PanaderiaContextModelSnapshot : ModelSnapshot
+    [Migration("20260624130743_HacerProductoNombreNullable")]
+    partial class HacerProductoNombreNullable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -115,9 +118,6 @@ namespace Panaderia.Models.Migrations
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<decimal>("Cantidad")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal>("CostoEnvio")
                         .HasColumnType("numeric");
 
                     b.Property<int>("IdCompra")
@@ -454,13 +454,10 @@ namespace Panaderia.Models.Migrations
                     b.Property<decimal?>("CantidadFija")
                         .HasColumnType("numeric");
 
-                    b.Property<int?>("IdInsumo")
+                    b.Property<int>("IdInsumo")
                         .HasColumnType("integer");
 
                     b.Property<int>("IdReceta")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("IdSubReceta")
                         .HasColumnType("integer");
 
                     b.Property<decimal?>("PorcentajePanadero")
@@ -471,8 +468,6 @@ namespace Panaderia.Models.Migrations
                     b.HasIndex("IdInsumo");
 
                     b.HasIndex("IdReceta");
-
-                    b.HasIndex("IdSubReceta");
 
                     b.ToTable("RecetaDetalles");
                 });
@@ -513,58 +508,6 @@ namespace Panaderia.Models.Migrations
                     b.HasIndex("IdProveedor");
 
                     b.ToTable("ReportesCaja");
-                });
-
-            modelBuilder.Entity("Panaderia.Models.Entities.SubReceta", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<decimal>("MargenSeguridad")
-                        .HasColumnType("numeric");
-
-                    b.Property<string>("Nombre")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Notas")
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("SubRecetas");
-                });
-
-            modelBuilder.Entity("Panaderia.Models.Entities.SubRecetaDetalle", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<decimal?>("CantidadFija")
-                        .HasColumnType("numeric");
-
-                    b.Property<int>("IdInsumo")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("IdSubReceta")
-                        .HasColumnType("integer");
-
-                    b.Property<decimal?>("PorcentajePanadero")
-                        .HasColumnType("numeric");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("IdInsumo");
-
-                    b.HasIndex("IdSubReceta");
-
-                    b.ToTable("SubRecetaDetalles");
                 });
 
             modelBuilder.Entity("Panaderia.Models.Entities.Tamano", b =>
@@ -729,7 +672,8 @@ namespace Panaderia.Models.Migrations
                     b.HasOne("Panaderia.Models.Entities.Insumo", "Insumo")
                         .WithMany()
                         .HasForeignKey("IdInsumo")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.HasOne("Panaderia.Models.Entities.Receta", "Receta")
                         .WithMany("Detalles")
@@ -737,16 +681,9 @@ namespace Panaderia.Models.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Panaderia.Models.Entities.SubReceta", "SubReceta")
-                        .WithMany()
-                        .HasForeignKey("IdSubReceta")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.Navigation("Insumo");
 
                     b.Navigation("Receta");
-
-                    b.Navigation("SubReceta");
                 });
 
             modelBuilder.Entity("Panaderia.Models.Entities.ReporteCaja", b =>
@@ -762,25 +699,6 @@ namespace Panaderia.Models.Migrations
                     b.Navigation("Pedido");
 
                     b.Navigation("Proveedor");
-                });
-
-            modelBuilder.Entity("Panaderia.Models.Entities.SubRecetaDetalle", b =>
-                {
-                    b.HasOne("Panaderia.Models.Entities.Insumo", "Insumo")
-                        .WithMany()
-                        .HasForeignKey("IdInsumo")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Panaderia.Models.Entities.SubReceta", "SubReceta")
-                        .WithMany("Detalles")
-                        .HasForeignKey("IdSubReceta")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Insumo");
-
-                    b.Navigation("SubReceta");
                 });
 
             modelBuilder.Entity("Panaderia.Models.Entities.UnidadCompra", b =>
@@ -812,11 +730,6 @@ namespace Panaderia.Models.Migrations
                 });
 
             modelBuilder.Entity("Panaderia.Models.Entities.Receta", b =>
-                {
-                    b.Navigation("Detalles");
-                });
-
-            modelBuilder.Entity("Panaderia.Models.Entities.SubReceta", b =>
                 {
                     b.Navigation("Detalles");
                 });

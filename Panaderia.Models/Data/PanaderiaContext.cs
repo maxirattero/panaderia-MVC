@@ -1,9 +1,10 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Panaderia.Models.Entities;
 
 namespace Panaderia.Models.Data
 {
-    public class PanaderiaContext : DbContext
+    public class PanaderiaContext : DbContext, IDataProtectionKeyContext
     {
         public PanaderiaContext(DbContextOptions<PanaderiaContext> options) : base(options)
         {
@@ -25,6 +26,9 @@ namespace Panaderia.Models.Data
         public DbSet<CompraDetalle> ComprasDetalle { get; set; }
         public DbSet<Receta> Recetas { get; set; }
         public DbSet<RecetaDetalle> RecetaDetalles { get; set; }
+        public DbSet<SubReceta> SubRecetas { get; set; }
+        public DbSet<SubRecetaDetalle> SubRecetaDetalles { get; set; }
+        public DbSet<DataProtectionKey> DataProtectionKeys { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -55,11 +59,12 @@ namespace Panaderia.Models.Data
                 .HasOne(d => d.Pedido)
                 .WithMany(p => p.Detalles)
                 .HasForeignKey(d => d.IdPedido);
-            // DetallePedido -> Producto
+            // DetallePedido -> Producto (restrict)
             modelBuilder.Entity<DetallePedido>()
                 .HasOne(d => d.Producto)
                 .WithMany()
-                .HasForeignKey(d => d.IdProducto);
+                .HasForeignKey(d => d.IdProducto)
+                .OnDelete(DeleteBehavior.Restrict);
             // ReporteCaja -> Pedido (opcional)
             modelBuilder.Entity<ReporteCaja>()
                 .HasOne(r => r.Pedido)
@@ -99,6 +104,24 @@ namespace Panaderia.Models.Data
                 .OnDelete(DeleteBehavior.Cascade);
             // RecetaDetalle -> Insumo (restrict)
             modelBuilder.Entity<RecetaDetalle>()
+                .HasOne(d => d.Insumo)
+                .WithMany()
+                .HasForeignKey(d => d.IdInsumo)
+                .OnDelete(DeleteBehavior.Restrict);
+            // RecetaDetalle -> SubReceta (restrict, nullable)
+            modelBuilder.Entity<RecetaDetalle>()
+                .HasOne(d => d.SubReceta)
+                .WithMany()
+                .HasForeignKey(d => d.IdSubReceta)
+                .OnDelete(DeleteBehavior.Restrict);
+            // SubRecetaDetalle -> SubReceta (cascade)
+            modelBuilder.Entity<SubRecetaDetalle>()
+                .HasOne(d => d.SubReceta)
+                .WithMany(s => s.Detalles)
+                .HasForeignKey(d => d.IdSubReceta)
+                .OnDelete(DeleteBehavior.Cascade);
+            // SubRecetaDetalle -> Insumo (restrict)
+            modelBuilder.Entity<SubRecetaDetalle>()
                 .HasOne(d => d.Insumo)
                 .WithMany()
                 .HasForeignKey(d => d.IdInsumo)

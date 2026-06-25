@@ -13,26 +13,63 @@ namespace Panaderia.MVC.Controllers
         private readonly IPedidoService _pedidoService;
         private readonly IClienteService _clienteService;
         private readonly IProductoService _productoService;
+        private readonly IRecetaService _recetaService;
 
         public PedidoController(
             IPedidoService pedidoService,
             IClienteService clienteService,
-            IProductoService productoService)
+            IProductoService productoService,
+            IRecetaService recetaService)
         {
             _pedidoService = pedidoService;
             _clienteService = clienteService;
             _productoService = productoService;
+            _recetaService = recetaService;
         }
 
         public async Task<IActionResult> Produccion()
         {
-            var (porProducto, porBolsa) = await _pedidoService.GetResumenProduccionAsync();
+            var (porProducto, porBolsa, porSubReceta) = await _pedidoService.GetResumenProduccionAsync();
             var vm = new ProduccionViewModel
             {
-                PorProducto = porProducto,
-                PorBolsa = porBolsa
+                PorProducto  = porProducto,
+                PorBolsa     = porBolsa,
+                PorSubReceta = porSubReceta
             };
+            foreach (var item in vm.PorProducto)
+            {
+                var receta = await _recetaService.GetByProductoIdAsync(item.IdProducto);
+                if (receta != null)
+                {
+                    vm.ItemsSeleccionables.Add(new ItemProduccionSeleccionable
+                    {
+                        IdProducto        = item.IdProducto,
+                        IdReceta          = receta.Id,
+                        NombreProducto    = item.NombreProducto,
+                        CantidadSugerida  = item.CantidadTotal,
+                        CantidadAProducir = item.CantidadTotal,
+                        Seleccionado      = true
+                    });
+                }
+            }
             return View(vm);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ConfirmarProduccion(ProduccionViewModel vm)
+        {
+            var itemsSeleccionados = vm.ItemsSeleccionables.Where(i => i.Seleccionado).ToList();
+            if (!itemsSeleccionados.Any())
+            {
+                TempData["Error"] = "No seleccionaste ningún producto para producir.";
+                return RedirectToAction(nameof(Produccion));
+            }
+            var warnings = await _pedidoService.ConfirmarProduccionAsync(itemsSeleccionados);
+            if (warnings.Any())
+                TempData["Warning"] = string.Join("|", warnings);
+            TempData["Success"] = "Producción confirmada. Stock actualizado.";
+            return RedirectToAction(nameof(Produccion));
         }
 
         public async Task<IActionResult> Imprimir(bool conDetalles = false)
@@ -40,6 +77,28 @@ namespace Panaderia.MVC.Controllers
             var pedidos = await _pedidoService.GetByEstadoAsync(EstadoPedido.Pendiente);
             ViewBag.ConDetalles = conDetalles;
             return View(pedidos);
+        }
+
+        public async Task<IActionResult> ImprimirProduccion()
+        {
+            var (porProducto, _, porSubReceta) = await _pedidoService.GetResumenProduccionAsync();
+            var vm = new ImprimirProduccionViewModel
+            {
+                Fecha      = DateTime.Today,
+                SubRecetas = porSubReceta
+            };
+            foreach (var item in porProducto)
+            {
+                var receta = await _recetaService.GetByProductoIdAsync(item.IdProducto);
+                if (receta == null) continue;
+                vm.Items.Add(new ImprimirProduccionItemViewModel
+                {
+                    NombreProducto   = item.NombreProducto,
+                    CantidadUnidades = item.CantidadTotal,
+                    Receta           = receta
+                });
+            }
+            return View(vm);
         }
 
         public async Task<IActionResult> Index()
@@ -67,7 +126,7 @@ namespace Panaderia.MVC.Controllers
                 EstaPagado = pedido.EstaPagado,
                 Detalles = pedido.Detalles.Select(d => new DetallePedidoDetailsViewModel
                 {
-                    NombreProducto = d.Producto.Nombre,
+                    NombreProducto = d.Producto.NombreVisible,
                     Cantidad = d.Cantidad,
                     PrecioUnitario = d.PrecioUnitario,
                     Subtotal = d.Cantidad * d.PrecioUnitario,

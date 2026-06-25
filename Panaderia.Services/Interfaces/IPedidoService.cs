@@ -38,10 +38,14 @@ namespace Panaderia.Services.Interfaces
         // Anular pedido
         Task AnularAsync(int id);
         // Resumen de producción (pedidos no entregados)
-        Task<(List<ResumenProductoItem> PorProducto, List<ResumenBolsaItem> PorBolsa)> GetResumenProduccionAsync();
+        Task<(List<ResumenProductoItem> PorProducto, List<ResumenBolsaItem> PorBolsa, List<ResumenSubRecetaItem> PorSubReceta)> GetResumenProduccionAsync();
+        // Confirmar producción y descontar stock
+        Task<List<string>> ConfirmarProduccionAsync(List<ItemProduccionSeleccionable> items);
         // Marcar pedido como entregado
         Task MarcarEntregadoAsync(int id);
         // Total vendido en la semana actual (domingo a sábado)
         Task<decimal> GetTotalVendidoSemanaAsync();
+        // Resumen para cierre semanal: cobrado, costo de insumos y desglose por producto
+        Task<(decimal TotalCobrado, decimal CostoInsumos, List<CostoProductoItem> Detalles)> GetResumenCierreSemanalAsync();
     }
 }

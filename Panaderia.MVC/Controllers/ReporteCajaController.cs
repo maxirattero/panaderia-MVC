@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Panaderia.Models.DTOs;
 using Panaderia.Models.Entities;
 using Panaderia.Models.Enums;
 using Panaderia.MVC.Models;
@@ -11,11 +12,16 @@ namespace Panaderia.MVC.Controllers
     {
         private readonly IReporteCajaService _reporteCajaService;
         private readonly IProveedorService _proveedorService;
+        private readonly IPedidoService _pedidoService;
 
-        public ReporteCajaController(IReporteCajaService reporteCajaService, IProveedorService proveedorService)
+        public ReporteCajaController(
+            IReporteCajaService reporteCajaService,
+            IProveedorService proveedorService,
+            IPedidoService pedidoService)
         {
             _reporteCajaService = reporteCajaService;
             _proveedorService = proveedorService;
+            _pedidoService = pedidoService;
         }
 
         private async Task CargarDropdowns(ReporteCajaFormViewModel vm)
@@ -152,6 +158,53 @@ namespace Panaderia.MVC.Controllers
         {
             await _reporteCajaService.DeleteAsync(id);
             TempData["Success"] = "Movimiento eliminado correctamente.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> CierreSemanal()
+        {
+            var (totalCobrado, costoInsumos, detalles) = await _pedidoService.GetResumenCierreSemanalAsync();
+            var hoy = DateTime.UtcNow.Date;
+            int diasDesdeDomingo = (int)hoy.DayOfWeek;
+            var inicioSemana = hoy.AddDays(-diasDesdeDomingo);
+            var vm = new CierreSemanalViewModel
+            {
+                InicioSemana  = inicioSemana,
+                FinSemana     = inicioSemana.AddDays(6),
+                TotalCobrado  = totalCobrado,
+                CostoInsumos  = costoInsumos,
+                MontoARetirar = Math.Round(totalCobrado - costoInsumos, 2),
+                DetallesCosto = detalles
+            };
+            return View(vm);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RegistrarCierre(CierreSemanalViewModel vm)
+        {
+            foreach (var key in ModelState.Keys.Where(k => k.StartsWith("DetallesCosto")).ToList())
+                ModelState.Remove(key);
+
+            if (vm.MontoARetirar <= 0)
+            {
+                TempData["Error"] = "El monto a retirar debe ser mayor a cero.";
+                return RedirectToAction(nameof(CierreSemanal));
+            }
+
+            var periodoStr = $"{vm.InicioSemana:dd/MM} - {vm.FinSemana:dd/MM}";
+            await _reporteCajaService.CreateAsync(new ReporteCaja
+            {
+                Fecha       = DateTime.UtcNow,
+                Tipo        = TipoMovimiento.Ingreso,
+                Categoria   = CategoriaMovimiento.Recaudacion,
+                Monto       = vm.MontoARetirar,
+                Descripcion = $"Recaudación semanal {periodoStr}" +
+                              (string.IsNullOrWhiteSpace(vm.Notas) ? "" : $" – {vm.Notas}")
+            });
+
+            TempData["Success"] = $"Recaudación de {vm.MontoARetirar:C} registrada correctamente.";
             return RedirectToAction(nameof(Index));
         }
     }

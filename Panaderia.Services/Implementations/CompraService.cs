@@ -43,12 +43,14 @@ public class CompraService : ICompraService
             var insumo = await _context.Insumos.FindAsync(detalle.IdInsumo);
             var unidad = await _context.UnidadesCompra.FindAsync(detalle.IdUnidadCompra);
 
-            detalle.Subtotal = detalle.Cantidad * detalle.PrecioUnitario;
+            detalle.Subtotal = detalle.Cantidad * detalle.PrecioUnitario + detalle.CostoEnvio;
 
             if (insumo != null && unidad != null)
             {
-                insumo.StockActual += detalle.Cantidad * unidad.FactorConversion;
-                insumo.PrecioCompra = detalle.PrecioUnitario / unidad.FactorConversion;
+                insumo.StockActual  += detalle.Cantidad * unidad.FactorConversion;
+                var costoEnvioPorUnidad    = detalle.Cantidad > 0 ? detalle.CostoEnvio / detalle.Cantidad : 0m;
+                insumo.PrecioCompra        = detalle.PrecioUnitario + costoEnvioPorUnidad;
+                insumo.CantidadRendimiento = unidad.FactorConversion;
             }
         }
 

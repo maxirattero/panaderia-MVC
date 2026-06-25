@@ -1,23 +1,35 @@
 using Microsoft.AspNetCore.Mvc;
 using Panaderia.Models.Entities;
+using Panaderia.MVC.Models;
 using Panaderia.Services.Interfaces;
 
 namespace Panaderia.MVC.Controllers;
 
 public class RecetaController : Controller
 {
-    private readonly IRecetaService _recetaService;
-    private readonly IProductoService _productoService;
-    private readonly IInsumoService _insumoService;
+    private readonly IRecetaService    _recetaService;
+    private readonly IProductoService  _productoService;
+    private readonly IInsumoService    _insumoService;
+    private readonly ISubRecetaService _subRecetaService;
 
     public RecetaController(
         IRecetaService recetaService,
         IProductoService productoService,
-        IInsumoService insumoService)
+        IInsumoService insumoService,
+        ISubRecetaService subRecetaService)
     {
-        _recetaService = recetaService;
-        _productoService = productoService;
-        _insumoService = insumoService;
+        _recetaService    = recetaService;
+        _productoService  = productoService;
+        _insumoService    = insumoService;
+        _subRecetaService = subRecetaService;
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> ImprimirReceta(int idProducto, decimal cantidad)
+    {
+        var receta = await _recetaService.GetByProductoIdAsync(idProducto);
+        if (receta == null) return NotFound();
+        return View(new ImprimirRecetaViewModel { Receta = receta, CantidadUnidades = cantidad });
     }
 
     [HttpGet]
@@ -29,7 +41,7 @@ public class RecetaController : Controller
         var receta = await _recetaService.GetByProductoIdAsync(idProducto)
                      ?? new Receta { IdProducto = idProducto, TamanioLote = 1, Detalles = new() };
 
-        ViewBag.NombreProducto = producto.Nombre;
+        ViewBag.NombreProducto = producto.NombreVisible;
         await CargarDropdowns();
         return View(receta);
     }
@@ -41,13 +53,13 @@ public class RecetaController : Controller
         ModelState.Remove(nameof(receta.Producto));
 
         foreach (var key in ModelState.Keys
-            .Where(k => k.Contains(".Receta") || k.Contains(".Insumo")).ToList())
+            .Where(k => k.Contains(".Receta") || k.Contains(".Insumo") || k.Contains(".SubReceta")).ToList())
             ModelState.Remove(key);
 
         if (!ModelState.IsValid)
         {
             var prod = await _productoService.GetByIdAsync(idProducto);
-            ViewBag.NombreProducto = prod?.Nombre ?? "";
+            ViewBag.NombreProducto = prod?.NombreVisible ?? "";
             await CargarDropdowns();
             return View(receta);
         }
@@ -71,6 +83,7 @@ public class RecetaController : Controller
         var insumos = (await _insumoService.GetAllAsync())
             .Where(i => i.Activo)
             .ToList();
-        ViewBag.InsumosLista = insumos;
+        ViewBag.InsumosLista    = insumos;
+        ViewBag.SubRecetasLista = await _subRecetaService.GetAllAsync();
     }
 }

@@ -15,4 +15,5 @@ public class CompraDetalleViewModel
     public int IdUnidadCompra { get; set; }
     public decimal Cantidad { get; set; }
     public decimal PrecioUnitario { get; set; }
+    public decimal CostoEnvio { get; set; } = 0;
 }
