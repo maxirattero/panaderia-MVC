@@ -428,3 +428,5 @@ FodyWeavers.xsd
 *.msm
 *.msp
 DataProtection-Keys/
+appsettings.Production.json
+appsettings.*.Local.json
