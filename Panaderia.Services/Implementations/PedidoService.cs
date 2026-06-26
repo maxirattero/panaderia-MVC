@@ -373,7 +373,7 @@ namespace Panaderia.Services.Implementations
                 // Accumulate water from direct recipe ingredients
                 foreach (var det in receta.Detalles.Where(d => d.IdInsumo.HasValue && d.Insumo != null))
                 {
-                    if (det.Insumo!.Nombre.Equals("Agua", StringComparison.OrdinalIgnoreCase)
+                    if (det.Insumo!.Nombre.Equals("Agua corriente", StringComparison.OrdinalIgnoreCase)
                         && det.PorcentajePanadero.HasValue && receta.SumaPorcentajes > 0)
                     {
                         decimal gramosAgua = (receta.TamanioLote * receta.PesoUnitario
