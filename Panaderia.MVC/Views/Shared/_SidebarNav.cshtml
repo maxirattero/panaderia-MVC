@@ -58,6 +58,19 @@
     </a>
 </nav>
 <div class="mt-auto border-top pt-4">
+    <div class="mb-3 px-3">
+        <div class="d-flex align-items-center gap-2 mb-2">
+            <span class="material-symbols-outlined" style="font-size:1.2rem; color: var(--mv-secondary);">account_circle</span>
+            <span class="small text-muted text-truncate" style="max-width: 160px;">@User.Identity?.Name</span>
+        </div>
+        <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-sm btn-outline-secondary w-100 d-flex align-items-center justify-content-center gap-1">
+                <span class="material-symbols-outlined" style="font-size:1rem">logout</span>
+                Cerrar sesión
+            </button>
+        </form>
+    </div>
     <button class="btn btn-mv-primary w-100 d-flex align-items-center justify-content-center gap-2">
         <span class="material-symbols-outlined">add</span>
         Nuevo Pedido

@@ -1,10 +1,11 @@
 ﻿using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Panaderia.Models.Entities;
 
 namespace Panaderia.Models.Data
 {
-    public class PanaderiaContext : DbContext, IDataProtectionKeyContext
+    public class PanaderiaContext : IdentityDbContext<ApplicationUser>, IDataProtectionKeyContext
     {
         public PanaderiaContext(DbContextOptions<PanaderiaContext> options) : base(options)
         {
