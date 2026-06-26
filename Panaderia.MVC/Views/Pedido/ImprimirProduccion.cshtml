@@ -92,6 +92,21 @@
                                     <td style="border:1px solid #ccc; padding:3px 6px; text-align:right;">@cantidadDet.ToString("0.###", CultureInfo.InvariantCulture)</td>
                                 </tr>
                             }
+                            @foreach (var det in item.Receta.Detalles.Where(d => d.IdSubReceta.HasValue && d.SubReceta != null))
+                            {
+                                decimal cantidadSr = 0m;
+                                if (det.PorcentajePanadero.HasValue && item.Receta.SumaPorcentajes > 0)
+                                {
+                                    cantidadSr = (item.Receta.TamanioLote * item.Receta.PesoUnitario
+                                                  / item.Receta.SumaPorcentajes)
+                                                 * det.PorcentajePanadero.Value * item.VecesReceta;
+                                }
+                                <tr style="background-color: #fff8e1;">
+                                    <td style="border:1px solid #ccc; padding:3px 6px;">⟳ @det.SubReceta!.Nombre</td>
+                                    <td style="border:1px solid #ccc; padding:3px 6px; text-align:center;">g</td>
+                                    <td style="border:1px solid #ccc; padding:3px 6px; text-align:right;">@cantidadSr.ToString("0.###", CultureInfo.InvariantCulture)</td>
+                                </tr>
+                            }
                         </tbody>
                     </table>
                     <p style="margin:6px 0 0 0; font-size:11px;">
