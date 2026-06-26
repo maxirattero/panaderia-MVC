@@ -2,39 +2,235 @@
     ViewData["Title"] = "Planificador de Amasadas";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex justify-content-between align-items-center mb-4 no-print">
     <h1 class="display-6 fw-bold titulo-pagina mb-1">Planificador de Amasadas</h1>
     <div class="d-flex gap-2">
+        <button onclick="resetear()" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2">
+            <span class="material-symbols-outlined">restart_alt</span>Resetear
+        </button>
+        <button onclick="imprimir()" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2">
+            <span class="material-symbols-outlined">print</span>Imprimir plan
+        </button>
         <a asp-action="Produccion" class="btn btn-mv-primary">Volver</a>
     </div>
+</div>
+
+<!-- Action bar for combining — shown when 2+ batches selected -->
+<div id="action-bar" class="mb-3 no-print" style="display:none; max-width:900px;">
+    <button onclick="combinar()" class="btn btn-mv-primary d-inline-flex align-items-center gap-2">
+        <span class="material-symbols-outlined">merge</span>
+        Combinar seleccionados (<span id="selected-count">0</span>)
+    </button>
 </div>
 
 <div id="planificador" style="max-width: 900px;">
     <p class="text-muted">Cargando...</p>
 </div>
 
+<!-- Hidden container for print layout -->
+<div id="print-area" style="display:none;"></div>
+
+<style>
+    @@media print {
+        .no-print { display: none !important; }
+        #planificador { display: none !important; }
+        #print-area {
+            display: block !important;
+            font-size: 13px;
+        }
+        #print-area .grid-amasadas {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        #print-area .amasada-card {
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            break-inside: avoid;
+        }
+        #print-area .amasada-card:nth-child(4n) {
+            break-after: page;
+        }
+    }
+</style>
+
 @section Scripts {
 <script>
-    const productos = @Html.Raw(ViewBag.ProductosJson);
+    // ─── Data & State ───────────────────────────────────
+    const productosOriginales = @Html.Raw(ViewBag.ProductosJson);
+    let amasadas = [];
+    let nextId = 1;
 
+    // ─── Init ───────────────────────────────────────────
+    function init() {
+        nextId = 1;
+        amasadas = productosOriginales.map(p => ({
+            id: nextId++,
+            productos: [structuredClone(p)],
+            splitInfo: null   // { parte: 1, total: 3 } when split
+        }));
+        render();
+    }
+
+    // ─── Combine ────────────────────────────────────────
+    function combinar() {
+        const checks = document.querySelectorAll('.batch-check:checked');
+        const ids = Array.from(checks).map(c => parseInt(c.dataset.id));
+        if (ids.length < 2) return;
+
+        const nuevaAmasada = { id: nextId++, productos: [], splitInfo: null };
+        for (const id of ids) {
+            const batch = amasadas.find(a => a.id === id);
+            if (batch) nuevaAmasada.productos.push(...batch.productos);
+        }
+        amasadas = amasadas.filter(a => !ids.includes(a.id));
+        amasadas.push(nuevaAmasada);
+        render();
+    }
+
+    // ─── Uncombine ──────────────────────────────────────
+    function desCombinar(amasadaId) {
+        const batch = amasadas.find(a => a.id === amasadaId);
+        if (!batch || batch.productos.length < 2) return;
+
+        const idx = amasadas.indexOf(batch);
+        amasadas.splice(idx, 1);
+        for (let i = 0; i < batch.productos.length; i++) {
+            amasadas.splice(idx + i, 0, {
+                id: nextId++,
+                productos: [batch.productos[i]],
+                splitInfo: null
+            });
+        }
+        render();
+    }
+
+    // ─── Split ──────────────────────────────────────────
+    function dividir(amasadaId) {
+        const input = document.getElementById('div-' + amasadaId);
+        const n = parseInt(input?.value);
+        if (!n || n < 2) return;
+
+        const batch = amasadas.find(a => a.id === amasadaId);
+        if (!batch || batch.productos.length !== 1) return;
+
+        const prod = batch.productos[0];
+        const idx = amasadas.indexOf(batch);
+        amasadas.splice(idx, 1);
+
+        for (let i = 0; i < n; i++) {
+            amasadas.splice(idx + i, 0, {
+                id: nextId++,
+                productos: [{
+                    ...structuredClone(prod),
+                    pesoMasaTotal: prod.pesoMasaTotal / n,
+                    cantidadUnidades: prod.cantidadUnidades / n,
+                    ingredientes: prod.ingredientes.map(ing => ({
+                        ...ing,
+                        gramos: ing.gramos / n
+                    }))
+                }],
+                splitInfo: { parte: i + 1, total: n }
+            });
+        }
+        render();
+    }
+
+    // ─── Reset ──────────────────────────────────────────
+    function resetear() {
+        init();
+    }
+
+    // ─── Combine ingredients across products ────────────
+    function getIngredientesCombinados(amasada) {
+        const map = new Map();
+        for (const prod of amasada.productos) {
+            for (const ing of prod.ingredientes) {
+                const key = ing.esSubReceta
+                    ? 'sr-' + ing.idSubReceta
+                    : 'in-' + ing.idInsumo;
+                if (map.has(key)) {
+                    map.get(key).gramos += ing.gramos;
+                } else {
+                    map.set(key, { ...ing });
+                }
+            }
+        }
+        return Array.from(map.values());
+    }
+
+    // ─── Update action bar visibility ───────────────────
+    function updateActionBar() {
+        const checked = document.querySelectorAll('.batch-check:checked').length;
+        document.getElementById('action-bar').style.display = checked >= 2 ? '' : 'none';
+        document.getElementById('selected-count').textContent = checked;
+    }
+
+    // ─── Render ─────────────────────────────────────────
     function render() {
         const container = document.getElementById('planificador');
 
-        if (!productos || productos.length === 0) {
+        if (!amasadas.length) {
             container.innerHTML = '<p class="text-muted">No hay productos con receta en los pedidos pendientes.</p>';
+            document.getElementById('action-bar').style.display = 'none';
             return;
         }
 
         let html = '<div class="row g-4">';
-        for (const p of productos) {
+
+        amasadas.forEach((am, idx) => {
+            const esCombinada = am.productos.length > 1;
+            const pesoTotal = am.productos.reduce((s, p) => s + p.pesoMasaTotal, 0);
+            const ingredientes = getIngredientesCombinados(am);
+
+            // Card title
+            let titulo = 'Amasada ' + (idx + 1);
+            if (am.splitInfo) {
+                titulo += ' <span class="text-muted small">(' + am.splitInfo.parte + '/' + am.splitInfo.total + ')</span>';
+            }
+
             html += `
             <div class="col-md-6">
                 <div class="card card-custom p-4">
-                    <h5 class="fw-bold mb-1">${p.nombreProducto}</h5>
-                    <p class="text-muted small mb-3">
-                        ${p.cantidadUnidades} unidades &mdash;
-                        Masa total: <strong>${Math.round(p.pesoMasaTotal)} g</strong>
-                    </p>
+                    <div class="d-flex align-items-start gap-2 mb-2">
+                        <input type="checkbox" class="form-check-input mt-1 batch-check no-print"
+                               data-id="${am.id}" onchange="updateActionBar()">
+                        <div class="flex-grow-1">
+                            <h5 class="fw-bold mb-0">${titulo}</h5>
+                        </div>
+                        ${esCombinada
+                            ? `<button onclick="desCombinar(${am.id})"
+                                    class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 no-print">
+                                    <span class="material-symbols-outlined" style="font-size:16px;">undo</span>Deshacer
+                               </button>`
+                            : `<div class="d-inline-flex align-items-center gap-1 no-print">
+                                    <input type="number" id="div-${am.id}" value="2" min="2" max="10"
+                                           class="form-control form-control-sm" style="width:60px;">
+                                    <button onclick="dividir(${am.id})"
+                                            class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1">
+                                        <span class="material-symbols-outlined" style="font-size:16px;">content_cut</span>Dividir
+                                    </button>
+                               </div>`
+                        }
+                    </div>
+
+                    <!-- Product list with individual weights -->
+                    ${am.productos.map(p => `
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span>${p.nombreProducto}</span>
+                            <strong>${Math.round(p.pesoMasaTotal)} g</strong>
+                        </div>
+                    `).join('')}
+                    ${esCombinada ? `
+                        <div class="d-flex justify-content-between small fw-bold border-top pt-1 mb-2">
+                            <span>TOTAL</span>
+                            <span>${Math.round(pesoTotal)} g</span>
+                        </div>` : '<div class="mb-2"></div>'
+                    }
+
+                    <!-- Ingredient table -->
                     <table class="table table-sm align-middle mb-0">
                         <thead>
                             <tr>
@@ -43,20 +239,94 @@
                             </tr>
                         </thead>
                         <tbody>
-                            ${p.ingredientes.map(ing => `
+                            ${ingredientes.map(ing => `
                             <tr${ing.esSubReceta ? ' class="table-warning"' : ''}>
-                                <td>${ing.esSubReceta ? '⟳ ' : ''}${ing.nombre}</td>
+                                <td>${ing.esSubReceta ? '\u27F3 ' : ''}${ing.nombre}</td>
                                 <td class="text-end fw-bold">${Math.round(ing.gramos)} ${ing.unidad}</td>
                             </tr>`).join('')}
                         </tbody>
                     </table>
                 </div>
             </div>`;
-        }
+        });
+
         html += '</div>';
         container.innerHTML = html;
+
+        // Reset action bar
+        document.getElementById('action-bar').style.display = 'none';
     }
 
-    document.addEventListener('DOMContentLoaded', render);
+    // ─── Print ──────────────────────────────────────────
+    function imprimir() {
+        const printArea = document.getElementById('print-area');
+        const hoy = new Date().toLocaleDateString('es-AR');
+
+        let html = `<h4>Plan de amasadas \u2014 ${hoy}</h4>`;
+        html += '<div class="grid-amasadas">';
+
+        amasadas.forEach((am, idx) => {
+            const esCombinada = am.productos.length > 1;
+            const pesoTotal = am.productos.reduce((s, p) => s + p.pesoMasaTotal, 0);
+            const ingredientes = getIngredientesCombinados(am);
+
+            let titulo = 'Amasada ' + (idx + 1);
+            if (am.splitInfo) titulo += ' (' + am.splitInfo.parte + '/' + am.splitInfo.total + ')';
+
+            html += `<div class="amasada-card">`;
+            html += `<h5 style="margin:0 0 4px 0; font-size:14px;">${titulo}</h5>`;
+
+            // Product list
+            for (const p of am.productos) {
+                html += `<div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:2px;">
+                    <span>${p.nombreProducto} \u2014 ${p.cantidadUnidades % 1 === 0 ? p.cantidadUnidades : p.cantidadUnidades.toFixed(1)} u.</span>
+                    <strong>${Math.round(p.pesoMasaTotal)} g</strong>
+                </div>`;
+            }
+            if (esCombinada) {
+                html += `<div style="display:flex; justify-content:space-between; font-size:11px; font-weight:bold; border-top:1px solid #ccc; padding-top:2px; margin-bottom:4px;">
+                    <span>TOTAL</span>
+                    <span>${Math.round(pesoTotal)} g</span>
+                </div>`;
+            } else {
+                html += '<div style="margin-bottom:4px;"></div>';
+            }
+
+            // Ingredient table
+            html += `<table style="width:100%; border-collapse:collapse; font-size:11px;">
+                <thead>
+                    <tr>
+                        <th style="border:1px solid #ccc; padding:3px 6px; background:#f0f0f0; text-align:left;">Ingrediente</th>
+                        <th style="border:1px solid #ccc; padding:3px 6px; background:#f0f0f0; text-align:center;">Unidad</th>
+                        <th style="border:1px solid #ccc; padding:3px 6px; background:#f0f0f0; text-align:right;">Cantidad</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+            for (const ing of ingredientes) {
+                const bg = ing.esSubReceta ? ' background-color:#fff8e1;' : '';
+                const prefix = ing.esSubReceta ? '\u27F3 ' : '';
+                html += `<tr>
+                    <td style="border:1px solid #ccc; padding:3px 6px;${bg}">${prefix}${ing.nombre}</td>
+                    <td style="border:1px solid #ccc; padding:3px 6px; text-align:center;${bg}">${ing.unidad}</td>
+                    <td style="border:1px solid #ccc; padding:3px 6px; text-align:right;${bg}">${Math.round(ing.gramos)}</td>
+                </tr>`;
+            }
+
+            html += '</tbody></table>';
+            html += `<p style="margin:6px 0 0 0; font-size:11px;">
+                <strong>Peso masa total:</strong> ${Math.round(pesoTotal)} g
+            </p>`;
+            html += '</div>';
+        });
+
+        html += '</div>';
+        printArea.innerHTML = html;
+
+        setTimeout(() => window.print(), 100);
+    }
+
+    // ─── Boot ───────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', init);
 </script>
 }
