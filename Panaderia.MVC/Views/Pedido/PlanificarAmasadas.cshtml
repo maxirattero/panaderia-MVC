@@ -60,6 +60,7 @@
 <script>
     // ─── Data & State ───────────────────────────────────
     const productosOriginales = @Html.Raw(ViewBag.ProductosJson);
+    const subRecetasOriginales = @Html.Raw(ViewBag.SubRecetasJson);
     let amasadas = [];
     let nextId = 1;
 
@@ -321,6 +322,43 @@
         });
 
         html += '</div>';
+
+        // Preparaciones previas
+        if (subRecetasOriginales && subRecetasOriginales.length > 0) {
+            html += `<div style="margin-top: 20px;">
+                <h4 style="margin-bottom: 10px; font-size: 14px; border-bottom: 1px solid #ccc; padding-bottom: 4px;">
+                    Preparaciones previas
+                </h4>
+                <div class="grid-amasadas">`;
+
+            for (const sr of subRecetasOriginales) {
+                html += `<div class="amasada-card">
+                    <h5 style="margin:0 0 4px 0; font-size:14px;">${sr.nombre}</h5>
+                    <p style="margin:0 0 6px 0; font-size:11px; color:#555;">
+                        Total con margen: <strong>${Math.round(sr.totalGramos)} g</strong>
+                    </p>
+                    <table style="width:100%; border-collapse:collapse; font-size:11px;">
+                        <thead>
+                            <tr>
+                                <th style="border:1px solid #ccc; padding:3px 6px; background:#f0f0f0; text-align:left;">Ingrediente</th>
+                                <th style="border:1px solid #ccc; padding:3px 6px; background:#f0f0f0; text-align:right;">Cantidad</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+
+                for (const ing of sr.ingredientes) {
+                    html += `<tr>
+                        <td style="border:1px solid #ccc; padding:3px 6px;">${ing.nombreInsumo}</td>
+                        <td style="border:1px solid #ccc; padding:3px 6px; text-align:right;">${Math.round(ing.cantidad)} ${ing.unidad}</td>
+                    </tr>`;
+                }
+
+                html += `</tbody></table></div>`;
+            }
+
+            html += '</div></div>';
+        }
+
         printArea.innerHTML = html;
 
         setTimeout(() => window.print(), 100);

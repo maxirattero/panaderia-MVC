@@ -85,10 +85,13 @@ namespace Panaderia.MVC.Controllers
         public async Task<IActionResult> PlanificarAmasadas()
         {
             var productos = await _pedidoService.GetIngredientesProduccionAsync();
-            ViewBag.ProductosJson = JsonSerializer.Serialize(productos, new JsonSerializerOptions
+            var (_, _, porSubReceta, _) = await _pedidoService.GetResumenProduccionAsync();
+            var jsonOptions = new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            });
+            };
+            ViewBag.ProductosJson = JsonSerializer.Serialize(productos, jsonOptions);
+            ViewBag.SubRecetasJson = JsonSerializer.Serialize(porSubReceta, jsonOptions);
             return View();
         }
 
