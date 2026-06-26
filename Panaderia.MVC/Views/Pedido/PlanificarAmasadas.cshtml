@@ -1,0 +1,62 @@
+@{
+    ViewData["Title"] = "Planificador de Amasadas";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="display-6 fw-bold titulo-pagina mb-1">Planificador de Amasadas</h1>
+    <div class="d-flex gap-2">
+        <a asp-action="Produccion" class="btn btn-mv-primary">Volver</a>
+    </div>
+</div>
+
+<div id="planificador" style="max-width: 900px;">
+    <p class="text-muted">Cargando...</p>
+</div>
+
+@section Scripts {
+<script>
+    const productos = @Html.Raw(ViewBag.ProductosJson);
+
+    function render() {
+        const container = document.getElementById('planificador');
+
+        if (!productos || productos.length === 0) {
+            container.innerHTML = '<p class="text-muted">No hay productos con receta en los pedidos pendientes.</p>';
+            return;
+        }
+
+        let html = '<div class="row g-4">';
+        for (const p of productos) {
+            html += `
+            <div class="col-md-6">
+                <div class="card card-custom p-4">
+                    <h5 class="fw-bold mb-1">${p.nombreProducto}</h5>
+                    <p class="text-muted small mb-3">
+                        ${p.cantidadUnidades} unidades &mdash;
+                        Masa total: <strong>${Math.round(p.pesoMasaTotal)} g</strong>
+                    </p>
+                    <table class="table table-sm align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Ingrediente</th>
+                                <th class="text-end">Cantidad</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${p.ingredientes.map(ing => `
+                            <tr${ing.esSubReceta ? ' class="table-warning"' : ''}>
+                                <td>${ing.esSubReceta ? '⟳ ' : ''}${ing.nombre}</td>
+                                <td class="text-end fw-bold">${Math.round(ing.gramos)} ${ing.unidad}</td>
+                            </tr>`).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>`;
+        }
+        html += '</div>';
+        container.innerHTML = html;
+    }
+
+    document.addEventListener('DOMContentLoaded', render);
+</script>
+}

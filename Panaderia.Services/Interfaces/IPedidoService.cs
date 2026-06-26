@@ -47,5 +47,7 @@ namespace Panaderia.Services.Interfaces
         Task<decimal> GetTotalVendidoSemanaAsync();
         // Resumen para cierre semanal: cobrado, costo de insumos y desglose por producto
         Task<(decimal TotalCobrado, decimal CostoInsumos, List<CostoProductoItem> Detalles)> GetResumenCierreSemanalAsync();
+        // Ingredientes por producto para el planificador de amasadas
+        Task<List<ProduccionProductoDetalle>> GetIngredientesProduccionAsync();
     }
 }

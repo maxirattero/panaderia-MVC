@@ -434,5 +434,108 @@ namespace Panaderia.Services.Implementations
 
             return (porProducto, porBolsa, porSubReceta, totalAgua);
         }
+
+        public async Task<List<ProduccionProductoDetalle>> GetIngredientesProduccionAsync()
+        {
+            var detalles = await _context.DetallesPedido
+                .Include(d => d.Producto).ThenInclude(p => p.Categoria)
+                .Include(d => d.Producto).ThenInclude(p => p.Formato)
+                .Where(d => d.Pedido.Estado != EstadoPedido.Entregado)
+                .ToListAsync();
+
+            var porProducto = detalles
+                .GroupBy(d => d.IdProducto)
+                .Select(g => new
+                {
+                    IdProducto = g.Key,
+                    Producto = g.First().Producto,
+                    Cantidad = g.Sum(d => d.Cantidad)
+                })
+                .OrderBy(x => x.Producto.Categoria?.Nombre)
+                .ThenBy(x => x.Producto.Masa)
+                .ToList();
+
+            var resultado = new List<ProduccionProductoDetalle>();
+
+            foreach (var item in porProducto)
+            {
+                var receta = await _context.Recetas
+                    .Include(r => r.Detalles).ThenInclude(d => d.Insumo)
+                    .Include(r => r.Detalles).ThenInclude(d => d.SubReceta)
+                    .FirstOrDefaultAsync(r => r.IdProducto == item.IdProducto);
+
+                if (receta == null) continue;
+
+                decimal vecesReceta = (decimal)item.Cantidad / receta.TamanioLote;
+                decimal pesoMasaTotal = receta.PesoUnitario * item.Cantidad;
+
+                var ingredientes = new List<ProduccionIngredienteDetalle>();
+
+                foreach (var det in receta.Detalles)
+                {
+                    if (det.IdInsumo.HasValue && det.Insumo != null)
+                    {
+                        decimal gramos;
+                        string unidad;
+
+                        if (det.PorcentajePanadero.HasValue && receta.SumaPorcentajes > 0)
+                        {
+                            gramos = (receta.TamanioLote * receta.PesoUnitario
+                                      / receta.SumaPorcentajes)
+                                     * det.PorcentajePanadero.Value * vecesReceta;
+                            unidad = det.Insumo.UnidadBase switch
+                            {
+                                Panaderia.Models.Enums.UnidadMedida.Mililitros => "ml",
+                                Panaderia.Models.Enums.UnidadMedida.Unidades   => "u",
+                                _                                               => "g"
+                            };
+                        }
+                        else if (det.CantidadFija.HasValue)
+                        {
+                            gramos = det.CantidadFija.Value * receta.TamanioLote * vecesReceta;
+                            unidad = "u";
+                        }
+                        else continue;
+
+                        ingredientes.Add(new ProduccionIngredienteDetalle
+                        {
+                            IdInsumo    = det.IdInsumo,
+                            Nombre      = det.Insumo.Nombre,
+                            Gramos      = gramos,
+                            Unidad      = unidad,
+                            EsSubReceta = false
+                        });
+                    }
+                    else if (det.IdSubReceta.HasValue && det.SubReceta != null)
+                    {
+                        if (!det.PorcentajePanadero.HasValue || receta.SumaPorcentajes == 0) continue;
+
+                        decimal gramos = (receta.TamanioLote * receta.PesoUnitario
+                                          / receta.SumaPorcentajes)
+                                         * det.PorcentajePanadero.Value * vecesReceta;
+
+                        ingredientes.Add(new ProduccionIngredienteDetalle
+                        {
+                            IdSubReceta = det.IdSubReceta,
+                            Nombre      = det.SubReceta.Nombre,
+                            Gramos      = gramos,
+                            Unidad      = "g",
+                            EsSubReceta = true
+                        });
+                    }
+                }
+
+                resultado.Add(new ProduccionProductoDetalle
+                {
+                    IdProducto       = item.IdProducto,
+                    NombreProducto   = item.Producto.NombreVisible,
+                    CantidadUnidades = item.Cantidad,
+                    PesoMasaTotal    = pesoMasaTotal,
+                    Ingredientes     = ingredientes
+                });
+            }
+
+            return resultado;
+        }
     }
 }

@@ -29,4 +29,23 @@ namespace Panaderia.Models.DTOs
         public decimal Cantidad { get; set; }
         public string Unidad { get; set; } = string.Empty;
     }
+
+    public class ProduccionProductoDetalle
+    {
+        public int IdProducto { get; set; }
+        public string NombreProducto { get; set; } = string.Empty;
+        public int CantidadUnidades { get; set; }
+        public decimal PesoMasaTotal { get; set; }
+        public List<ProduccionIngredienteDetalle> Ingredientes { get; set; } = new();
+    }
+
+    public class ProduccionIngredienteDetalle
+    {
+        public int? IdInsumo { get; set; }
+        public int? IdSubReceta { get; set; }
+        public string Nombre { get; set; } = string.Empty;
+        public decimal Gramos { get; set; }
+        public string Unidad { get; set; } = string.Empty;
+        public bool EsSubReceta { get; set; }
+    }
 }

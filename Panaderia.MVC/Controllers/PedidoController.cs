@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Panaderia.Models.DTOs;
 using Panaderia.Models.Entities;
@@ -78,6 +79,17 @@ namespace Panaderia.MVC.Controllers
             var pedidos = await _pedidoService.GetByEstadoAsync(EstadoPedido.Pendiente);
             ViewBag.ConDetalles = conDetalles;
             return View(pedidos);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> PlanificarAmasadas()
+        {
+            var productos = await _pedidoService.GetIngredientesProduccionAsync();
+            ViewBag.ProductosJson = JsonSerializer.Serialize(productos, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
+            return View();
         }
 
         public async Task<IActionResult> ImprimirProduccion()
