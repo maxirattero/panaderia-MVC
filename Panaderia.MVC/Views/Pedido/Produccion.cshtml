@@ -80,9 +80,23 @@
         </div>
     </div>
 
-    @if (Model.PorSubReceta.Any())
+    @if (Model.PorSubReceta.Any() || Model.TotalAgua > 0)
     {
         <div class="row g-4 mt-0">
+            @if (Model.TotalAgua > 0)
+            {
+                <div class="col-md-6">
+                    <div class="card card-custom p-4">
+                        <h5 class="fw-bold mb-1">
+                            <span class="material-symbols-outlined align-middle me-1">water_drop</span>Agua
+                        </h5>
+                        <p class="mb-0 mt-2">
+                            Total necesario:
+                            <strong class="fs-4">@Model.TotalAgua.ToString("N0") g</strong>
+                        </p>
+                    </div>
+                </div>
+            }
             @foreach (var sr in Model.PorSubReceta)
             {
                 <div class="col-md-6">

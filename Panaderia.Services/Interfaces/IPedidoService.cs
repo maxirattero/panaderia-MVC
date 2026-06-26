@@ -38,7 +38,7 @@ namespace Panaderia.Services.Interfaces
         // Anular pedido
         Task AnularAsync(int id);
         // Resumen de producción (pedidos no entregados)
-        Task<(List<ResumenProductoItem> PorProducto, List<ResumenBolsaItem> PorBolsa, List<ResumenSubRecetaItem> PorSubReceta)> GetResumenProduccionAsync();
+        Task<(List<ResumenProductoItem> PorProducto, List<ResumenBolsaItem> PorBolsa, List<ResumenSubRecetaItem> PorSubReceta, decimal TotalAgua)> GetResumenProduccionAsync();
         // Confirmar producción y descontar stock
         Task<List<string>> ConfirmarProduccionAsync(List<ItemProduccionSeleccionable> items);
         // Marcar pedido como entregado

@@ -29,12 +29,13 @@ namespace Panaderia.MVC.Controllers
 
         public async Task<IActionResult> Produccion()
         {
-            var (porProducto, porBolsa, porSubReceta) = await _pedidoService.GetResumenProduccionAsync();
+            var (porProducto, porBolsa, porSubReceta, totalAgua) = await _pedidoService.GetResumenProduccionAsync();
             var vm = new ProduccionViewModel
             {
                 PorProducto  = porProducto,
                 PorBolsa     = porBolsa,
-                PorSubReceta = porSubReceta
+                PorSubReceta = porSubReceta,
+                TotalAgua    = totalAgua
             };
             foreach (var item in vm.PorProducto)
             {
@@ -81,7 +82,7 @@ namespace Panaderia.MVC.Controllers
 
         public async Task<IActionResult> ImprimirProduccion()
         {
-            var (porProducto, _, porSubReceta) = await _pedidoService.GetResumenProduccionAsync();
+            var (porProducto, _, porSubReceta, _) = await _pedidoService.GetResumenProduccionAsync();
             var vm = new ImprimirProduccionViewModel
             {
                 Fecha      = DateTime.Today,

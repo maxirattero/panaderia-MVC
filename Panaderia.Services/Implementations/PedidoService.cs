@@ -299,7 +299,7 @@ namespace Panaderia.Services.Implementations
         }
 
         // Resumen de producción (pedidos no entregados, anulados excluidos por query filter)
-        public async Task<(List<ResumenProductoItem> PorProducto, List<ResumenBolsaItem> PorBolsa, List<ResumenSubRecetaItem> PorSubReceta)> GetResumenProduccionAsync()
+        public async Task<(List<ResumenProductoItem> PorProducto, List<ResumenBolsaItem> PorBolsa, List<ResumenSubRecetaItem> PorSubReceta, decimal TotalAgua)> GetResumenProduccionAsync()
         {
             var detalles = await _context.DetallesPedido
                 .Include(d => d.Producto)
@@ -330,10 +330,13 @@ namespace Panaderia.Services.Implementations
 
             // Build sub-receta totals
             var porSubReceta = new List<ResumenSubRecetaItem>();
+            decimal totalAgua = 0m;
 
             foreach (var productoItem in porProducto)
             {
                 var receta = await _context.Recetas
+                    .Include(r => r.Detalles)
+                        .ThenInclude(d => d.Insumo)
                     .Include(r => r.Detalles)
                         .ThenInclude(d => d.SubReceta)
                             .ThenInclude(s => s.Detalles)
@@ -365,6 +368,19 @@ namespace Panaderia.Services.Implementations
                         porSubReceta.Add(existing);
                     }
                     existing.TotalGramos += gramosConMargen;
+                }
+
+                // Accumulate water from direct recipe ingredients
+                foreach (var det in receta.Detalles.Where(d => d.IdInsumo.HasValue && d.Insumo != null))
+                {
+                    if (det.Insumo!.Nombre.Equals("Agua", StringComparison.OrdinalIgnoreCase)
+                        && det.PorcentajePanadero.HasValue && receta.SumaPorcentajes > 0)
+                    {
+                        decimal gramosAgua = (receta.TamanioLote * receta.PesoUnitario
+                                             / receta.SumaPorcentajes)
+                                            * det.PorcentajePanadero.Value * vecesReceta;
+                        totalAgua += gramosAgua;
+                    }
                 }
             }
 
@@ -416,7 +432,7 @@ namespace Panaderia.Services.Implementations
                 }
             }
 
-            return (porProducto, porBolsa, porSubReceta);
+            return (porProducto, porBolsa, porSubReceta, totalAgua);
         }
     }
 }
