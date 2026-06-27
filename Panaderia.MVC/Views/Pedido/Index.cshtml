@@ -201,7 +201,7 @@
                                         @foreach (var d in p.Detalles)
                                         {
                                             <tr>
-                                                <td>@d.Producto.Nombre</td>
+                                                <td>@d.Producto.NombreVisible</td>
                                                 <td>@d.Cantidad</td>
                                                 <td>@d.Bolsa</td>
                                                 <td>$@d.PrecioUnitario</td>
@@ -278,7 +278,7 @@
                         @foreach (var d in p.Detalles)
                         {
                             <div class="pedido-card-detail-row">
-                                <span class="pedido-card-detail-name">@d.Cantidad× @d.Producto.Nombre</span>
+                                <span class="pedido-card-detail-name">@d.Cantidad× @d.Producto.NombreVisible</span>
                                 <span class="pedido-card-detail-price">$@(d.Cantidad * d.PrecioUnitario)</span>
                             </div>
                         }
