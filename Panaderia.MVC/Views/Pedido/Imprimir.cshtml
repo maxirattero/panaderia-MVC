@@ -56,7 +56,9 @@
         @foreach (var p in Model)
         {
             <div style="margin-bottom: 1rem;">
-                <strong>@p.Cliente.NombreCompleto</strong> — @p.Cliente.Direccion@(string.IsNullOrWhiteSpace(p.Notas) ? "" : $" | Notas: {p.Notas}")
+                <div style="text-align: center; font-size: 16px;">
+                <strong>@p.Cliente.NombreCompleto</strong> — @p.Cliente.Direccion - Tel: @p.Cliente.Telefono @(string.IsNullOrWhiteSpace(p.Notas) ? "" : $" | Notas: {p.Notas}")
+                </div>
                 <table>
                     <thead>
                         <tr>
