@@ -114,10 +114,6 @@
                                 <td>@r.Categoria</td>
                                 <td>
                                     @r.Descripcion
-                                    @if (r.IdPedido.HasValue)
-                                    {
-                                        <span class="status-badge status-active ms-1">Pedido #@r.IdPedido</span>
-                                    }
                                 </td>
                                 <td class="fw-bold @(r.Tipo == TipoMovimiento.Ingreso ? "text-success" : "text-danger")">
                                     @r.Monto.ToString("C", cultura)

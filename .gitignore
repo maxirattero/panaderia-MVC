@@ -430,3 +430,4 @@ FodyWeavers.xsd
 DataProtection-Keys/
 appsettings.Production.json
 appsettings.*.Local.json
+Panaderia.MVC/Properties/launchSettings.json

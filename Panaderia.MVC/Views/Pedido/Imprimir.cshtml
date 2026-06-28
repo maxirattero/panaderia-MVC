@@ -57,7 +57,8 @@
         {
             <div style="margin-bottom: 1rem;">
                 <div style="text-align: center; font-size: 16px;">
-                <strong>@p.Cliente.NombreCompleto</strong> — @p.Cliente.Direccion - Tel: @p.Cliente.Telefono @(string.IsNullOrWhiteSpace(p.Notas) ? "" : $" | Notas: {p.Notas}")
+                    @* <strong>@p.Cliente.NombreCompleto</strong> — @p.Cliente.Direccion - Tel: @p.Cliente.Telefono @(string.IsNullOrWhiteSpace(p.Notas) ? "" : $" | Notas: {p.Notas}") *@
+                    <strong>@p.Cliente.NombreCompleto</strong> — @p.Cliente.Direccion@(string.IsNullOrWhiteSpace(p.Cliente.Telefono) ? "" : $" - {p.Cliente.Telefono}")@(string.IsNullOrWhiteSpace(p.Notas) ? "" : $" | Notas: {p.Notas}")
                 </div>
                 <table>
                     <thead>

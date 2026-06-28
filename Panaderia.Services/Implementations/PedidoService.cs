@@ -80,7 +80,9 @@ namespace Panaderia.Services.Implementations
         //registrar un cobro parcial o total de un pedido y el Reporte de Caja
         public async Task RegistrarCobroAsync(int idPedido, decimal monto)
         {
-            var pedido = await _context.Pedidos.FindAsync(idPedido);
+            var pedido = await _context.Pedidos
+                .Include(p => p.Cliente)
+                .FirstOrDefaultAsync(p => p.Id == idPedido);
             if (pedido != null)
             {
                 pedido.MontoCobrado += monto;
@@ -96,7 +98,7 @@ namespace Panaderia.Services.Implementations
                         Tipo = TipoMovimiento.Ingreso,
                         Categoria = CategoriaMovimiento.Venta,
                         Monto = pedido.MontoCobrado,
-                        Descripcion = $"Venta - Pedido #{pedido.Id}",
+                        Descripcion = $"Venta - {pedido.Cliente.NombreCompleto}",
                         IdPedido = pedido.Id
                     });
                 }
