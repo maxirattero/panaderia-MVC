@@ -46,7 +46,9 @@ namespace Panaderia.Services.Interfaces
         // Total vendido en la semana actual (domingo a sábado)
         Task<decimal> GetTotalVendidoSemanaAsync();
         // Resumen para cierre semanal: cobrado, costo de insumos y desglose por producto
-        Task<(decimal TotalCobrado, decimal CostoInsumos, List<CostoProductoItem> Detalles)> GetResumenCierreSemanalAsync();
+        Task<ResumenCierreSemanal> GetResumenCierreSemanalAsync(DateTime inicioSemana);
+        // Verificar si ya existe un cierre registrado para el rango dado
+        Task<bool> ExisteCierreSemanalAsync(DateTime inicioSemana, DateTime finSemana);
         // Ingredientes por producto para el planificador de amasadas
         Task<List<ProduccionProductoDetalle>> GetIngredientesProduccionAsync();
     }

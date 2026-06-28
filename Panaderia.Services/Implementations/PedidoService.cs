@@ -201,13 +201,27 @@ namespace Panaderia.Services.Implementations
                 .SumAsync(p => (decimal?)p.MontoTotal) ?? 0m;
         }
 
-        public async Task<(decimal TotalCobrado, decimal CostoInsumos, List<CostoProductoItem> Detalles)> GetResumenCierreSemanalAsync()
+        public async Task<bool> ExisteCierreSemanalAsync(DateTime inicioSemana, DateTime finSemana)
         {
-            var hoy = DateTime.UtcNow.Date;
-            int diasDesdeDomingo = (int)hoy.DayOfWeek;
-            var inicioSemana = DateTime.SpecifyKind(hoy.AddDays(-diasDesdeDomingo), DateTimeKind.Utc);
+            return await _context.ReportesCaja
+                .AnyAsync(r => r.FechaInicioPeriodo == inicioSemana && r.FechaFinPeriodo == finSemana);
+        }
+
+        public async Task<ResumenCierreSemanal> GetResumenCierreSemanalAsync(DateTime inicioSemana)
+        {
             var finSemana = inicioSemana.AddDays(7);
 
+            // Movimientos de caja de la semana, excluyendo cierres registrados
+            var movimientos = await _context.ReportesCaja
+                .Where(r => r.Fecha >= inicioSemana
+                         && r.Fecha < finSemana
+                         && !r.FechaInicioPeriodo.HasValue)
+                .ToListAsync();
+
+            decimal totalIngresos = movimientos.Where(r => r.Tipo == TipoMovimiento.Ingreso).Sum(r => r.Monto);
+            decimal totalEgresos  = movimientos.Where(r => r.Tipo == TipoMovimiento.Egreso).Sum(r => r.Monto);
+
+            // Costo estimado desde recetas (informativo)
             var pedidos = await _context.Pedidos
                 .Include(p => p.Detalles)
                     .ThenInclude(d => d.Producto)
@@ -219,8 +233,6 @@ namespace Panaderia.Services.Implementations
                          && p.FechaEntrega >= inicioSemana
                          && p.FechaEntrega < finSemana)
                 .ToListAsync();
-
-            decimal totalCobrado = pedidos.Sum(p => p.MontoCobrado);
 
             var gruposPorProducto = pedidos
                 .SelectMany(p => p.Detalles)
@@ -254,7 +266,13 @@ namespace Panaderia.Services.Implementations
                 costoTotal += costoUnitario * cantidadTotal;
             }
 
-            return (totalCobrado, costoTotal, detalles);
+            return new ResumenCierreSemanal
+            {
+                TotalIngresos = totalIngresos,
+                TotalEgresos  = totalEgresos,
+                CostoInsumos  = costoTotal,
+                DetallesCosto = detalles
+            };
         }
 
         // Confirmar producción y descontar stock de insumos

@@ -20,6 +20,8 @@ namespace Panaderia.Services.Implementations
             return await _context.ReportesCaja
                 .Include(r => r.Pedido)
                 .Include(r => r.Proveedor)
+                .OrderByDescending(r => r.Fecha)
+                .ThenByDescending(r => r.Id)
                 .ToListAsync();
         }
 

@@ -162,20 +162,52 @@ namespace Panaderia.MVC.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> CierreSemanal()
+        public async Task<IActionResult> CierreSemanal(string? inicioSemana)
         {
-            var (totalCobrado, costoInsumos, detalles) = await _pedidoService.GetResumenCierreSemanalAsync();
             var hoy = DateTime.UtcNow.Date;
-            int diasDesdeDomingo = (int)hoy.DayOfWeek;
-            var inicioSemana = hoy.AddDays(-diasDesdeDomingo);
+            // Lunes de la semana actual (DayOfWeek.Sunday == 0 → offset 6, resto → dayOfWeek - 1)
+            int diasDesdeLunes = hoy.DayOfWeek == DayOfWeek.Sunday ? 6 : (int)hoy.DayOfWeek - 1;
+            var lunesSemanaActual = DateTime.SpecifyKind(hoy.AddDays(-diasDesdeLunes), DateTimeKind.Utc);
+            // Si hoy es domingo la semana actual (lun-dom) está completa; si no, usar la anterior
+            var semanaDefecto = hoy.DayOfWeek == DayOfWeek.Sunday
+                ? lunesSemanaActual
+                : lunesSemanaActual.AddDays(-7);
+
+            // Últimas 6 semanas completas (lunes a domingo, hacia atrás)
+            var semanas = Enumerable.Range(0, 6)
+                .Select(i => semanaDefecto.AddDays(-7 * i))
+                .ToList();
+
+            DateTime inicio = semanaDefecto;
+            if (!string.IsNullOrWhiteSpace(inicioSemana)
+                && DateTime.TryParseExact(inicioSemana, "yyyy-MM-dd",
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.None, out var parsed))
+            {
+                inicio = DateTime.SpecifyKind(parsed, DateTimeKind.Utc);
+            }
+
+            var fin = inicio.AddDays(7);
+            var resumen   = await _pedidoService.GetResumenCierreSemanalAsync(inicio);
+            var yaCerrado = await _pedidoService.ExisteCierreSemanalAsync(inicio, fin);
+
+            ViewBag.Semanas = semanas.Select(s => new
+            {
+                Valor = s.ToString("yyyy-MM-dd"),
+                Label = $"{s:dd/MM} - {s.AddDays(6):dd/MM/yyyy}"
+            }).ToList();
+            ViewBag.SemanaSeleccionada = inicio.ToString("yyyy-MM-dd");
+            ViewBag.YaCerrado = yaCerrado;
+
             var vm = new CierreSemanalViewModel
             {
-                InicioSemana  = inicioSemana,
-                FinSemana     = inicioSemana.AddDays(6),
-                TotalCobrado  = totalCobrado,
-                CostoInsumos  = costoInsumos,
-                MontoARetirar = Math.Round(totalCobrado - costoInsumos, 2),
-                DetallesCosto = detalles
+                InicioSemana  = inicio,
+                FinSemana     = inicio.AddDays(6),
+                TotalIngresos = resumen.TotalIngresos,
+                TotalEgresos  = resumen.TotalEgresos,
+                CostoInsumos  = resumen.CostoInsumos,
+                MontoARetirar = Math.Round(resumen.GananciaEstimada, 2),
+                DetallesCosto = resumen.DetallesCosto
             };
             return View(vm);
         }
@@ -190,18 +222,29 @@ namespace Panaderia.MVC.Controllers
             if (vm.MontoARetirar <= 0)
             {
                 TempData["Error"] = "El monto a retirar debe ser mayor a cero.";
-                return RedirectToAction(nameof(CierreSemanal));
+                return RedirectToAction(nameof(CierreSemanal), new { inicioSemana = vm.InicioSemana.ToString("yyyy-MM-dd") });
             }
 
-            var periodoStr = $"{vm.InicioSemana:dd/MM} - {vm.FinSemana:dd/MM}";
+            var inicioUtc = DateTime.SpecifyKind(vm.InicioSemana.Date, DateTimeKind.Utc);
+            var finUtc    = inicioUtc.AddDays(7);
+
+            if (await _pedidoService.ExisteCierreSemanalAsync(inicioUtc, finUtc))
+            {
+                TempData["Error"] = "Ya existe un cierre registrado para esa semana.";
+                return RedirectToAction(nameof(CierreSemanal), new { inicioSemana = vm.InicioSemana.ToString("yyyy-MM-dd") });
+            }
+
+            var periodoStr = $"{vm.InicioSemana:dd/MM} - {vm.InicioSemana.AddDays(6):dd/MM/yyyy}";
             await _reporteCajaService.CreateAsync(new ReporteCaja
             {
-                Fecha       = DateTime.UtcNow,
-                Tipo        = TipoMovimiento.Ingreso,
-                Categoria   = CategoriaMovimiento.Recaudacion,
-                Monto       = vm.MontoARetirar,
-                Descripcion = $"Recaudación semanal {periodoStr}" +
-                              (string.IsNullOrWhiteSpace(vm.Notas) ? "" : $" – {vm.Notas}")
+                Fecha                = DateTime.UtcNow,
+                Tipo                 = TipoMovimiento.Egreso,
+                Categoria            = CategoriaMovimiento.Recaudacion,
+                Monto                = vm.MontoARetirar,
+                Descripcion          = $"Recaudación semanal {periodoStr}" +
+                                       (string.IsNullOrWhiteSpace(vm.Notas) ? "" : $" – {vm.Notas}"),
+                FechaInicioPeriodo   = inicioUtc,
+                FechaFinPeriodo      = finUtc
             });
 
             TempData["Success"] = $"Recaudación de {vm.MontoARetirar:C} registrada correctamente.";

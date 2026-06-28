@@ -14,5 +14,7 @@ namespace Panaderia.Models.Entities
         public Pedido? Pedido { get; set; }
         public int? IdProveedor { get; set; }
         public Proveedor? Proveedor { get; set; }
+        public DateTime? FechaInicioPeriodo { get; set; }
+        public DateTime? FechaFinPeriodo { get; set; }
     }
 }
