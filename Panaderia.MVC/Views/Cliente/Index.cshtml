@@ -1,147 +1,229 @@
-﻿@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 @model IEnumerable<Panaderia.Models.Entities.Cliente>
 
 @{
     ViewData["Title"] = "Clientes";
+    int totalClientes = Model.Count();
 }
-    <!-- Header Section -->
-    <div class="row align-items-end mb-5 gy-4">
-        <div class="col-md-7">
-            <h1 class="display-6 fw-bold titulo-pagina mb-1">Clientes</h1>
-            <p class="text-secondary m-0">Administra los clientes y revendedores de la panadería.</p>
-        </div>
-        <div class="col-md-5 text-md-end">
-            <a asp-action="Create" class="btn btn-mv-primary d-inline-flex align-items-center gap-2 shadow">
-                <span class="material-symbols-outlined">person_add</span>
-                Agregar Nuevo Cliente
-            </a>
-        </div>
-    </div>
 
-    <!-- Filters Bar -->
-    <div class="card-custom p-3 mb-4">
-        <div class="row g-3">
-            <div class="col-lg-6">
-                <div class="input-group">
-                    <span class="input-group-text bg-transparent border-end-0">
-                        <span class="material-symbols-outlined text-secondary">filter_list</span>
-                    </span>
-                    <input id="filtroTexto" class="form-control border-start-0 ps-0" placeholder="Filtrar por nombre, apellido, direcci&#243;n, localidad o tel&#233;fono..." type="text" />
+<style>
+    .pill-filtro {
+        padding: 0.3rem 1rem;
+        border-radius: 999px;
+        border: 1px solid #cebaac;
+        background: #fff;
+        font-size: 0.82rem;
+        cursor: pointer;
+        transition: background 0.15s, color 0.15s;
+    }
+    .pill-filtro.activo {
+        background-color: #855330;
+        color: #fff;
+        border-color: #855330;
+    }
+    .cliente-card {
+        background: #fff;
+        border-radius: 12px;
+        border: 0.5px solid #cebaac;
+        padding: 14px 16px;
+    }
+</style>
+
+@* ── Header ── *@
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <h1 class="display-6 fw-bold titulo-pagina mb-1">Clientes</h1>
+        <p class="text-secondary m-0 d-none d-md-block">Administr&#225; los clientes y revendedores de la panader&#237;a.</p>
+    </div>
+    <a asp-action="Create"
+       class="btn d-inline-flex align-items-center gap-2 shadow-sm"
+       style="background-color: #855330; color: #fff; border-radius: 8px;">
+        <span class="material-symbols-outlined">person_add</span>
+        <span class="d-none d-md-inline">Nuevo Cliente</span>
+        <span class="d-md-none">Nuevo</span>
+    </a>
+</div>
+
+@* ── Buscador ── *@
+<div class="mb-3">
+    <div class="input-group">
+        <span class="input-group-text bg-transparent border-end-0">
+            <span class="material-symbols-outlined text-secondary">search</span>
+        </span>
+        <input id="filtroTexto" type="text"
+               class="form-control border-start-0 ps-0"
+               placeholder="Buscar cliente..." />
+    </div>
+</div>
+
+@* ── Pills de tipo ── *@
+<div class="d-flex gap-2 mb-3">
+    <button id="pilTodos"        class="pill-filtro activo" onclick="setPill('todos')">Todos</button>
+    <button id="pilMinoristas"   class="pill-filtro"        onclick="setPill('minoristas')">Minoristas</button>
+    <button id="pilRevendedores" class="pill-filtro"        onclick="setPill('revendedores')">Revendedores</button>
+</div>
+
+@* ── Contador ── *@
+<p id="contadorVisible" class="text-secondary small mb-3">@totalClientes clientes</p>
+
+@* ══════════════════════════════════════════
+   MOBILE: Cards (ocultas en desktop)
+   ══════════════════════════════════════════ *@
+<div id="mobileCards" class="d-md-none">
+    @foreach (var c in Model)
+    {
+        var ini = (string.IsNullOrEmpty(c.Nombre) ? "?" : c.Nombre[0].ToString().ToUpper())
+                + (string.IsNullOrEmpty(c.Apellido) ? "" : c.Apellido[0].ToString().ToUpper());
+        <div class="cliente-card mb-3"
+             data-revendedor="@c.Revendedor.ToString().ToLower()"
+             data-busqueda="@($"{c.Nombre} {c.Apellido} {c.Direccion} {c.Telefono}").ToLower()">
+
+            @* Avatar + nombre + badge *@
+            <div class="d-flex align-items-center gap-3 mb-2">
+                <div class="avatar-circle"
+                     style="background-color:#f0e6de;color:#855330;font-size:1rem;width:40px;height:40px;flex-shrink:0;">
+                    @ini
+                </div>
+                <div>
+                    <div class="fw-bold lh-sm">@c.NombreCompleto</div>
+                    @if (c.Revendedor)
+                    {
+                        <span class="badge rounded-pill"
+                              style="background-color:#dff0d8;color:#3c763d;font-size:0.7rem;">
+                            Revendedor
+                        </span>
+                    }
                 </div>
             </div>
-            <div class="col-sm-6 col-lg-3">
-                <select id="filtroTipo" class="form-select">
-                    <option value="">Todos los Tipos</option>
-                    <option value="true">Revendedor</option>
-                    <option value="false">Minorista</option>
-                </select>
+
+            @* Direcci&#243;n *@
+            <div class="d-flex align-items-center gap-1 small text-secondary mb-1">
+                <span class="material-symbols-outlined fs-6">location_on</span>
+                @if (!string.IsNullOrWhiteSpace(c.Direccion))
+                {
+                    <span>@c.Direccion</span>
+                }
+                else
+                {
+                    <em>Sin direcci&#243;n</em>
+                }
+            </div>
+
+            @* Tel&#233;fono (solo si existe) *@
+            @if (!string.IsNullOrWhiteSpace(c.Telefono))
+            {
+                <div class="d-flex align-items-center gap-1 small text-secondary mb-2">
+                    <span class="material-symbols-outlined fs-6">call</span>
+                    <span>@c.Telefono</span>
+                </div>
+            }
+
+            <hr class="my-2" />
+
+            @* Acciones *@
+            <div class="d-flex gap-2 justify-content-end">
+                <a asp-action="Details" asp-route-id="@c.Id"
+                   class="btn btn-sm" style="border:1px solid #cebaac;" title="Ver detalles">
+                    <span class="material-symbols-outlined">visibility</span>
+                </a>
+                <a asp-action="Edit" asp-route-id="@c.Id"
+                   class="btn btn-sm" style="border:1px solid #cebaac;" title="Editar">
+                    <span class="material-symbols-outlined">edit</span>
+                </a>
+                <button type="button"
+                        class="btn btn-sm"
+                        style="border:1px solid #e0a0a0;color:#993333;"
+                        title="Eliminar"
+                        data-bs-toggle="modal"
+                        data-bs-target="#deleteModal"
+                        data-nombre="@c.NombreCompleto"
+                        data-delete-url="@Url.Action("Delete", "Cliente", new { id = c.Id })"
+                        data-token="@Antiforgery.GetAndStoreTokens(Context).RequestToken">
+                    <span class="material-symbols-outlined">delete</span>
+                </button>
             </div>
         </div>
-    </div>
+    }
+</div>
 
-    <!-- Table Card -->
-    <div class="card-custom overflow-hidden mb-5">
-        <div class="table-responsive">
-            <table class="table table-custom table-hover m-0">
-                <thead>
-                    <tr>
-                        <th>Nombre / Apellido</th>
-                        <th>Ubicación</th>
-                        <th>Teléfono</th>
-                        <th>Tipo</th>
-                        <th class="text-end">Acciones</th>
+@* ══════════════════════════════════════════
+   DESKTOP: Tabla (oculta en mobile)
+   ══════════════════════════════════════════ *@
+<div class="card-custom overflow-hidden mb-5 d-none d-md-block">
+    <div class="table-responsive">
+        <table class="table table-custom table-hover m-0">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Apellido</th>
+                    <th>Direcci&#243;n</th>
+                    <th>Tel&#233;fono</th>
+                    <th>Tipo</th>
+                    <th class="text-end">Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="tablaBody">
+                @foreach (var c in Model)
+                {
+                    <tr data-revendedor="@c.Revendedor.ToString().ToLower()"
+                        data-busqueda="@($"{c.Nombre} {c.Apellido} {c.Direccion} {c.Telefono}").ToLower()">
+                        <td class="fw-bold">@c.Nombre</td>
+                        <td>@c.Apellido</td>
+                        <td class="text-secondary small">@(c.Direccion ?? "&#8212;")</td>
+                        <td class="text-secondary small">@(c.Telefono ?? "&#8212;")</td>
+                        <td>
+                            @if (c.Revendedor)
+                            {
+                                <span class="status-badge status-active">
+                                    <span class="dot" style="background-color:var(--mv-success);"></span>
+                                    Revendedor
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="status-badge status-inactive">
+                                    <span class="dot" style="background-color:var(--mv-error);"></span>
+                                    Minorista
+                                </span>
+                            }
+                        </td>
+                        <td class="text-end">
+                            <div class="d-flex gap-1 justify-content-end">
+                                <a asp-action="Details" asp-route-id="@c.Id"
+                                   class="btn btn-sm btn-outline-primary" title="Ver detalles">
+                                    <span class="material-symbols-outlined">visibility</span>
+                                </a>
+                                <a asp-action="Edit" asp-route-id="@c.Id"
+                                   class="btn btn-sm btn-outline-success" title="Editar">
+                                    <span class="material-symbols-outlined">edit</span>
+                                </a>
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-danger"
+                                        title="Eliminar"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#deleteModal"
+                                        data-nombre="@c.NombreCompleto"
+                                        data-delete-url="@Url.Action("Delete", "Cliente", new { id = c.Id })"
+                                        data-token="@Antiforgery.GetAndStoreTokens(Context).RequestToken">
+                                    <span class="material-symbols-outlined">delete</span>
+                                </button>
+                            </div>
+                        </td>
                     </tr>
-                </thead>
-                <tbody id="tablaBody">
-                    @foreach (var cliente in Model)
-                    {
-                        <tr data-revendedor="@cliente.Revendedor.ToString().ToLower()"
-                            data-busqueda="@($"{cliente.Nombre} {cliente.Apellido} {cliente.Direccion} {cliente.Localidad} {cliente.Telefono}").ToLower()">
-                            <td>
-                                <div class="d-flex align-items-center gap-3">
-                                    <div class="avatar-circle" style="background-color: var(--mv-surface-variant); color: var(--mv-primary-dark);">
-                                        @cliente.Nombre.Substring(0, 1).ToUpper()
-                                    </div>
-                                    <div class="fw-bold">@cliente.Nombre @cliente.Apellido</div>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="d-flex flex-column gap-1 small text-secondary">
-                                    @if (cliente.Direccion != null)
-                                    {
-                                        <span class="d-flex align-items-center gap-1">
-                                            <span class="material-symbols-outlined fs-6">home</span>
-                                            @cliente.Direccion
-                                        </span>
-                                    }
-                                    @if (cliente.Localidad != null)
-                                    {
-                                        <span class="d-flex align-items-center gap-1">
-                                            <span class="material-symbols-outlined fs-6">location_on</span>
-                                            @cliente.Localidad
-                                        </span>
-                                    }
-                                </div>
-                            </td>
-                            <td>
-                                @if (cliente.Telefono != null)
-                                {
-                                    <small class="d-flex align-items-center gap-1 text-secondary">
-                                        <span class="material-symbols-outlined fs-6">call</span>
-                                        @cliente.Telefono
-                                    </small>
-                                }
-                            </td>
-                            <td>
-                                @if (cliente.Revendedor)
-                                {
-                                    <span class="status-badge status-active">
-                                        <span class="dot" style="background-color: var(--mv-success);"></span>
-                                        Revendedor
-                                    </span>
-                                }
-                                else
-                                {
-                                    <span class="status-badge status-inactive">
-                                        <span class="dot" style="background-color: var(--mv-error);"></span>
-                                        Minorista
-                                    </span>
-                                }
-                            </td>
-                            <td class="text-end">
-                                <div class="btn-group">
-                                    <a asp-action="Details" asp-route-id="@cliente.Id" class="btn btn-sm btn-outline-primary" title="Ver Detalles">
-                                        <span class="material-symbols-outlined">visibility</span>
-                                    </a>
-                                    <a asp-action="Edit" asp-route-id="@cliente.Id" class="btn btn-sm btn-outline-success" title="Editar">
-                                        <span class="material-symbols-outlined">edit</span>
-                                    </a>
-                                    <button type="button"
-                                            class="btn btn-sm btn-outline-danger"
-                                            title="Eliminar"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#deleteModal"
-                                            data-id="@cliente.Id"
-                                            data-nombre="@cliente.Nombre @cliente.Apellido"
-                                            data-delete-url="@Url.Action("Delete", "Cliente", new { id = cliente.Id })"
-                                            data-token="@Antiforgery.GetAndStoreTokens(Context).RequestToken">
-                                        <span class="material-symbols-outlined">delete</span>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
+                }
+            </tbody>
+        </table>
     </div>
+</div>
 
 @section Scripts {
     <script>
         (function () {
-            const inputTexto = document.getElementById('filtroTexto');
-            const selectTipo = document.getElementById('filtroTipo');
-            const filas = document.querySelectorAll('#tablaBody tr');
+            const inputTexto  = document.getElementById('filtroTexto');
+            const contador    = document.getElementById('contadorVisible');
+            const cards       = document.querySelectorAll('#mobileCards .cliente-card');
+            const filas       = document.querySelectorAll('#tablaBody tr');
+            let filtroTipo    = 'todos';
 
             function normalizar(str) {
                 return (str || '')
@@ -152,21 +234,40 @@
 
             function filtrar() {
                 const texto = normalizar(inputTexto.value);
-                const tipo = selectTipo.value;
+                let visibles = 0;
 
-                filas.forEach(function (tr) {
-                    const busqueda = normalizar(tr.dataset.busqueda);
-                    const revendedor = tr.dataset.revendedor;
+                function evaluar(el) {
+                    const busqueda   = normalizar(el.dataset.busqueda);
+                    const revendedor = el.dataset.revendedor;
 
-                    const coincideTexto = texto === '' || busqueda.includes(texto);
-                    const coincideTipo = tipo === '' || revendedor === tipo;
+                    const okTexto = texto === '' || busqueda.includes(texto);
+                    const okTipo  = filtroTipo === 'todos'
+                        || (filtroTipo === 'minoristas'   && revendedor === 'false')
+                        || (filtroTipo === 'revendedores' && revendedor === 'true');
 
-                    tr.style.display = coincideTexto && coincideTipo ? '' : 'none';
-                });
+                    el.style.display = okTexto && okTipo ? '' : 'none';
+                    return okTexto && okTipo;
+                }
+
+                // Contar desde tabla (siempre en DOM)
+                filas.forEach(tr => { if (evaluar(tr)) visibles++; });
+                // Aplicar a cards sin contar doble
+                cards.forEach(card => evaluar(card));
+
+                contador.textContent = visibles === 1 ? '1 cliente' : visibles + ' clientes';
             }
 
+            window.setPill = function (tipo) {
+                filtroTipo = tipo;
+                ['pilTodos', 'pilMinoristas', 'pilRevendedores'].forEach(id => {
+                    document.getElementById(id).classList.remove('activo');
+                });
+                const map = { todos: 'pilTodos', minoristas: 'pilMinoristas', revendedores: 'pilRevendedores' };
+                document.getElementById(map[tipo]).classList.add('activo');
+                filtrar();
+            };
+
             inputTexto.addEventListener('input', filtrar);
-            selectTipo.addEventListener('change', filtrar);
         })();
     </script>
 }
