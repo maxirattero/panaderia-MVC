@@ -66,6 +66,16 @@ namespace Panaderia.Models.Data
                 .WithMany()
                 .HasForeignKey(d => d.IdProducto)
                 .OnDelete(DeleteBehavior.Restrict);
+            // DetallePedido -> Insumo (Empaque, restrict, nullable)
+            modelBuilder.Entity<DetallePedido>()
+                .HasOne(d => d.Empaque)
+                .WithMany()
+                .HasForeignKey(d => d.IdEmpaque)
+                .OnDelete(DeleteBehavior.Restrict);
+            // CostoEmpaque precision
+            modelBuilder.Entity<DetallePedido>()
+                .Property(d => d.CostoEmpaque)
+                .HasPrecision(18, 4);
             // ReporteCaja -> Pedido (opcional)
             modelBuilder.Entity<ReporteCaja>()
                 .HasOne(r => r.Pedido)

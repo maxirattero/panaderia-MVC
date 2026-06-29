@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Panaderia.Models.Data;
 using Panaderia.Models.Entities;
+using Panaderia.Models.Enums;
 using Panaderia.Services.Interfaces;
 
 namespace Panaderia.Services.Implementations;
@@ -50,7 +51,9 @@ public class InsumoService : IInsumoService
         existe.CantidadRendimiento = insumo.CantidadRendimiento;
         existe.IdProveedor = insumo.IdProveedor;
         existe.Notas = insumo.Notas;
+        existe.TipoInsumo = insumo.TipoInsumo;
         existe.Activo = insumo.Activo;
+        existe.StockActual = insumo.StockActual;
         existe.StockMinimo = insumo.StockMinimo;
         existe.FechaModificacion = DateTime.UtcNow;
 
@@ -75,5 +78,21 @@ public class InsumoService : IInsumoService
     public async Task<bool> ExistsAsync(int id)
     {
         return await _context.Insumos.AnyAsync(i => i.Id == id);
+    }
+
+    public async Task<IEnumerable<Insumo>> GetEmpaquesAsync()
+    {
+        return await _context.Insumos
+            .Where(i => i.TipoInsumo == TipoInsumo.Empaque && i.Activo)
+            .OrderBy(i => i.Nombre)
+            .ToListAsync();
+    }
+
+    public async Task<decimal> GetCostoEtiquetaAsync()
+    {
+        var etiqueta = await _context.Insumos
+            .FirstOrDefaultAsync(i => i.TipoInsumo == TipoInsumo.Etiqueta);
+        if (etiqueta == null || etiqueta.CantidadRendimiento == 0) return 0m;
+        return etiqueta.PrecioCompra / etiqueta.CantidadRendimiento;
     }
 }

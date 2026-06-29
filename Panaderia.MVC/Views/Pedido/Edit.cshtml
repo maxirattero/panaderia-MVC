@@ -6,7 +6,7 @@
     ViewData["Title"] = "Editar Pedido";
 }
 
-<div style="max-width: 1060px;">
+<div style="max-width: 1200px;">
     <div class="mb-4">
         <h1 class="display-6 fw-bold titulo-pagina mb-1">Editar Pedido</h1>
         <p class="text-muted">Modificá los datos del pedido.</p>
@@ -47,9 +47,11 @@
                 <thead>
                     <tr>
                         <th>Producto</th>
-                        <th style="width: 90px;">Cantidad</th>
-                        <th style="width: 140px;">Bolsa</th>
-                        <th style="width: 110px;">Subtotal</th>
+                        <th style="width: 80px;">Cant.</th>
+                        <th style="width: 130px;">Bolsa</th>
+                        <th style="width: 160px;">Empaque</th>
+                        <th style="width: 80px;" class="text-center">Etiqueta</th>
+                        <th style="width: 100px;">Subtotal</th>
                         <th style="width: 50px;"></th>
                     </tr>
                 </thead>
@@ -77,11 +79,11 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="anularModalLabel">¿Anular este pedido?</h5>
+                <h5 class="modal-title" id="anularModalLabel">&#191;Anular este pedido?</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
             <div class="modal-body">
-                <p>¿Anular este pedido? Si tenía cobros registrados, se eliminará el ingreso correspondiente en Caja. Esta acción no se puede deshacer.</p>
+                <p>&#191;Anular este pedido? Si ten&#237;a cobros registrados, se eliminar&#225; el ingreso correspondiente en Caja. Esta acci&#243;n no se puede deshacer.</p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -112,14 +114,26 @@
             </select>
         </td>
         <td>
-            <input name="__CANT__" type="number" min="1" value="1" class="form-control cant-input" required />
+            <input name="__CANT__" type="number" min="1" placeholder="Cant." class="form-control cant-input" required />
         </td>
         <td>
             <select name="__BOLSA__" class="form-select bolsa-select" asp-items="Html.GetEnumSelectList<TipoBolsa>()"></select>
         </td>
+        <td>
+            <select name="__EMPAQUE__" class="form-select empaque-select" required>
+                <option value="">Empaque...</option>
+                @foreach (var e in (IEnumerable<Insumo>)ViewBag.Empaques)
+                {
+                    <option value="@e.Id">@e.Nombre</option>
+                }
+            </select>
+        </td>
+        <td class="text-center align-middle">
+            <input name="__ETIQUETA__" type="checkbox" class="form-check-input etiqueta-check" value="true" />
+        </td>
         <td class="subtotal">$0</td>
         <td>
-            <button type="button" class="btn btn-sm btn-danger btnQuitar">✕</button>
+            <button type="button" class="btn btn-sm btn-danger btnQuitar">&#x2715;</button>
         </td>
     </tr>
 </template>
@@ -158,9 +172,11 @@
 
             function reindexar() {
                 tbody.querySelectorAll('tr').forEach((tr, i) => {
-                    tr.querySelector('.prod-select').name = `Detalles[${i}].IdProducto`;
-                    tr.querySelector('.cant-input').name  = `Detalles[${i}].Cantidad`;
-                    tr.querySelector('.bolsa-select').name = `Detalles[${i}].Bolsa`;
+                    tr.querySelector('.prod-select').name    = `Detalles[${i}].IdProducto`;
+                    tr.querySelector('.cant-input').name     = `Detalles[${i}].Cantidad`;
+                    tr.querySelector('.bolsa-select').name   = `Detalles[${i}].Bolsa`;
+                    tr.querySelector('.empaque-select').name = `Detalles[${i}].IdEmpaque`;
+                    tr.querySelector('.etiqueta-check').name = `Detalles[${i}].LlevaEtiqueta`;
                 });
             }
 
@@ -169,9 +185,13 @@
                 tbody.appendChild(tr);
 
                 if (data) {
-                    tr.querySelector('.prod-select').value = data.idProducto;
-                    tr.querySelector('.cant-input').value = data.cantidad;
+                    tr.querySelector('.prod-select').value  = data.idProducto;
+                    tr.querySelector('.cant-input').value   = data.cantidad;
                     tr.querySelector('.bolsa-select').value = data.bolsa;
+                    if (data.idEmpaque) {
+                        tr.querySelector('.empaque-select').value = data.idEmpaque;
+                    }
+                    tr.querySelector('.etiqueta-check').checked = !!data.llevaEtiqueta;
                 }
 
                 reindexar();

@@ -28,6 +28,8 @@ public class Insumo
 
     public string? Notas { get; set; }
 
+    public TipoInsumo TipoInsumo { get; set; } = TipoInsumo.Ingrediente;
+
     public bool Activo { get; set; } = true;
 
     [Range(0, double.MaxValue, ErrorMessage = "Debe ser mayor o igual a cero.")]

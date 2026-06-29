@@ -10,4 +10,6 @@ public interface IInsumoService
     Task UpdateAsync(Insumo insumo);
     Task DeleteAsync(int id);
     Task<bool> ExistsAsync(int id);
+    Task<IEnumerable<Insumo>> GetEmpaquesAsync();
+    Task<decimal> GetCostoEtiquetaAsync();
 }

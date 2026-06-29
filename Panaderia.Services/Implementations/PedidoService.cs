@@ -109,6 +109,7 @@ namespace Panaderia.Services.Implementations
         //crear un nuevo pedido
         public async Task CreateAsync(Pedido pedido)
         {
+            await AplicarCostoEmpaqueAsync(pedido.Detalles);
             await _context.Pedidos.AddAsync(pedido);
             await _context.SaveChangesAsync();
         }
@@ -127,16 +128,21 @@ namespace Panaderia.Services.Implementations
             existing.MontoTotal = pedido.MontoTotal;
             existing.FechaModificacion = DateTime.UtcNow;
 
+            await AplicarCostoEmpaqueAsync(pedido.Detalles);
+
             _context.DetallesPedido.RemoveRange(existing.Detalles);
             existing.Detalles.Clear();
             foreach (var d in pedido.Detalles)
             {
                 existing.Detalles.Add(new DetallePedido
                 {
-                    IdProducto = d.IdProducto,
-                    Cantidad = d.Cantidad,
+                    IdProducto    = d.IdProducto,
+                    Cantidad      = d.Cantidad,
                     PrecioUnitario = d.PrecioUnitario,
-                    Bolsa = d.Bolsa
+                    Bolsa         = d.Bolsa,
+                    IdEmpaque     = d.IdEmpaque,
+                    LlevaEtiqueta = d.LlevaEtiqueta,
+                    CostoEmpaque  = d.CostoEmpaque
                 });
             }
 
@@ -391,7 +397,8 @@ namespace Panaderia.Services.Implementations
                 }
 
                 // Accumulate water from direct recipe ingredients
-                foreach (var det in receta.Detalles.Where(d => d.IdInsumo.HasValue && d.Insumo != null))
+                foreach (var det in receta.Detalles.Where(d => d.IdInsumo.HasValue && d.Insumo != null
+                    && d.Insumo.TipoInsumo == TipoInsumo.Ingrediente))
                 {
                     if (det.Insumo!.Nombre.Equals("Agua corriente", StringComparison.OrdinalIgnoreCase)
                         && det.PorcentajePanadero.HasValue && receta.SumaPorcentajes > 0)
@@ -455,6 +462,38 @@ namespace Panaderia.Services.Implementations
             return (porProducto, porBolsa, porSubReceta, totalAgua);
         }
 
+        private async Task AplicarCostoEmpaqueAsync(IEnumerable<DetallePedido> detalles)
+        {
+            decimal costoEtiqueta = 0m;
+            bool etiquetaCargada = false;
+
+            foreach (var detalle in detalles)
+            {
+                decimal costoEmpaque = 0m;
+                if (detalle.IdEmpaque.HasValue)
+                {
+                    var insumoEmpaque = await _context.Insumos.FindAsync(detalle.IdEmpaque.Value);
+                    if (insumoEmpaque != null && insumoEmpaque.CantidadRendimiento > 0)
+                        costoEmpaque = insumoEmpaque.PrecioCompra / insumoEmpaque.CantidadRendimiento;
+                }
+
+                if (detalle.LlevaEtiqueta)
+                {
+                    if (!etiquetaCargada)
+                    {
+                        var insumoEtiqueta = await _context.Insumos
+                            .FirstOrDefaultAsync(i => i.TipoInsumo == TipoInsumo.Etiqueta);
+                        if (insumoEtiqueta != null && insumoEtiqueta.CantidadRendimiento > 0)
+                            costoEtiqueta = insumoEtiqueta.PrecioCompra / insumoEtiqueta.CantidadRendimiento;
+                        etiquetaCargada = true;
+                    }
+                    costoEmpaque += costoEtiqueta;
+                }
+
+                detalle.CostoEmpaque = costoEmpaque;
+            }
+        }
+
         public async Task<List<ProduccionProductoDetalle>> GetIngredientesProduccionAsync()
         {
             var detalles = await _context.DetallesPedido
@@ -493,7 +532,8 @@ namespace Panaderia.Services.Implementations
 
                 foreach (var det in receta.Detalles)
                 {
-                    if (det.IdInsumo.HasValue && det.Insumo != null)
+                    if (det.IdInsumo.HasValue && det.Insumo != null
+                        && det.Insumo.TipoInsumo == TipoInsumo.Ingrediente)
                     {
                         decimal gramos;
                         string unidad;

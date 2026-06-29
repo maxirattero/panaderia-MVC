@@ -15,17 +15,20 @@ namespace Panaderia.MVC.Controllers
         private readonly IClienteService _clienteService;
         private readonly IProductoService _productoService;
         private readonly IRecetaService _recetaService;
+        private readonly IInsumoService _insumoService;
 
         public PedidoController(
             IPedidoService pedidoService,
             IClienteService clienteService,
             IProductoService productoService,
-            IRecetaService recetaService)
+            IRecetaService recetaService,
+            IInsumoService insumoService)
         {
             _pedidoService = pedidoService;
             _clienteService = clienteService;
             _productoService = productoService;
             _recetaService = recetaService;
+            _insumoService = insumoService;
         }
 
         public async Task<IActionResult> Produccion()
@@ -157,9 +160,11 @@ namespace Panaderia.MVC.Controllers
         {
             var clientes = await _clienteService.GetAllAsync();
             var productos = await _productoService.GetAllAsync();
+            var empaques = await _insumoService.GetEmpaquesAsync();
 
             ViewBag.Clientes = clientes;
             ViewBag.Productos = productos;
+            ViewBag.Empaques = empaques;
         }
 
         [HttpGet]
@@ -214,10 +219,12 @@ namespace Panaderia.MVC.Controllers
 
                 pedido.Detalles.Add(new DetallePedido
                 {
-                    IdProducto = d.IdProducto,
-                    Cantidad = d.Cantidad,
+                    IdProducto    = d.IdProducto,
+                    Cantidad      = d.Cantidad,
                     PrecioUnitario = precio,
-                    Bolsa = d.Bolsa
+                    Bolsa         = d.Bolsa,
+                    IdEmpaque     = d.IdEmpaque,
+                    LlevaEtiqueta = d.LlevaEtiqueta
                 });
             }
 
@@ -243,9 +250,11 @@ namespace Panaderia.MVC.Controllers
                 Notas = pedido.Notas,
                 Detalles = pedido.Detalles.Select(d => new DetallePedidoViewModel
                 {
-                    IdProducto = d.IdProducto,
-                    Cantidad = d.Cantidad,
-                    Bolsa = d.Bolsa
+                    IdProducto    = d.IdProducto,
+                    Cantidad      = d.Cantidad,
+                    Bolsa         = d.Bolsa,
+                    IdEmpaque     = d.IdEmpaque,
+                    LlevaEtiqueta = d.LlevaEtiqueta
                 }).ToList()
             };
 
@@ -283,10 +292,12 @@ namespace Panaderia.MVC.Controllers
                 var precio = cliente.Revendedor ? producto.PrecioReventa : producto.PrecioFinal;
                 detalles.Add(new DetallePedido
                 {
-                    IdProducto = d.IdProducto,
-                    Cantidad = d.Cantidad,
+                    IdProducto    = d.IdProducto,
+                    Cantidad      = d.Cantidad,
                     PrecioUnitario = precio,
-                    Bolsa = d.Bolsa
+                    Bolsa         = d.Bolsa,
+                    IdEmpaque     = d.IdEmpaque,
+                    LlevaEtiqueta = d.LlevaEtiqueta
                 });
             }
 

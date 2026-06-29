@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Panaderia.Models.Entities;
+using Panaderia.Models.Enums;
 using Panaderia.MVC.Models;
 using Panaderia.Services.Interfaces;
 
@@ -81,7 +82,7 @@ public class RecetaController : Controller
     private async Task CargarDropdowns()
     {
         var insumos = (await _insumoService.GetAllAsync())
-            .Where(i => i.Activo)
+            .Where(i => i.Activo && i.TipoInsumo == TipoInsumo.Ingrediente)
             .ToList();
         ViewBag.InsumosLista    = insumos;
         ViewBag.SubRecetasLista = await _subRecetaService.GetAllAsync();

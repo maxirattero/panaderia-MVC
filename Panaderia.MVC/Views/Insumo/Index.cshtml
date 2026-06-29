@@ -25,6 +25,7 @@
                 <thead>
                     <tr>
                         <th>Nombre</th>
+                        <th>Tipo</th>
                         <th>Unidad</th>
                         <th>Precio Compra</th>
                         <th>Rendimiento</th>
@@ -39,7 +40,7 @@
                     @if (!Model.Any())
                     {
                         <tr>
-                            <td colspan="9" class="text-center text-muted py-4">No hay insumos registrados.</td>
+                            <td colspan="10" class="text-center text-muted py-4">No hay insumos registrados.</td>
                         </tr>
                     }
                     else
@@ -55,6 +56,23 @@
                             };
                             <tr class="@(!insumo.Activo ? "opacity-75" : "")">
                                 <td class="fw-bold">@insumo.Nombre</td>
+                                <td>
+                                    @{
+                                        var tipoBadgeClass = insumo.TipoInsumo switch
+                                        {
+                                            TipoInsumo.Empaque  => "bg-info text-dark",
+                                            TipoInsumo.Etiqueta => "bg-warning text-dark",
+                                            _                    => "bg-secondary"
+                                        };
+                                        var tipoLabel = insumo.TipoInsumo switch
+                                        {
+                                            TipoInsumo.Empaque  => "Empaque",
+                                            TipoInsumo.Etiqueta => "Etiqueta",
+                                            _                    => "Ingrediente"
+                                        };
+                                    }
+                                    <span class="badge @tipoBadgeClass">@tipoLabel</span>
+                                </td>
                                 <td>@insumo.UnidadBase</td>
                                 <td>@insumo.PrecioCompra.ToString("C", cultura)</td>
                                 <td>@insumo.CantidadRendimiento.ToString("N0") @sufijo</td>

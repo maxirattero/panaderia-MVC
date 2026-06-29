@@ -25,6 +25,10 @@
                     <span asp-validation-for="Nombre" class="text-danger"></span>
                 </div>
                 <div class="col-md-6">
+                    <label asp-for="TipoInsumo" class="form-label small fw-bold text-muted">Tipo</label>
+                    <select asp-for="TipoInsumo" asp-items="Html.GetEnumSelectList<TipoInsumo>()" class="form-select"></select>
+                </div>
+                <div class="col-md-6">
                     <label asp-for="UnidadBase" class="form-label small fw-bold text-muted">Unidad base</label>
                     <select asp-for="UnidadBase" asp-items="Html.GetEnumSelectList<UnidadMedida>()" class="form-select"></select>
                     <span asp-validation-for="UnidadBase" class="text-danger"></span>
@@ -46,9 +50,14 @@
                     </select>
                 </div>
                 <div class="col-md-6">
-                    <label asp-for="StockMinimo" class="form-label small fw-bold text-muted">Stock mínimo</label>
-                    <input asp-for="StockMinimo" type="number" lang="en" step="0.001" min="0" class="form-control" />
-                    <div class="text-muted small mt-1">Se usará para alertas visuales de stock bajo.</div>
+                    <label asp-for="StockActual" class="form-label small fw-bold text-muted">Stock Actual</label>
+                    <input asp-for="StockActual" type="number" lang="en" step="0.01" min="0" class="form-control" />
+                    <span asp-validation-for="StockActual" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="StockMinimo" class="form-label small fw-bold text-muted">Stock M&#237;nimo</label>
+                    <input asp-for="StockMinimo" type="number" lang="en" step="0.01" min="0" class="form-control" />
+                    <div class="text-muted small mt-1">Se usar&#225; para alertas visuales de stock bajo.</div>
                     <span asp-validation-for="StockMinimo" class="text-danger"></span>
                 </div>
                 <div class="col-12">
