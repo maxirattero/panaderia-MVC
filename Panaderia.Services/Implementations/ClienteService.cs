@@ -17,7 +17,10 @@ namespace Panaderia.Services.Implementations
         //listado de clientes
         public async Task<IEnumerable<Cliente>> GetAllAsync()
         {
-            return await _context.Clientes.ToListAsync();
+            return await _context.Clientes
+                .OrderBy(c => c.Apellido)
+                .ThenBy(c => c.Nombre)
+                .ToListAsync();
         }
 
         //obtener un cliente por su ID

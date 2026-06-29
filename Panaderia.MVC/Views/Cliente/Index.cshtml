@@ -26,14 +26,14 @@
                     <span class="input-group-text bg-transparent border-end-0">
                         <span class="material-symbols-outlined text-secondary">filter_list</span>
                     </span>
-                    <input class="form-control border-start-0 ps-0" placeholder="Filtrar por nombre, apellido, dirección, localidad o teléfono..." type="text" />
+                    <input id="filtroTexto" class="form-control border-start-0 ps-0" placeholder="Filtrar por nombre, apellido, direcci&#243;n, localidad o tel&#233;fono..." type="text" />
                 </div>
             </div>
             <div class="col-sm-6 col-lg-3">
-                <select class="form-select">
-                    <option>Todos los Tipos</option>
-                    <option>Revendedor</option>
-                    <option>Minorista</option>
+                <select id="filtroTipo" class="form-select">
+                    <option value="">Todos los Tipos</option>
+                    <option value="true">Revendedor</option>
+                    <option value="false">Minorista</option>
                 </select>
             </div>
         </div>
@@ -52,10 +52,11 @@
                         <th class="text-end">Acciones</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="tablaBody">
                     @foreach (var cliente in Model)
                     {
-                        <tr>
+                        <tr data-revendedor="@cliente.Revendedor.ToString().ToLower()"
+                            data-busqueda="@($"{cliente.Nombre} {cliente.Apellido} {cliente.Direccion} {cliente.Localidad} {cliente.Telefono}").ToLower()">
                             <td>
                                 <div class="d-flex align-items-center gap-3">
                                     <div class="avatar-circle" style="background-color: var(--mv-surface-variant); color: var(--mv-primary-dark);">
@@ -134,3 +135,38 @@
             </table>
         </div>
     </div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const inputTexto = document.getElementById('filtroTexto');
+            const selectTipo = document.getElementById('filtroTipo');
+            const filas = document.querySelectorAll('#tablaBody tr');
+
+            function normalizar(str) {
+                return (str || '')
+                    .normalize('NFD')
+                    .replace(/[̀-ͯ]/g, '')
+                    .toLowerCase();
+            }
+
+            function filtrar() {
+                const texto = normalizar(inputTexto.value);
+                const tipo = selectTipo.value;
+
+                filas.forEach(function (tr) {
+                    const busqueda = normalizar(tr.dataset.busqueda);
+                    const revendedor = tr.dataset.revendedor;
+
+                    const coincideTexto = texto === '' || busqueda.includes(texto);
+                    const coincideTipo = tipo === '' || revendedor === tipo;
+
+                    tr.style.display = coincideTexto && coincideTipo ? '' : 'none';
+                });
+            }
+
+            inputTexto.addEventListener('input', filtrar);
+            selectTipo.addEventListener('change', filtrar);
+        })();
+    </script>
+}
