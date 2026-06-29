@@ -44,27 +44,26 @@
     </a>
 </div>
 
-@* ── Buscador ── *@
-<div class="mb-3">
-    <div class="input-group">
-        <span class="input-group-text bg-transparent border-end-0">
-            <span class="material-symbols-outlined text-secondary">search</span>
-        </span>
-        <input id="filtroTexto" type="text"
-               class="form-control border-start-0 ps-0"
-               placeholder="Buscar cliente..." />
+@* ── Buscador + Pills + Contador ── *@
+<div class="card-custom p-3 mb-4">
+    <div class="row g-3">
+        <div class="col-12 col-lg-8">
+            <div class="input-group">
+                <span class="input-group-text bg-transparent border-end-0">
+                    <span class="material-symbols-outlined text-secondary">filter_list</span>
+                </span>
+                <input id="filtroTexto" class="form-control border-start-0 ps-0"
+                       placeholder="Buscar cliente..." type="text" />
+            </div>
+        </div>
+        <div class="col-12 d-flex align-items-center gap-2 flex-wrap">
+            <button id="pilTodos"        class="pill-filtro activo" onclick="setPill('todos')">Todos</button>
+            <button id="pilMinoristas"   class="pill-filtro"        onclick="setPill('minoristas')">Minoristas</button>
+            <button id="pilRevendedores" class="pill-filtro"        onclick="setPill('revendedores')">Revendedores</button>
+            <span id="contadorVisible" class="text-secondary small ms-2">@totalClientes clientes</span>
+        </div>
     </div>
 </div>
-
-@* ── Pills de tipo ── *@
-<div class="d-flex gap-2 mb-3">
-    <button id="pilTodos"        class="pill-filtro activo" onclick="setPill('todos')">Todos</button>
-    <button id="pilMinoristas"   class="pill-filtro"        onclick="setPill('minoristas')">Minoristas</button>
-    <button id="pilRevendedores" class="pill-filtro"        onclick="setPill('revendedores')">Revendedores</button>
-</div>
-
-@* ── Contador ── *@
-<p id="contadorVisible" class="text-secondary small mb-3">@totalClientes clientes</p>
 
 @* ══════════════════════════════════════════
    MOBILE: Cards (ocultas en desktop)
@@ -76,7 +75,7 @@
                 + (string.IsNullOrEmpty(c.Apellido) ? "" : c.Apellido[0].ToString().ToUpper());
         <div class="cliente-card mb-3"
              data-revendedor="@c.Revendedor.ToString().ToLower()"
-             data-busqueda="@($"{c.Nombre} {c.Apellido} {c.Direccion} {c.Telefono}").ToLower()">
+             data-busqueda="@($"{c.NombreCompleto} {c.Direccion} {c.Telefono}").ToLower()">
 
             @* Avatar + nombre + badge *@
             <div class="d-flex align-items-center gap-3 mb-2">
@@ -120,7 +119,7 @@
 
             <hr class="my-2" />
 
-            @* Acciones *@
+            @* Botones de acci&#243;n *@
             <div class="d-flex gap-2 justify-content-end">
                 <a asp-action="Details" asp-route-id="@c.Id"
                    class="btn btn-sm" style="border:1px solid #cebaac;" title="Ver detalles">
@@ -154,8 +153,7 @@
         <table class="table table-custom table-hover m-0">
             <thead>
                 <tr>
-                    <th>Nombre</th>
-                    <th>Apellido</th>
+                    <th>Cliente</th>
                     <th>Direcci&#243;n</th>
                     <th>Tel&#233;fono</th>
                     <th>Tipo</th>
@@ -166,9 +164,10 @@
                 @foreach (var c in Model)
                 {
                     <tr data-revendedor="@c.Revendedor.ToString().ToLower()"
-                        data-busqueda="@($"{c.Nombre} {c.Apellido} {c.Direccion} {c.Telefono}").ToLower()">
-                        <td class="fw-bold">@c.Nombre</td>
-                        <td>@c.Apellido</td>
+                        data-busqueda="@($"{c.NombreCompleto} {c.Direccion} {c.Telefono}").ToLower()">
+                        <td>
+                            <div class="fw-bold">@c.NombreCompleto</div>
+                        </td>
                         <td class="text-secondary small">@(c.Direccion ?? "&#8212;")</td>
                         <td class="text-secondary small">@(c.Telefono ?? "&#8212;")</td>
                         <td>
@@ -219,11 +218,11 @@
 @section Scripts {
     <script>
         (function () {
-            const inputTexto  = document.getElementById('filtroTexto');
-            const contador    = document.getElementById('contadorVisible');
-            const cards       = document.querySelectorAll('#mobileCards .cliente-card');
-            const filas       = document.querySelectorAll('#tablaBody tr');
-            let filtroTipo    = 'todos';
+            const inputTexto = document.getElementById('filtroTexto');
+            const contador   = document.getElementById('contadorVisible');
+            const cards      = document.querySelectorAll('#mobileCards .cliente-card');
+            const filas      = document.querySelectorAll('#tablaBody tr');
+            let filtroTipo   = 'todos';
 
             function normalizar(str) {
                 return (str || '')
@@ -245,13 +244,12 @@
                         || (filtroTipo === 'minoristas'   && revendedor === 'false')
                         || (filtroTipo === 'revendedores' && revendedor === 'true');
 
-                    el.style.display = okTexto && okTipo ? '' : 'none';
-                    return okTexto && okTipo;
+                    const visible = okTexto && okTipo;
+                    el.style.display = visible ? '' : 'none';
+                    return visible;
                 }
 
-                // Contar desde tabla (siempre en DOM)
                 filas.forEach(tr => { if (evaluar(tr)) visibles++; });
-                // Aplicar a cards sin contar doble
                 cards.forEach(card => evaluar(card));
 
                 contador.textContent = visibles === 1 ? '1 cliente' : visibles + ' clientes';
@@ -259,9 +257,7 @@
 
             window.setPill = function (tipo) {
                 filtroTipo = tipo;
-                ['pilTodos', 'pilMinoristas', 'pilRevendedores'].forEach(id => {
-                    document.getElementById(id).classList.remove('activo');
-                });
+                document.querySelectorAll('.pill-filtro').forEach(b => b.classList.remove('activo'));
                 const map = { todos: 'pilTodos', minoristas: 'pilMinoristas', revendedores: 'pilRevendedores' };
                 document.getElementById(map[tipo]).classList.add('activo');
                 filtrar();

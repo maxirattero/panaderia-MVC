@@ -18,8 +18,8 @@ namespace Panaderia.Services.Implementations
         public async Task<IEnumerable<Cliente>> GetAllAsync()
         {
             return await _context.Clientes
-                .OrderBy(c => c.Apellido)
-                .ThenBy(c => c.Nombre)
+                .OrderBy(c => c.Nombre)
+                .ThenBy(c => c.Apellido)
                 .ToListAsync();
         }
 
