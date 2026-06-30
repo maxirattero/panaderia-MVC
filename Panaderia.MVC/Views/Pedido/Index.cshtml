@@ -1,6 +1,10 @@
 @model IEnumerable<Panaderia.Models.Entities.Pedido>
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 
+@{
+    ViewData["Title"] = "Pedidos";
+}
+
     @* ── Header ── *@
     <div class="row align-items-end mb-5 gy-4">
         <div class="col-md-7">
