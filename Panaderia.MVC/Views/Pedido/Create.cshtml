@@ -71,7 +71,7 @@
 
 <template id="filaTemplate">
     <tr>
-        <td>
+        <td data-label="Producto">
             <select name="__PROD__" class="form-select prod-select" required>
                 <option value="">-- Producto --</option>
                 @foreach (var p in (IEnumerable<Producto>)ViewBag.Productos)
@@ -84,13 +84,13 @@
                 }
             </select>
         </td>
-        <td>
+        <td data-label="Cantidad">
             <input name="__CANT__" type="number" min="1" placeholder="Cant." class="form-control cant-input" required />
         </td>
-        <td>
+        <td data-label="Bolsa">
             <select name="__BOLSA__" class="form-select bolsa-select" asp-items="Html.GetEnumSelectList<TipoBolsa>()"></select>
         </td>
-        <td>
+        <td data-label="Empaque">
             <select name="__EMPAQUE__" class="form-select empaque-select" required>
                 <option value="">Empaque...</option>
                 @foreach (var e in (IEnumerable<Insumo>)ViewBag.Empaques)
@@ -99,10 +99,10 @@
                 }
             </select>
         </td>
-        <td class="text-center align-middle">
+        <td data-label="Etiqueta" class="text-center align-middle">
             <input name="__ETIQUETA__" type="checkbox" class="form-check-input etiqueta-check" value="true" />
         </td>
-        <td class="subtotal">$0</td>
+        <td data-label="Subtotal" class="subtotal">$0</td>
         <td>
             <button type="button" class="btn btn-sm btn-danger btnQuitar">&#x2715;</button>
         </td>
