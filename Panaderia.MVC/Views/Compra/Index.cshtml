@@ -32,6 +32,20 @@
         </div>
     }
 
+    <div class="card-custom p-3 mb-4">
+        <div class="row g-3">
+            <div class="col-12">
+                <div class="input-group">
+                    <span class="input-group-text bg-transparent border-end-0">
+                        <span class="material-symbols-outlined text-secondary">filter_list</span>
+                    </span>
+                    <input id="filtroTexto" class="form-control border-start-0 ps-0" placeholder="Buscar por proveedor o factura..." type="text" />
+                </div>
+                <span id="contadorVisible" class="text-secondary small mt-2"></span>
+            </div>
+        </div>
+    </div>
+
     <div class="card card-custom overflow-hidden">
         <div class="table-responsive">
             <table class="table table-custom table-hover m-0">
@@ -39,9 +53,9 @@
                     <tr>
                         <th>Fecha</th>
                         <th>Proveedor</th>
-                        <th>Nº Factura</th>
+                        <th class="d-none d-md-table-cell">Nº Factura</th>
                         <th>Monto total</th>
-                        <th class="text-end">Acciones</th>
+                        <th class="text-end d-none d-md-table-cell">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -55,12 +69,12 @@
                     {
                         @foreach (var c in Model)
                         {
-                            <tr>
+                            <tr data-busqueda="@($"{c.Proveedor.Nombre} {c.NumeroFactura}").ToLower()">
                                 <td>@c.Fecha.ToString("dd/MM/yyyy")</td>
                                 <td>@c.Proveedor.Nombre</td>
-                                <td class="text-secondary">@(c.NumeroFactura ?? "—")</td>
+                                <td class="d-none d-md-table-cell text-secondary">@(c.NumeroFactura ?? "—")</td>
                                 <td>@c.MontoTotal.ToString("C", cultura)</td>
-                                <td class="text-end">
+                                <td class="text-end d-none d-md-table-cell">
                                     <div class="d-flex gap-1 justify-content-end">
                                         <a asp-action="Details" asp-route-id="@c.Id"
                                            class="btn btn-sm btn-outline-primary" title="Ver detalle">
@@ -75,3 +89,41 @@
             </table>
         </div>
     </div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const inputTexto = document.getElementById('filtroTexto');
+            const contador   = document.getElementById('contadorVisible');
+            const filas      = document.querySelectorAll('table tbody > tr:not(.collapse)');
+
+            function normalizar(str) {
+                return (str || '')
+                    .normalize('NFD')
+                    .replace(/[̀-ͯ]/g, '')
+                    .toLowerCase();
+            }
+
+            function filtrar() {
+                const texto = normalizar(inputTexto.value);
+                let visibles = 0;
+
+                filas.forEach(tr => {
+                    if (!tr.dataset.busqueda) return;
+                    const busqueda = normalizar(tr.dataset.busqueda);
+                    const okTexto  = texto === '' || busqueda.includes(texto);
+
+                    tr.style.display = okTexto ? '' : 'none';
+
+                    if (okTexto) visibles++;
+                });
+
+                contador.textContent = visibles === 1 ? '1 compra' : visibles + ' compras';
+            }
+
+            inputTexto.addEventListener('input', filtrar);
+
+            filtrar();
+        })();
+    </script>
+}

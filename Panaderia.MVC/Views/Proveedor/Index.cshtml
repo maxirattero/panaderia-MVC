@@ -1,4 +1,4 @@
-﻿@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 @model IEnumerable<Panaderia.Models.Entities.Proveedor>
 
 @{
@@ -17,36 +17,29 @@
             </a>
         </div>
     </div>
+
     <!-- Filters Bar -->
     <div class="card-custom p-3 mb-4">
         <div class="row g-3">
-            <div class="col-lg-6">
+            <div class="col-12 col-lg-8">
                 <div class="input-group">
                     <span class="input-group-text bg-transparent border-end-0">
                         <span class="material-symbols-outlined text-secondary">filter_list</span>
                     </span>
-                    <input class="form-control border-start-0 ps-0" placeholder="Filtrar por nombre, categoría o contacto..." type="text" />
+                    <input id="filtroTexto" class="form-control border-start-0 ps-0" placeholder="Buscar proveedor..." type="text" />
                 </div>
             </div>
-            <div class="col-sm-6 col-lg-3">
-                <select class="form-select">
-                    <option>Todos los Estados</option>
-                    <option>Activos</option>
-                    <option>Inactivos</option>
-                </select>
-            </div>
-            <div class="col-sm-6 col-lg-3">
-                <select class="form-select">
-                    <option>Materia Prima</option>
-                    <option>Empaques</option>
-                    <option>Maquinaria</option>
-                    <option>Logística</option>
-                </select>
+            <div class="col-12 d-flex align-items-center gap-2 flex-wrap">
+                <button id="pilTodos"     class="pill-filtro activo" onclick="setPill('todos')">Todos</button>
+                <button id="pilActivos"   class="pill-filtro"        onclick="setPill('activos')">Activos</button>
+                <button id="pilInactivos" class="pill-filtro"        onclick="setPill('inactivos')">Inactivos</button>
+                <span id="contadorVisible" class="text-secondary small ms-2"></span>
             </div>
         </div>
     </div>
-    <!-- Table Card -->
-    <div class="card-custom overflow-hidden mb-5">
+
+    <!-- Table Card (desktop) -->
+    <div class="card-custom overflow-hidden mb-5 d-none d-md-block">
         <div class="table-responsive">
             <table class="table table-custom table-hover m-0">
                 <thead>
@@ -59,93 +52,218 @@
                         <th class="text-end">Acciones</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <tbody>
-                        @foreach (var proveedor in Model)
-                        {
-                            <tr class="@(!proveedor.Activo ? "opacity-75" : "")">
-                                <td>
-                                    <div class="d-flex align-items-center gap-3">
-                                        <div class="avatar-circle" style="background-color: var(--mv-surface-variant); color: var(--mv-primary-dark);">
-                                            @proveedor.Nombre.Substring(0, 1).ToUpper()
-                                        </div>
-                                        <div class="fw-bold">@proveedor.Nombre</div>
+                <tbody id="tablaBody">
+                    @foreach (var proveedor in Model)
+                    {
+                        <tr data-busqueda="@($"{proveedor.Nombre} {proveedor.Contacto} {proveedor.Telefono} {proveedor.Email}").ToLower()" data-activo="@proveedor.Activo.ToString().ToLower()">
+                            <td>
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="avatar-circle" style="background-color: var(--mv-surface-variant); color: var(--mv-primary-dark);">
+                                        @proveedor.Nombre.Substring(0, 1).ToUpper()
                                     </div>
-                                </td>
-                                <td>@proveedor.Contacto</td>
-                                <td>
-                                    <div class="d-flex flex-column gap-1 small text-secondary">
-                                        @if (proveedor.Telefono != null)
-                                        {
-                                            <span class="d-flex align-items-center gap-1">
-                                                <span class="material-symbols-outlined fs-6">call</span>
-                                                @proveedor.Telefono
-                                            </span>
-                                        }
-                                        @if (proveedor.Email != null)
-                                        {
-                                            <span class="d-flex align-items-center gap-1">
-                                                <span class="material-symbols-outlined fs-6">mail</span>
-                                                @proveedor.Email
-                                            </span>
-                                        }
-                                    </div>
-                                </td>
-                                <td><small class="text-secondary">@proveedor.Direccion</small></td>
-                                <td>
-                                    @if (proveedor.Activo)
+                                    <div class="fw-bold">@proveedor.Nombre</div>
+                                </div>
+                            </td>
+                            <td>@proveedor.Contacto</td>
+                            <td>
+                                <div class="d-flex flex-column gap-1 small text-secondary">
+                                    @if (proveedor.Telefono != null)
                                     {
-                                        <span class="status-badge status-active">
-                                            <span class="dot" style="background-color: var(--mv-success);"></span>
-                                            Activo
+                                        <span class="d-flex align-items-center gap-1">
+                                            <span class="material-symbols-outlined fs-6">call</span>
+                                            @proveedor.Telefono
                                         </span>
                                     }
-                                    else
+                                    @if (proveedor.Email != null)
                                     {
-                                        <span class="status-badge status-inactive">
-                                            <span class="dot" style="background-color: var(--mv-error);"></span>
-                                            Inactivo
+                                        <span class="d-flex align-items-center gap-1">
+                                            <span class="material-symbols-outlined fs-6">mail</span>
+                                            @proveedor.Email
                                         </span>
                                     }
-                                </td>
-                                <td class="text-end">
-                                    <div class="btn-group">
-                                        <a asp-action="Details" asp-route-id="@proveedor.Id" class="btn btn-sm btn-outline-primary" title="Ver Detalles">
-                                            <span class="material-symbols-outlined">visibility</span>
-                                        </a>
-                                        <a asp-action="Edit" asp-route-id="@proveedor.Id" class="btn btn-sm btn-outline-success" title="Editar">
-                                            <span class="material-symbols-outlined">edit</span>
-                                        </a>
-                                        <button type="button"
-                                                class="btn btn-sm btn-outline-danger"                                                
-                                                title="Eliminar"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#deleteModal"
-                                                data-id="@proveedor.Id"
-                                                data-nombre="@proveedor.Nombre"
-                                                data-delete-url="@Url.Action("Delete", "Proveedor", new { id = proveedor.Id })"
-                                                data-token="@Antiforgery.GetAndStoreTokens(Context).RequestToken">
-                                            <span class="material-symbols-outlined">delete</span>
-                                        </button>                                        
-                                    </div>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
+                                </div>
+                            </td>
+                            <td><small class="text-secondary">@proveedor.Direccion</small></td>
+                            <td>
+                                @if (proveedor.Activo)
+                                {
+                                    <span class="status-badge status-active">
+                                        <span class="dot" style="background-color: var(--mv-success);"></span>
+                                        Activo
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="status-badge status-inactive">
+                                        <span class="dot" style="background-color: var(--mv-error);"></span>
+                                        Inactivo
+                                    </span>
+                                }
+                            </td>
+                            <td class="text-end">
+                                <div class="btn-group">
+                                    <a asp-action="Details" asp-route-id="@proveedor.Id" class="btn btn-sm btn-outline-primary" title="Ver Detalles">
+                                        <span class="material-symbols-outlined">visibility</span>
+                                    </a>
+                                    <a asp-action="Edit" asp-route-id="@proveedor.Id" class="btn btn-sm btn-outline-success" title="Editar">
+                                        <span class="material-symbols-outlined">edit</span>
+                                    </a>
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-danger"
+                                            title="Eliminar"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#deleteModal"
+                                            data-id="@proveedor.Id"
+                                            data-nombre="@proveedor.Nombre"
+                                            data-delete-url="@Url.Action("Delete", "Proveedor", new { id = proveedor.Id })"
+                                            data-token="@Antiforgery.GetAndStoreTokens(Context).RequestToken">
+                                        <span class="material-symbols-outlined">delete</span>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
                 </tbody>
             </table>
         </div>
-        <!-- Pagination -->
-        <div class="d-flex align-items-center justify-content-between p-3 border-top bg-light bg-opacity-10">
-            <small class="text-secondary">Mostrando 3 de 24 proveedores</small>
-            <nav>
-                <ul class="pagination pagination-sm m-0">
-                    <li class="page-item"><a class="page-link text-secondary" href="#"><span class="material-symbols-outlined fs-6">chevron_left</span></a></li>
-                    <li class="page-item active"><a class="page-link bg-primary border-primary" href="#">1</a></li>
-                    <li class="page-item"><a class="page-link text-secondary" href="#">2</a></li>
-                    <li class="page-item"><a class="page-link text-secondary" href="#">3</a></li>
-                    <li class="page-item"><a class="page-link text-secondary" href="#"><span class="material-symbols-outlined fs-6">chevron_right</span></a></li>
-                </ul>
-            </nav>
-        </div>
     </div>
+
+    <!-- Mobile Cards -->
+    <div id="mobileCards" class="d-md-none">
+        @foreach (var proveedor in Model)
+        {
+            <div class="card-custom p-3 mb-3 proveedor-card @(!proveedor.Activo ? "opacity-75" : "")"
+                 data-busqueda="@($"{proveedor.Nombre} {proveedor.Contacto} {proveedor.Telefono} {proveedor.Email}").ToLower()"
+                 data-activo="@proveedor.Activo.ToString().ToLower()">
+
+                <div class="d-flex align-items-center gap-3 mb-2">
+                    <div class="avatar-circle" style="background-color: var(--mv-surface-variant); color: var(--mv-primary-dark);">
+                        @proveedor.Nombre.Substring(0, 1).ToUpper()
+                    </div>
+                    <div>
+                        <div class="fw-bold">@proveedor.Nombre</div>
+                        @if (proveedor.Activo)
+                        {
+                            <span class="status-badge status-active" style="font-size:0.7rem;padding:0.15rem 0.5rem;">
+                                <span class="dot" style="background-color: var(--mv-success);"></span>
+                                Activo
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="status-badge status-inactive" style="font-size:0.7rem;padding:0.15rem 0.5rem;">
+                                <span class="dot" style="background-color: var(--mv-error);"></span>
+                                Inactivo
+                            </span>
+                        }
+                    </div>
+                </div>
+
+                <div class="mb-2 small text-secondary">
+                    @if (proveedor.Contacto != null)
+                    {
+                        <div>@proveedor.Contacto</div>
+                    }
+                    @if (proveedor.Telefono != null)
+                    {
+                        <div class="d-flex align-items-center gap-1">
+                            <span class="material-symbols-outlined fs-6">call</span>
+                            @proveedor.Telefono
+                        </div>
+                    }
+                    @if (proveedor.Email != null)
+                    {
+                        <div class="d-flex align-items-center gap-1">
+                            <span class="material-symbols-outlined fs-6">mail</span>
+                            @proveedor.Email
+                        </div>
+                    }
+                    @if (proveedor.Direccion != null)
+                    {
+                        <div class="d-flex align-items-center gap-1">
+                            <span class="material-symbols-outlined fs-6">location_on</span>
+                            @proveedor.Direccion
+                        </div>
+                    }
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 pt-2 border-top">
+                    <a asp-action="Details" asp-route-id="@proveedor.Id"
+                       class="btn btn-sm" style="border:1px solid #cebaac;" title="Ver detalles">
+                        <span class="material-symbols-outlined">visibility</span>
+                    </a>
+                    <a asp-action="Edit" asp-route-id="@proveedor.Id"
+                       class="btn btn-sm" style="border:1px solid #cebaac;" title="Editar">
+                        <span class="material-symbols-outlined">edit</span>
+                    </a>
+                    <button type="button"
+                            class="btn btn-sm"
+                            style="border:1px solid #e0a0a0;color:#993333;"
+                            title="Eliminar"
+                            data-bs-toggle="modal"
+                            data-bs-target="#deleteModal"
+                            data-id="@proveedor.Id"
+                            data-nombre="@proveedor.Nombre"
+                            data-delete-url="@Url.Action("Delete", "Proveedor", new { id = proveedor.Id })"
+                            data-token="@Antiforgery.GetAndStoreTokens(Context).RequestToken">
+                        <span class="material-symbols-outlined">delete</span>
+                    </button>
+                </div>
+            </div>
+        }
+    </div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const inputTexto = document.getElementById('filtroTexto');
+            const contador   = document.getElementById('contadorVisible');
+            const filas      = document.querySelectorAll('#tablaBody tr');
+            const cards      = document.querySelectorAll('.proveedor-card');
+            let filtroTipo   = 'todos';
+
+            function normalizar(str) {
+                return (str || '')
+                    .normalize('NFD')
+                    .replace(/[̀-ͯ]/g, '')
+                    .toLowerCase();
+            }
+
+            function filtrar() {
+                const texto = normalizar(inputTexto.value);
+                let visibles = 0;
+
+                function evaluar(el) {
+                    const busqueda = normalizar(el.dataset.busqueda);
+                    const activo   = el.dataset.activo;
+
+                    const okTexto = texto === '' || busqueda.includes(texto);
+                    const okTipo  = filtroTipo === 'todos'
+                        || (filtroTipo === 'activos'   && activo === 'true')
+                        || (filtroTipo === 'inactivos' && activo === 'false');
+
+                    const visible = okTexto && okTipo;
+                    el.style.display = visible ? '' : 'none';
+                    return visible;
+                }
+
+                filas.forEach(tr => { if (evaluar(tr)) visibles++; });
+                cards.forEach(card => evaluar(card));
+
+                contador.textContent = visibles === 1 ? '1 proveedor' : visibles + ' proveedores';
+            }
+
+            window.setPill = function (tipo) {
+                filtroTipo = tipo;
+                document.querySelectorAll('.pill-filtro').forEach(b => b.classList.remove('activo'));
+                const map = { todos: 'pilTodos', activos: 'pilActivos', inactivos: 'pilInactivos' };
+                document.getElementById(map[tipo]).classList.add('activo');
+                filtrar();
+            };
+
+            inputTexto.addEventListener('input', filtrar);
+
+            filtrar();
+        })();
+    </script>
+}

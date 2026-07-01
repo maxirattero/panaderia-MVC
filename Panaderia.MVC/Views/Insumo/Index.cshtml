@@ -19,18 +19,39 @@
         </div>
     </div>
 
+    <div class="card-custom p-3 mb-4">
+        <div class="row g-3">
+            <div class="col-12 col-lg-8">
+                <div class="input-group">
+                    <span class="input-group-text bg-transparent border-end-0">
+                        <span class="material-symbols-outlined text-secondary">filter_list</span>
+                    </span>
+                    <input id="filtroTexto" class="form-control border-start-0 ps-0" placeholder="Buscar insumo..." type="text" />
+                </div>
+            </div>
+            <div class="col-12 d-flex align-items-center gap-2 flex-wrap">
+                <button id="pilTodos"     class="pill-filtro activo" onclick="setPill('todos')">Todos</button>
+                <button id="pilActivos"   class="pill-filtro"        onclick="setPill('activos')">Activos</button>
+                <button id="pilInactivos" class="pill-filtro"        onclick="setPill('inactivos')">Inactivos</button>
+                <button id="pilBajoStock" class="pill-filtro"        onclick="setPill('bajostock')">Bajo stock</button>
+                <span id="contadorVisible" class="text-secondary small ms-2"></span>
+            </div>
+        </div>
+    </div>
+
     <div class="card card-custom overflow-hidden">
         <div class="table-responsive">
             <table class="table table-custom table-hover m-0">
                 <thead>
                     <tr>
+                        <th class="d-md-none"></th>
                         <th>Nombre</th>
-                        <th>Tipo</th>
-                        <th>Unidad</th>
-                        <th>Precio Compra</th>
-                        <th>Rendimiento</th>
-                        <th>Costo/Unidad</th>
-                        <th>Proveedor</th>
+                        <th class="d-none d-md-table-cell">Tipo</th>
+                        <th class="d-none d-md-table-cell">Unidad</th>
+                        <th class="d-none d-md-table-cell">Precio Compra</th>
+                        <th class="d-none d-md-table-cell">Rendimiento</th>
+                        <th class="d-none d-md-table-cell">Costo/Unidad</th>
+                        <th class="d-none d-md-table-cell">Proveedor</th>
                         <th>Estado</th>
                         <th>Stock actual</th>
                         <th class="text-end">Acciones</th>
@@ -40,7 +61,7 @@
                     @if (!Model.Any())
                     {
                         <tr>
-                            <td colspan="10" class="text-center text-muted py-4">No hay insumos registrados.</td>
+                            <td colspan="11" class="text-center text-muted py-4">No hay insumos registrados.</td>
                         </tr>
                     }
                     else
@@ -54,30 +75,43 @@
                                 UnidadMedida.Unidades => "u",
                                 _ => ""
                             };
-                            <tr class="@(!insumo.Activo ? "opacity-75" : "")">
+                            var tipoBadgeClass = insumo.TipoInsumo switch
+                            {
+                                TipoInsumo.Empaque  => "bg-info text-dark",
+                                TipoInsumo.Etiqueta => "bg-warning text-dark",
+                                _                    => "bg-secondary"
+                            };
+                            var tipoLabel = insumo.TipoInsumo switch
+                            {
+                                TipoInsumo.Empaque  => "Empaque",
+                                TipoInsumo.Etiqueta => "Etiqueta",
+                                _                    => "Ingrediente"
+                            };
+                            var stockStr = insumo.StockActual % 1 == 0
+                                ? insumo.StockActual.ToString("0")
+                                : insumo.StockActual.ToString("0.###");
+                            var stockLabel = $"{stockStr} {sufijo}";
+                            var esBajoStock = insumo.StockMinimo.HasValue
+                                && insumo.StockActual <= insumo.StockMinimo.Value;
+                            <tr class="@(!insumo.Activo ? "opacity-75" : "")"
+                                data-busqueda="@($"{insumo.Nombre} {insumo.Proveedor?.Nombre}").ToLower()"
+                                data-activo="@insumo.Activo.ToString().ToLower()"
+                                data-bajostock="@esBajoStock.ToString().ToLower()">
+                                <td class="d-md-none">
+                                    <button class="btn btn-sm btn-outline-secondary" type="button"
+                                            data-bs-toggle="collapse" data-bs-target="#detalle-insumo-@insumo.Id">
+                                        <span class="material-symbols-outlined">expand_more</span>
+                                    </button>
+                                </td>
                                 <td class="fw-bold">@insumo.Nombre</td>
-                                <td>
-                                    @{
-                                        var tipoBadgeClass = insumo.TipoInsumo switch
-                                        {
-                                            TipoInsumo.Empaque  => "bg-info text-dark",
-                                            TipoInsumo.Etiqueta => "bg-warning text-dark",
-                                            _                    => "bg-secondary"
-                                        };
-                                        var tipoLabel = insumo.TipoInsumo switch
-                                        {
-                                            TipoInsumo.Empaque  => "Empaque",
-                                            TipoInsumo.Etiqueta => "Etiqueta",
-                                            _                    => "Ingrediente"
-                                        };
-                                    }
+                                <td class="d-none d-md-table-cell">
                                     <span class="badge @tipoBadgeClass">@tipoLabel</span>
                                 </td>
-                                <td>@insumo.UnidadBase</td>
-                                <td>@insumo.PrecioCompra.ToString("C", cultura)</td>
-                                <td>@insumo.CantidadRendimiento.ToString("N0") @sufijo</td>
-                                <td>@(insumo.CostoPorUnidadBase.ToString("C", cultura))/@sufijo</td>
-                                <td class="text-secondary">@(insumo.Proveedor?.Nombre ?? "—")</td>
+                                <td class="d-none d-md-table-cell">@insumo.UnidadBase</td>
+                                <td class="d-none d-md-table-cell">@insumo.PrecioCompra.ToString("C", cultura)</td>
+                                <td class="d-none d-md-table-cell">@insumo.CantidadRendimiento.ToString("N0") @sufijo</td>
+                                <td class="d-none d-md-table-cell">@(insumo.CostoPorUnidadBase.ToString("C", cultura))/@sufijo</td>
+                                <td class="d-none d-md-table-cell text-secondary">@(insumo.Proveedor?.Nombre ?? "—")</td>
                                 <td>
                                     @if (insumo.Activo)
                                     {
@@ -95,14 +129,6 @@
                                     }
                                 </td>
                                 <td>
-                                    @{
-                                        var stockStr = insumo.StockActual % 1 == 0
-                                            ? insumo.StockActual.ToString("0")
-                                            : insumo.StockActual.ToString("0.###");
-                                        var stockLabel = $"{stockStr} {sufijo}";
-                                        var esBajoStock = insumo.StockMinimo.HasValue
-                                            && insumo.StockActual <= insumo.StockMinimo.Value;
-                                    }
                                     @if (esBajoStock)
                                     {
                                         <span class="badge bg-warning text-dark">@stockLabel</span>
@@ -131,6 +157,18 @@
                                     </div>
                                 </td>
                             </tr>
+                            <tr class="collapse d-md-none" id="detalle-insumo-@insumo.Id">
+                                <td colspan="5" class="bg-light bg-opacity-25">
+                                    <div class="d-flex flex-column gap-1 small">
+                                        <div><span class="fw-bold">Tipo:</span> <span class="badge @tipoBadgeClass">@tipoLabel</span></div>
+                                        <div><span class="fw-bold">Unidad:</span> @insumo.UnidadBase</div>
+                                        <div><span class="fw-bold">Precio compra:</span> @insumo.PrecioCompra.ToString("C", cultura)</div>
+                                        <div><span class="fw-bold">Rendimiento:</span> @insumo.CantidadRendimiento.ToString("N0") @sufijo</div>
+                                        <div><span class="fw-bold">Costo/unidad:</span> @(insumo.CostoPorUnidadBase.ToString("C", cultura))/@sufijo</div>
+                                        <div><span class="fw-bold">Proveedor:</span> @(insumo.Proveedor?.Nombre ?? "—")</div>
+                                    </div>
+                                </td>
+                            </tr>
                         }
                     }
                 </tbody>
@@ -147,5 +185,61 @@
             document.getElementById('modalEliminarNombre').textContent = button.getAttribute('data-nombre');
             document.getElementById('formEliminar').action = button.getAttribute('data-delete-url');
         });
+    </script>
+    <script>
+        (function () {
+            const inputTexto = document.getElementById('filtroTexto');
+            const contador   = document.getElementById('contadorVisible');
+            const filas      = document.querySelectorAll('table tbody > tr:not(.collapse)');
+            let filtroTipo   = 'todos';
+
+            function normalizar(str) {
+                return (str || '')
+                    .normalize('NFD')
+                    .replace(/[̀-ͯ]/g, '')
+                    .toLowerCase();
+            }
+
+            function filtrar() {
+                const texto = normalizar(inputTexto.value);
+                let visibles = 0;
+
+                filas.forEach(tr => {
+                    const busqueda  = normalizar(tr.dataset.busqueda);
+                    const activo    = tr.dataset.activo;
+                    const bajostock = tr.dataset.bajostock;
+
+                    const okTexto = texto === '' || busqueda.includes(texto);
+                    const okTipo  = filtroTipo === 'todos'
+                        || (filtroTipo === 'activos'    && activo    === 'true')
+                        || (filtroTipo === 'inactivos'  && activo    === 'false')
+                        || (filtroTipo === 'bajostock'  && bajostock === 'true');
+
+                    const visible = okTexto && okTipo;
+                    tr.style.display = visible ? '' : 'none';
+
+                    const detalle = tr.nextElementSibling;
+                    if (detalle && detalle.classList.contains('collapse')) {
+                        detalle.style.display = visible ? '' : 'none';
+                    }
+
+                    if (visible) visibles++;
+                });
+
+                contador.textContent = visibles === 1 ? '1 insumo' : visibles + ' insumos';
+            }
+
+            window.setPill = function (tipo) {
+                filtroTipo = tipo;
+                document.querySelectorAll('.pill-filtro').forEach(b => b.classList.remove('activo'));
+                const map = { todos: 'pilTodos', activos: 'pilActivos', inactivos: 'pilInactivos', bajostock: 'pilBajoStock' };
+                document.getElementById(map[tipo]).classList.add('activo');
+                filtrar();
+            };
+
+            inputTexto.addEventListener('input', filtrar);
+
+            filtrar();
+        })();
     </script>
 }

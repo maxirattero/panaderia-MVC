@@ -13,9 +13,9 @@
             <h1 class="display-6 fw-bold titulo-pagina mb-1">Reportes de Caja</h1>
             <p class="text-secondary m-0">Registros de ingresos y egresos de la panadería.</p>
         </div>
-        <div class="col-md-5 text-md-end">
+        <div class="col-12 col-md-5 d-flex justify-content-end flex-wrap gap-2 mt-3 mt-md-0">
             <a asp-action="CierreSemanal"
-               class="btn btn-outline-secondary d-inline-flex align-items-center gap-2 me-2">
+               class="btn btn-outline-secondary d-inline-flex align-items-center gap-2">
                 <span class="material-symbols-outlined">savings</span>Cierre semanal
             </a>
             <a asp-action="Create" class="btn btn-mv-primary d-inline-flex align-items-center gap-2 shadow">
@@ -52,23 +52,32 @@
 
     <div class="card-custom p-3 mb-4">
         <form method="get" asp-action="Index" class="row g-3 align-items-end">
-            <div class="col-md-3">
+            <div class="col-6 col-md-3">
                 <label class="form-label small fw-bold text-muted">Desde</label>
                 <input type="date" name="fechaInicio" class="form-control"
                        value="@(Model.FechaInicio?.ToString("yyyy-MM-dd"))" />
             </div>
-            <div class="col-md-3">
+            <div class="col-6 col-md-3">
                 <label class="form-label small fw-bold text-muted">Hasta</label>
                 <input type="date" name="fechaFin" class="form-control"
                        value="@(Model.FechaFin?.ToString("yyyy-MM-dd"))" />
             </div>
-            <div class="col-md-3">
-                <label class="form-label small fw-bold text-muted">Tipo</label>
-                <select asp-for="TipoFiltro" asp-items="Html.GetEnumSelectList<TipoMovimiento>()" class="form-select">
-                    <option value="">Todos</option>
-                </select>
+            <div class="col-12 col-md-3">
+                <label class="form-label small fw-bold text-muted d-block">Tipo</label>
+                <div class="d-flex gap-2 flex-wrap">
+                    <button type="button" id="pilTipoTodos"
+                            class="pill-filtro @(Model.TipoFiltro == null ? "activo" : "")"
+                            onclick="seleccionarTipo('')">Todos</button>
+                    <button type="button" id="pilTipoIngreso"
+                            class="pill-filtro @(Model.TipoFiltro == TipoMovimiento.Ingreso ? "activo" : "")"
+                            onclick="seleccionarTipo('Ingreso')">Ingreso</button>
+                    <button type="button" id="pilTipoEgreso"
+                            class="pill-filtro @(Model.TipoFiltro == TipoMovimiento.Egreso ? "activo" : "")"
+                            onclick="seleccionarTipo('Egreso')">Egreso</button>
+                </div>
+                <input type="hidden" name="TipoFiltro" id="tipoFiltroHidden" value="@Model.TipoFiltro" />
             </div>
-            <div class="col-md-3 d-flex gap-2">
+            <div class="col-12 col-md-3 d-flex gap-2">
                 <button type="submit" class="btn btn-mv-primary flex-fill">Filtrar</button>
                 <a asp-action="Index" class="btn btn-mv-secondary flex-fill">Limpiar</a>
             </div>
@@ -80,12 +89,12 @@
             <table class="table table-custom table-hover m-0">
                 <thead>
                     <tr>
+                        <th class="d-md-none"></th>
                         <th>Fecha</th>
                         <th>Tipo</th>
-                        <th>Categoría</th>
-                        <th>Descripción</th>
+                        <th class="d-none d-md-table-cell">Categoría</th>
+                        <th class="d-none d-md-table-cell">Descripción</th>
                         <th>Monto</th>
-                        <th class="text-end">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -100,6 +109,12 @@
                         @foreach (var r in Model.Movimientos)
                         {
                             <tr>
+                                <td class="d-md-none">
+                                    <button class="btn btn-sm btn-outline-secondary" type="button"
+                                            data-bs-toggle="collapse" data-bs-target="#detalle-mov-@r.Id">
+                                        <span class="material-symbols-outlined">expand_more</span>
+                                    </button>
+                                </td>
                                 <td>@r.Fecha.ToString("dd/MM/yyyy")</td>
                                 <td>
                                     @if (r.Tipo == TipoMovimiento.Ingreso)
@@ -111,30 +126,34 @@
                                         <span class="status-badge status-pending">Egreso</span>
                                     }
                                 </td>
-                                <td>@r.Categoria</td>
-                                <td>
-                                    @r.Descripcion
-                                </td>
+                                <td class="d-none d-md-table-cell">@r.Categoria</td>
+                                <td class="d-none d-md-table-cell">@r.Descripcion</td>
                                 <td class="fw-bold @(r.Tipo == TipoMovimiento.Ingreso ? "text-success" : "text-danger")">
                                     @r.Monto.ToString("C", cultura)
                                 </td>
-                                <td class="text-end">
-                                    <div class="d-flex gap-1 justify-content-end">
-                                        <a asp-action="Edit" asp-route-id="@r.Id"
-                                           class="btn btn-sm btn-outline-success" title="Editar">
-                                            <span class="material-symbols-outlined">edit</span>
-                                        </a>
-                                        <button type="button"
-                                                class="btn btn-sm btn-outline-danger"
-                                                title="Eliminar"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#deleteModal"
-                                                data-id="@r.Id"
-                                                data-nombre="@(string.IsNullOrWhiteSpace(r.Descripcion) ? $"Movimiento del {r.Fecha.ToString("dd/MM/yyyy")}" : r.Descripcion)"
-                                                data-delete-url="@Url.Action("Delete", "ReporteCaja", new { id = r.Id })"
-                                                data-token="@Antiforgery.GetAndStoreTokens(Context).RequestToken">
-                                            <span class="material-symbols-outlined">delete</span>
-                                        </button>
+                            </tr>
+                            <tr class="collapse d-md-none" id="detalle-mov-@r.Id">
+                                <td colspan="6" class="bg-light bg-opacity-25">
+                                    <div class="d-flex flex-column gap-1 small">
+                                        <div><span class="fw-bold">Categoría:</span> @r.Categoria</div>
+                                        <div><span class="fw-bold">Descripción:</span> @r.Descripcion</div>
+                                        <div class="d-flex gap-2 mt-2 pt-2 border-top">
+                                            <a asp-action="Edit" asp-route-id="@r.Id"
+                                               class="btn btn-sm btn-outline-success" title="Editar">
+                                                <span class="material-symbols-outlined">edit</span> Editar
+                                            </a>
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-danger"
+                                                    title="Eliminar"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#deleteModal"
+                                                    data-id="@r.Id"
+                                                    data-nombre="@(string.IsNullOrWhiteSpace(r.Descripcion) ? $"Movimiento del {r.Fecha.ToString("dd/MM/yyyy")}" : r.Descripcion)"
+                                                    data-delete-url="@Url.Action("Delete", "ReporteCaja", new { id = r.Id })"
+                                                    data-token="@Antiforgery.GetAndStoreTokens(Context).RequestToken">
+                                                <span class="material-symbols-outlined">delete</span> Eliminar
+                                            </button>
+                                        </div>
                                     </div>
                                 </td>
                             </tr>
@@ -153,3 +172,12 @@
             Egresos del período: <span class="text-danger">@Model.TotalEgresos.ToString("C", cultura)</span>
         </span>
     </div>
+
+@section Scripts {
+    <script>
+        function seleccionarTipo(valor) {
+            document.getElementById('tipoFiltroHidden').value = valor;
+            document.getElementById(valor === '' ? 'pilTipoTodos' : (valor === 'Ingreso' ? 'pilTipoIngreso' : 'pilTipoEgreso')).closest('form').submit();
+        }
+    </script>
+}
