@@ -57,15 +57,48 @@ public class InsumoService : IInsumoService
         existe.StockMinimo = insumo.StockMinimo;
         existe.FechaModificacion = DateTime.UtcNow;
 
-        _context.UnidadesCompra.RemoveRange(existe.UnidadesCompra);
-        existe.UnidadesCompra.Clear();
-        foreach (var u in insumo.UnidadesCompra ?? new())
-            existe.UnidadesCompra.Add(new UnidadCompra
+        var entrantes = insumo.UnidadesCompra ?? new();
+        var idsEntrantes = entrantes.Where(u => u.Id != 0).Select(u => u.Id).ToHashSet();
+
+        var aEliminar = existe.UnidadesCompra
+            .Where(u => !idsEntrantes.Contains(u.Id))
+            .ToList();
+
+        if (aEliminar.Count > 0)
+        {
+            var idsAEliminar = aEliminar.Select(u => u.Id).ToHashSet();
+            var tieneCompras = await _context.ComprasDetalle
+                .AnyAsync(d => idsAEliminar.Contains(d.IdUnidadCompra));
+            if (tieneCompras)
+                throw new InvalidOperationException(
+                    "No se puede eliminar una unidad de compra que ya tiene compras registradas. " +
+                    "Podés desactivar el insumo o simplemente dejar de usar esa unidad en nuevas compras.");
+            _context.UnidadesCompra.RemoveRange(aEliminar);
+        }
+
+        foreach (var u in entrantes)
+        {
+            if (u.Id != 0)
             {
-                Nombre           = u.Nombre,
-                FactorConversion = u.FactorConversion,
-                EsPorDefecto     = u.EsPorDefecto
-            });
+                var existente = existe.UnidadesCompra.FirstOrDefault(e => e.Id == u.Id);
+                if (existente != null)
+                {
+                    existente.Nombre           = u.Nombre;
+                    existente.FactorConversion = u.FactorConversion;
+                    existente.EsPorDefecto     = u.EsPorDefecto;
+                }
+            }
+            else
+            {
+                existe.UnidadesCompra.Add(new UnidadCompra
+                {
+                    IdInsumo         = existe.Id,
+                    Nombre           = u.Nombre,
+                    FactorConversion = u.FactorConversion,
+                    EsPorDefecto     = u.EsPorDefecto
+                });
+            }
+        }
 
         await _context.SaveChangesAsync();
     }

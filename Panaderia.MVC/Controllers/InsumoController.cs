@@ -66,7 +66,16 @@ public class InsumoController : Controller
             await CargarDropdowns();
             return View(insumo);
         }
-        await _insumoService.UpdateAsync(insumo);
+        try
+        {
+            await _insumoService.UpdateAsync(insumo);
+        }
+        catch (InvalidOperationException ex)
+        {
+            ModelState.AddModelError(string.Empty, ex.Message);
+            await CargarDropdowns();
+            return View(insumo);
+        }
         return RedirectToAction(nameof(Index));
     }
 
