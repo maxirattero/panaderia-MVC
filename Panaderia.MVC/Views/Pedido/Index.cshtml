@@ -67,23 +67,18 @@
         <div class="alert alert-danger">@TempData["Error"]</div>
     }
 
-    @* ── Desktop filter (hidden on mobile) ── *@
-    <div class="card-custom p-3 mb-4 d-none d-md-block">
+    @* ── Filtro (visible en mobile y desktop) ── *@
+    <div class="card-custom p-3 mb-4">
         <div class="row g-3">
-            <div class="col-lg-6">
+            <div class="col-12">
                 <div class="input-group">
                     <span class="input-group-text bg-transparent border-end-0">
                         <span class="material-symbols-outlined text-secondary">filter_list</span>
                     </span>
-                    <input class="form-control border-start-0 ps-0" placeholder="Filtrar por cliente..." type="text" />
+                    <input id="filtroTexto" class="form-control border-start-0 ps-0"
+                           placeholder="Buscar pedido..." type="text" />
                 </div>
-            </div>
-            <div class="col-sm-6 col-lg-3">
-                <select class="form-select">
-                    <option>Todos</option>
-                    <option>Cobrados</option>
-                    <option>Con saldo pendiente</option>
-                </select>
+                <span id="contadorVisible" class="text-secondary small mt-2"></span>
             </div>
         </div>
     </div>
@@ -108,7 +103,7 @@
                 <tbody>
                     @foreach (var p in Model)
                     {
-                        <tr>
+                        <tr data-busqueda="@($"{p.Cliente.NombreCompleto} {p.Cliente.Direccion} {p.Notas}").ToLower()" data-estado="@p.Estado.ToString()">
                             <td>
                                 <button class="btn btn-sm btn-outline-secondary" type="button"
                                         data-bs-toggle="collapse" data-bs-target="#detalle-@p.Id">
@@ -226,7 +221,7 @@
     <div class="d-md-none">
         @foreach (var p in Model)
         {
-            <div class="pedido-card">
+            <div class="pedido-card" data-busqueda="@($"{p.Cliente.NombreCompleto} {p.Cliente.Direccion} {p.Notas}").ToLower()" data-estado="@p.Estado.ToString()">
                 <div class="pedido-card-body">
                     @* Encabezado: nombre + badges *@
                     <div class="pedido-card-header">
@@ -350,3 +345,53 @@
             </div>
         }
     </div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const inputTexto = document.getElementById('filtroTexto');
+            const contador   = document.getElementById('contadorVisible');
+            const filas      = document.querySelectorAll('.table-custom tbody > tr:not(.collapse)');
+            const cards      = document.querySelectorAll('.pedido-card');
+
+            function normalizar(str) {
+                return (str || '')
+                    .normalize('NFD')
+                    .replace(/[̀-ͯ]/g, '')
+                    .toLowerCase();
+            }
+
+            function filtrar() {
+                const texto = normalizar(inputTexto.value);
+                let visibles = 0;
+
+                function evaluar(el) {
+                    const busqueda = normalizar(el.dataset.busqueda);
+
+                    const okTexto = texto === '' || busqueda.includes(texto);
+
+                    const visible = okTexto;
+                    el.style.display = visible ? '' : 'none';
+
+                    if (el.tagName === 'TR') {
+                        const detalle = el.nextElementSibling;
+                        if (detalle && detalle.classList.contains('collapse')) {
+                            detalle.style.display = visible ? '' : 'none';
+                        }
+                    }
+
+                    return visible;
+                }
+
+                filas.forEach(tr => { if (evaluar(tr)) visibles++; });
+                cards.forEach(card => evaluar(card));
+
+                contador.textContent = visibles === 1 ? '1 pedido' : visibles + ' pedidos';
+            }
+
+            inputTexto.addEventListener('input', filtrar);
+
+            filtrar();
+        })();
+    </script>
+}

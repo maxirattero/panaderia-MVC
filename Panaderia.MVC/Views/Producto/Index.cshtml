@@ -1,4 +1,4 @@
-﻿@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 @model IEnumerable<Panaderia.Models.Entities.Producto>
 
 @{
@@ -21,110 +21,239 @@
     <!-- Filters Bar -->
     <div class="card-custom p-3 mb-4">
         <div class="row g-3">
-            <div class="col-lg-6">
+            <div class="col-12 col-lg-8">
                 <div class="input-group">
                     <span class="input-group-text bg-transparent border-end-0">
                         <span class="material-symbols-outlined text-secondary">filter_list</span>
                     </span>
-                    <input class="form-control border-start-0 ps-0" placeholder="Filtrar por nombre..." type="text" />
+                    <input id="filtroTexto" class="form-control border-start-0 ps-0" placeholder="Buscar producto..." type="text" />
                 </div>
             </div>
-            <div class="col-sm-6 col-lg-3">
-                <select class="form-select">
-                    <option>Todas las Masas</option>
-                    <option>Semi-Integral</option>
-                    <option>Integral</option>
-                </select>
+            <div class="col-12 d-flex align-items-center gap-2 flex-wrap">
+                <button id="pilTodas" class="pill-filtro activo" onclick="setPill('todas')">Todas</button>
+                @foreach (var cat in Model.Select(p => p.Categoria).Where(c => c != null).DistinctBy(c => c.Id).OrderBy(c => c.Nombre))
+                {
+                    <button id="pil_@cat.Id" class="pill-filtro" onclick="setPill('@cat.Id')">@cat.Nombre</button>
+                }
+                <span id="contadorVisible" class="text-secondary small ms-2"></span>
             </div>
         </div>
     </div>
 
     <!-- Table Card -->
-    <div class="card-custom overflow-hidden mb-5">
-        <div class="table-responsive">
-            <table class="table table-custom table-hover m-0">
-                <thead>
-                    <tr>
-                        <th>Producto</th>
-                        <th>Categoría</th>
-                        <th>Formato / Tamaño</th>
-                        <th class="text-end">Precio Final</th>
-                        <th class="text-end">Precio Reventa</th>
-                        <th class="text-center">Stock</th>
-                        <th class="text-end">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var producto in Model)
-                    {
+    <div class="d-none d-md-block">
+        <div class="card-custom overflow-hidden mb-5">
+            <div class="table-responsive">
+                <table class="table table-custom table-hover m-0">
+                    <thead>
                         <tr>
-                            <td>
-                                <div class="d-flex align-items-center gap-3">
-                                    <div class="avatar-circle" style="background-color: var(--mv-surface-variant); color: var(--mv-primary-dark);">
-                                        @producto.NombreVisible.Substring(0, 1).ToUpper()
-                                    </div>
-                                    <div>
-                                        <div class="fw-bold">@producto.NombreVisible</div>
-                                        <small class="text-secondary">
-                                            @(producto.Variedad.HasValue ? $"{producto.Masa} · {producto.Variedad}" : producto.Masa.ToString())
-                                        </small>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <span class="text-secondary">@producto.Categoria?.Nombre</span>
-                            </td>
-                            <td>
-                                <div class="d-flex flex-column gap-1 small text-secondary">
-                                    <span class="d-flex align-items-center gap-1">
-                                        <span class="material-symbols-outlined fs-6">deployed_code</span>
-                                        @(producto.Formato?.Descripcion ?? "-")
-                                    </span>
-                                    <span class="d-flex align-items-center gap-1">
-                                        <span class="material-symbols-outlined fs-6">straighten</span>
-                                        @(producto.Tamano?.Descripcion ?? "-")
-                                    </span>
-                                </div>
-                            </td>
-                            <td class="text-end fw-bold">
-                                $@producto.PrecioFinal.ToString("N2")
-                            </td>
-                            <td class="text-end fw-bold">
-                                $@producto.PrecioReventa.ToString("N2")
-                            </td>
-                            <td class="text-center">
-                                @producto.Stock
-                            </td>
-                            <td class="text-end">
-                                <div class="btn-group">
-                                    <a asp-action="Details" asp-route-id="@producto.Id" class="btn btn-sm btn-outline-primary" title="Ver Detalles">
-                                        <span class="material-symbols-outlined">visibility</span>
-                                    </a>
-                                    <a asp-action="Edit" asp-route-id="@producto.Id" class="btn btn-sm btn-outline-success" title="Editar">
-                                        <span class="material-symbols-outlined">edit</span>
-                                    </a>
-                                    <a asp-controller="Receta" asp-action="Editar"
-                                       asp-route-idProducto="@producto.Id"
-                                       class="btn btn-sm btn-outline-secondary"
-                                       title="Receta">
-                                        <span class="material-symbols-outlined">menu_book</span>
-                                    </a>
-                                    <button type="button"
-                                            class="btn btn-sm btn-outline-danger"
-                                            title="Eliminar"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#deleteModal"
-                                            data-id="@producto.Id"
-                                            data-nombre="@producto.NombreVisible"
-                                            data-delete-url="@Url.Action("Delete", "Producto", new { id = producto.Id })"
-                                            data-token="@Antiforgery.GetAndStoreTokens(Context).RequestToken">
-                                        <span class="material-symbols-outlined">delete</span>
-                                    </button>
-                                </div>
-                            </td>
+                            <th>Producto</th>
+                            <th>Categoría</th>
+                            <th>Formato / Tamaño</th>
+                            <th class="text-end">Precio Final</th>
+                            <th class="text-end">Precio Reventa</th>
+                            <th class="text-center">Stock</th>
+                            <th class="text-end">Acciones</th>
                         </tr>
-                    }
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @foreach (var producto in Model)
+                        {
+                            <tr data-busqueda="@producto.NombreVisible.ToLower()" data-categoria="@(producto.Categoria?.Id.ToString() ?? "")">
+                                <td>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="avatar-circle" style="background-color: var(--mv-surface-variant); color: var(--mv-primary-dark);">
+                                            @producto.NombreVisible.Substring(0, 1).ToUpper()
+                                        </div>
+                                        <div>
+                                            <div class="fw-bold">@producto.NombreVisible</div>
+                                            <small class="text-secondary">
+                                                @(producto.Variedad.HasValue ? $"{producto.Masa} · {producto.Variedad}" : producto.Masa.ToString())
+                                            </small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="text-secondary">@producto.Categoria?.Nombre</span>
+                                </td>
+                                <td>
+                                    <div class="d-flex flex-column gap-1 small text-secondary">
+                                        <span class="d-flex align-items-center gap-1">
+                                            <span class="material-symbols-outlined fs-6">deployed_code</span>
+                                            @(producto.Formato?.Descripcion ?? "-")
+                                        </span>
+                                        <span class="d-flex align-items-center gap-1">
+                                            <span class="material-symbols-outlined fs-6">straighten</span>
+                                            @(producto.Tamano?.Descripcion ?? "-")
+                                        </span>
+                                    </div>
+                                </td>
+                                <td class="text-end fw-bold">
+                                    $@producto.PrecioFinal.ToString("N2")
+                                </td>
+                                <td class="text-end fw-bold">
+                                    $@producto.PrecioReventa.ToString("N2")
+                                </td>
+                                <td class="text-center">
+                                    @producto.Stock
+                                </td>
+                                <td class="text-end">
+                                    <div class="btn-group">
+                                        <a asp-action="Details" asp-route-id="@producto.Id" class="btn btn-sm btn-outline-primary" title="Ver Detalles">
+                                            <span class="material-symbols-outlined">visibility</span>
+                                        </a>
+                                        <a asp-action="Edit" asp-route-id="@producto.Id" class="btn btn-sm btn-outline-success" title="Editar">
+                                            <span class="material-symbols-outlined">edit</span>
+                                        </a>
+                                        <a asp-controller="Receta" asp-action="Editar"
+                                           asp-route-idProducto="@producto.Id"
+                                           class="btn btn-sm btn-outline-secondary"
+                                           title="Receta">
+                                            <span class="material-symbols-outlined">menu_book</span>
+                                        </a>
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-danger"
+                                                title="Eliminar"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#deleteModal"
+                                                data-id="@producto.Id"
+                                                data-nombre="@producto.NombreVisible"
+                                                data-delete-url="@Url.Action("Delete", "Producto", new { id = producto.Id })"
+                                                data-token="@Antiforgery.GetAndStoreTokens(Context).RequestToken">
+                                            <span class="material-symbols-outlined">delete</span>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
+
+    <div id="mobileCards" class="d-md-none">
+        @foreach (var producto in Model)
+        {
+            <div class="card-custom p-3 mb-3 producto-card" data-busqueda="@producto.NombreVisible.ToLower()" data-categoria="@(producto.Categoria?.Id.ToString() ?? "")">
+                <div class="d-flex align-items-center gap-3 mb-2">
+                    <div class="avatar-circle" style="background-color: var(--mv-surface-variant); color: var(--mv-primary-dark);">
+                        @producto.NombreVisible.Substring(0, 1).ToUpper()
+                    </div>
+                    <div>
+                        <div class="fw-bold">@producto.NombreVisible</div>
+                        <small class="text-secondary">
+                            @(producto.Variedad.HasValue ? $"{producto.Masa} · {producto.Variedad}" : producto.Masa.ToString())
+                        </small>
+                    </div>
+                </div>
+
+                <div class="mb-2 small text-secondary">
+                    <div>Categoría: @(producto.Categoria?.Nombre ?? "—")</div>
+                    <div>
+                        <span class="material-symbols-outlined fs-6 align-middle">deployed_code</span>
+                        @(producto.Formato?.Descripcion ?? "—")
+                        ·
+                        <span class="material-symbols-outlined fs-6 align-middle">straighten</span>
+                        @(producto.Tamano?.Descripcion ?? "—")
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-2 pt-2 border-top">
+                    <div>
+                        <small class="text-muted d-block">Precio Final</small>
+                        <span class="fw-bold">$@producto.PrecioFinal.ToString("N2")</span>
+                    </div>
+                    <div>
+                        <small class="text-muted d-block">Reventa</small>
+                        <span class="fw-bold">$@producto.PrecioReventa.ToString("N2")</span>
+                    </div>
+                    <div>
+                        <small class="text-muted d-block">Stock</small>
+                        <span class="fw-bold text-center d-block">@producto.Stock</span>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-1 pt-2 border-top">
+                    <a asp-action="Details" asp-route-id="@producto.Id" class="btn btn-sm btn-outline-primary" title="Ver Detalles">
+                        <span class="material-symbols-outlined">visibility</span>
+                    </a>
+                    <a asp-action="Edit" asp-route-id="@producto.Id" class="btn btn-sm btn-outline-success" title="Editar">
+                        <span class="material-symbols-outlined">edit</span>
+                    </a>
+                    <a asp-controller="Receta" asp-action="Editar"
+                       asp-route-idProducto="@producto.Id"
+                       class="btn btn-sm btn-outline-secondary"
+                       title="Receta">
+                        <span class="material-symbols-outlined">menu_book</span>
+                    </a>
+                    <button type="button"
+                            class="btn btn-sm btn-outline-danger"
+                            title="Eliminar"
+                            data-bs-toggle="modal"
+                            data-bs-target="#deleteModal"
+                            data-id="@producto.Id"
+                            data-nombre="@producto.NombreVisible"
+                            data-delete-url="@Url.Action("Delete", "Producto", new { id = producto.Id })"
+                            data-token="@Antiforgery.GetAndStoreTokens(Context).RequestToken">
+                        <span class="material-symbols-outlined">delete</span>
+                    </button>
+                </div>
+            </div>
+        }
+    </div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const inputTexto = document.getElementById('filtroTexto');
+            const contador   = document.getElementById('contadorVisible');
+            const filas      = document.querySelectorAll('table.table-custom tbody tr');
+            const cards      = document.querySelectorAll('.producto-card');
+            let filtroTipo   = 'todas';
+
+            function normalizar(str) {
+                return (str || '')
+                    .normalize('NFD')
+                    .replace(/[̀-ͯ]/g, '')
+                    .toLowerCase();
+            }
+
+            function filtrar() {
+                const texto = normalizar(inputTexto.value);
+                let visibles = 0;
+
+                function evaluar(el) {
+                    const busqueda  = normalizar(el.dataset.busqueda);
+                    const categoria = el.dataset.categoria;
+
+                    const okTexto = texto === '' || busqueda.includes(texto);
+                    const okTipo  = filtroTipo === 'todas' || categoria === filtroTipo;
+
+                    const visible = okTexto && okTipo;
+                    el.style.display = visible ? '' : 'none';
+                    return visible;
+                }
+
+                filas.forEach(tr => { if (evaluar(tr)) visibles++; });
+                cards.forEach(card => evaluar(card));
+
+                contador.textContent = visibles + ' productos';
+            }
+
+            window.setPill = function (tipo) {
+                filtroTipo = tipo;
+                document.querySelectorAll('.pill-filtro').forEach(b => b.classList.remove('activo'));
+                const btn = tipo === 'todas'
+                    ? document.getElementById('pilTodas')
+                    : document.getElementById('pil_' + tipo);
+                if (btn) btn.classList.add('activo');
+                filtrar();
+            };
+
+            inputTexto.addEventListener('input', filtrar);
+
+            filtrar();
+        })();
+    </script>
+}

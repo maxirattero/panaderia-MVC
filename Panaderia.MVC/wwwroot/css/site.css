@@ -433,6 +433,28 @@ h1, h2, h3, .font-literata {
     color: var(--mv-error);
 }
 
+.pill-filtro {
+    padding: 0.3rem 1rem;
+    border-radius: 999px;
+    border: 1px solid #cebaac;
+    background: #fff;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+.pill-filtro.activo {
+    background-color: #855330;
+    color: #fff;
+    border-color: #855330;
+}
+
+.cliente-card {
+    background: #fff;
+    border-radius: 12px;
+    border: 0.5px solid #cebaac;
+    padding: 14px 16px;
+}
+
 @media (max-width: 767.98px) {
     #tablaDetalles {
         display: block !important;
