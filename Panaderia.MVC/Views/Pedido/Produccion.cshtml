@@ -183,9 +183,9 @@
                                         <input type="hidden" name="ItemsSeleccionables[@i].NombreProducto" value="@item.NombreProducto" />
                                         <input type="hidden" name="ItemsSeleccionables[@i].CantidadSugerida"
                                                value="@item.CantidadSugerida.ToString(CultureInfo.InvariantCulture)" />
-                                        <input type="hidden" name="ItemsSeleccionables[@i].Seleccionado" value="false" />
                                         <input type="checkbox" name="ItemsSeleccionables[@i].Seleccionado" value="true"
                                                class="form-check-input" @(item.Seleccionado ? "checked" : "") />
+                                        <input type="hidden" name="ItemsSeleccionables[@i].Seleccionado" value="false" />
                                     </td>
                                     <td>@item.NombreProducto</td>
                                     <td>
