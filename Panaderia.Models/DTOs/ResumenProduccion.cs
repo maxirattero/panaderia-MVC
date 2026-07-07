@@ -13,6 +13,8 @@ namespace Panaderia.Models.DTOs
         public decimal CantidadSugerida { get; set; }
         public decimal CantidadAProducir { get; set; }
         public bool Seleccionado { get; set; } = true;
+        public bool EsStock { get; set; }
+        public int IdProduccionStock { get; set; }
     }
 
     public class ResumenSubRecetaItem
@@ -34,6 +36,8 @@ namespace Panaderia.Models.DTOs
     {
         public int IdProducto { get; set; }
         public string NombreProducto { get; set; } = string.Empty;
+        public string MasaKey { get; set; } = string.Empty;
+        public string NombreMasa { get; set; } = string.Empty;
         public int CantidadUnidades { get; set; }
         public decimal PesoMasaTotal { get; set; }
         public List<ProduccionIngredienteDetalle> Ingredientes { get; set; } = new();

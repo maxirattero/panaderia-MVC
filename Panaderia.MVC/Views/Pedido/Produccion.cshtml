@@ -13,7 +13,7 @@
            class="btn btn-outline-secondary d-inline-flex align-items-center gap-2">
             <span class="material-symbols-outlined">blender</span>Planificar amasadas
         </a>
-        <a asp-action="ImprimirProduccion" target="_blank"
+        <a asp-action="ImprimirProduccion" target="_blank" onclick="return imprimirPlan(event)"
            class="btn btn-outline-secondary d-inline-flex align-items-center gap-2">
             <span class="material-symbols-outlined">print</span>Imprimir plan
         </a>
@@ -103,12 +103,25 @@
             }
             @foreach (var sr in Model.PorSubReceta)
             {
+                var esMasaMadre = sr.Nombre != null && sr.Nombre.ToLowerInvariant().Contains("masa madre");
+                var etiquetaAnterior = esMasaMadre ? "Masa madre anterior (g)" : "Ya tengo preparado (g)";
                 <div class="col-md-6">
-                    <div class="card card-custom p-4">
+                    <div class="card card-custom p-4 sr-card" data-sr="@sr.IdSubReceta" data-total="@sr.TotalGramos.ToString(CultureInfo.InvariantCulture)">
                         <h5 class="fw-bold mb-1">@sr.Nombre</h5>
-                        <p class="text-muted small mb-3">
+                        <p class="text-muted small mb-2">
                             Total con margen: <strong>@sr.TotalGramos.ToString("0.#") g</strong>
                         </p>
+
+                        <div class="mb-2">
+                            <label class="form-label small mb-1">@etiquetaAnterior</label>
+                            <input type="number" class="form-control form-control-sm sr-anterior"
+                                   style="width:130px;" min="0" step="1" value="0" lang="en"
+                                   oninput="recalcSubReceta(this)" />
+                        </div>
+                        <p class="small mb-2 sr-restante" style="display:none;">
+                            Restante a preparar: <strong class="sr-restante-val"></strong>
+                        </p>
+
                         <table class="table table-sm align-middle mb-0">
                             <thead>
                                 <tr>
@@ -121,7 +134,9 @@
                                 {
                                     <tr>
                                         <td>@ing.NombreInsumo</td>
-                                        <td class="text-end fw-bold">
+                                        <td class="text-end fw-bold sr-ing"
+                                            data-base="@ing.Cantidad.ToString(CultureInfo.InvariantCulture)"
+                                            data-unidad="@ing.Unidad">
                                             @ing.Cantidad.ToString("0.#") @ing.Unidad
                                         </td>
                                     </tr>
@@ -145,7 +160,10 @@
     {
         var msgs = TempData["Warning"]!.ToString()!.Split('|');
         <div class="alert alert-warning alert-dismissible fade show mt-4" role="alert">
-            @foreach (var msg in msgs) { <div>@msg</div> }
+            @foreach (var msg in msgs)
+            {
+                <div>@msg</div>
+            }
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     }
@@ -157,54 +175,162 @@
         </div>
     }
 
-    @if (Model.ItemsSeleccionables.Any())
-    {
-        <div class="card card-custom p-4 mt-4">
-            <h5 class="fw-semibold mb-3">Confirmar producción</h5>
-            <form asp-action="ConfirmarProduccion" method="post">
+    <div class="card card-custom p-4 mt-4">
+        <h5 class="fw-semibold mb-3">Confirmar producción</h5>
+
+        <div class="border rounded p-3 mb-3" style="background-color: var(--mv-background);">
+            <label class="form-label fw-semibold mb-2">Producir para stock (sin pedido)</label>
+            <form asp-action="AgregarProduccionStock" method="post">
                 @Html.AntiForgeryToken()
-                <div class="table-responsive mb-3">
-                    <table class="table table-sm align-middle mb-0">
-                        <thead style="background-color: #cebaac; color: #281714;">
-                            <tr>
-                                <th style="width:40px;"></th>
-                                <th>Producto</th>
-                                <th style="width:140px;">Cantidad a producir</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @for (int i = 0; i < Model.ItemsSeleccionables.Count; i++)
+                <div class="d-flex flex-wrap align-items-end gap-2">
+                    <div>
+                        <select name="idProducto" class="form-select form-select-sm" style="min-width:240px;" required>
+                            <option value="">Seleccionar producto...</option>
+                            @foreach (var p in Model.ProductosDisponibles)
                             {
-                                var item = Model.ItemsSeleccionables[i];
-                                <tr>
-                                    <td>
-                                        <input type="hidden" name="ItemsSeleccionables[@i].IdProducto" value="@item.IdProducto" />
-                                        <input type="hidden" name="ItemsSeleccionables[@i].IdReceta" value="@item.IdReceta" />
-                                        <input type="hidden" name="ItemsSeleccionables[@i].NombreProducto" value="@item.NombreProducto" />
-                                        <input type="hidden" name="ItemsSeleccionables[@i].CantidadSugerida"
-                                               value="@item.CantidadSugerida.ToString(CultureInfo.InvariantCulture)" />
-                                        <input type="checkbox" name="ItemsSeleccionables[@i].Seleccionado" value="true"
-                                               class="form-check-input" @(item.Seleccionado ? "checked" : "") />
-                                        <input type="hidden" name="ItemsSeleccionables[@i].Seleccionado" value="false" />
-                                    </td>
-                                    <td>@item.NombreProducto</td>
-                                    <td>
+                                <option value="@p.IdProducto">@p.NombreProducto</option>
+                            }
+                        </select>
+                    </div>
+                    <div>
+                        <input type="number" name="cantidad" class="form-control form-control-sm"
+                               style="width:90px;" lang="en" step="1" min="1" value="1" required />
+                    </div>
+                    <button type="submit" class="btn btn-mv-secondary btn-sm d-inline-flex align-items-center gap-1">
+                        <span class="material-symbols-outlined" style="font-size:18px;">add</span>Agregar
+                    </button>
+                </div>
+            </form>
+            @if (!Model.ProductosDisponibles.Any())
+            {
+                <p class="text-muted small mb-0 mt-2">No hay productos con receta cargada.</p>
+            }
+        </div>
+
+        <form asp-action="ConfirmarProduccion" method="post">
+            @Html.AntiForgeryToken()
+            <div class="table-responsive mb-3">
+                <table class="table table-sm align-middle mb-0">
+                    <thead style="background-color: #cebaac; color: #281714;">
+                        <tr>
+                            <th style="width:40px;"></th>
+                            <th>Producto</th>
+                            <th style="width:220px;">Cantidad a producir</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (int i = 0; i < Model.ItemsSeleccionables.Count; i++)
+                        {
+                            var item = Model.ItemsSeleccionables[i];
+                            <tr>
+                                <td>
+                                    <input type="hidden" name="ItemsSeleccionables[@i].IdProducto" value="@item.IdProducto" />
+                                    <input type="hidden" name="ItemsSeleccionables[@i].IdReceta" value="@item.IdReceta" />
+                                    <input type="hidden" name="ItemsSeleccionables[@i].NombreProducto" value="@item.NombreProducto" />
+                                    <input type="hidden" name="ItemsSeleccionables[@i].CantidadSugerida"
+                                           value="@item.CantidadSugerida.ToString(CultureInfo.InvariantCulture)" />
+                                    <input type="hidden" name="ItemsSeleccionables[@i].EsStock" value="@item.EsStock.ToString().ToLower()" />
+                                    <input type="hidden" name="ItemsSeleccionables[@i].IdProduccionStock" value="@item.IdProduccionStock" />
+                                    <input type="checkbox" name="ItemsSeleccionables[@i].Seleccionado" value="true"
+                                           class="form-check-input" @(item.Seleccionado ? "checked" : "") />
+                                    <input type="hidden" name="ItemsSeleccionables[@i].Seleccionado" value="false" />
+                                </td>
+                                <td>
+                                    @item.NombreProducto
+                                    @if (item.EsStock)
+                                    {
+                                        <span class="badge rounded-pill ms-1"
+                                              style="background-color:#855330; font-size:11px;">stock</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="d-inline-flex align-items-center gap-1">
                                         <input type="number"
                                                name="ItemsSeleccionables[@i].CantidadAProducir"
                                                class="form-control form-control-sm"
                                                style="width:90px"
                                                lang="en" step="1" min="1"
                                                value="@item.CantidadAProducir.ToString(CultureInfo.InvariantCulture)" />
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
+                                        @if (item.EsStock)
+                                        {
+                                            <button type="submit" name="id" value="@item.IdProduccionStock"
+                                                    formaction="@Url.Action("QuitarProduccionStock", "Pedido")"
+                                                    formmethod="post"
+                                                    class="btn btn-sm btn-outline-danger d-inline-flex align-items-center"
+                                                    title="Quitar de stock">
+                                                <span class="material-symbols-outlined" style="font-size:16px;">close</span>
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @if (Model.ItemsSeleccionables.Any())
+            {
                 <button type="submit" class="btn btn-mv-primary d-inline-flex align-items-center gap-2">
                     <span class="material-symbols-outlined">check_circle</span>Confirmar producción
                 </button>
-            </form>
-        </div>
-    }
+            }
+            else
+            {
+                <p class="text-muted mb-0">No hay nada para producir. Agregá productos para stock arriba, o cargá pedidos.</p>
+            }
+        </form>
+    </div>
 </div>
+
+@section Scripts {
+    <script>
+        function imprimirPlan(e) {
+            const params = [];
+            document.querySelectorAll('.sr-card').forEach(card => {
+                const idSub = card.dataset.sr;
+                const input = card.querySelector('.sr-anterior');
+                const ant = input ? parseFloat(input.value) : 0;
+                if (idSub && !isNaN(ant) && ant > 0) {
+                    params.push(idSub + ':' + ant);
+                }
+            });
+
+            if (params.length) {
+                e.preventDefault();
+                const base = '@Url.Action("ImprimirProduccion", "Pedido")';
+                const url = base + '?anteriores=' + encodeURIComponent(params.join(','));
+                window.open(url, '_blank');
+                return false;
+            }
+            return true;
+        }
+
+        function recalcSubReceta(input) {
+            const card = input.closest('.sr-card');
+            if (!card) return;
+
+            const total = parseFloat(card.dataset.total) || 0;
+            let anterior = parseFloat(input.value);
+            if (isNaN(anterior) || anterior < 0) anterior = 0;
+
+            const restante = Math.max(0, total - anterior);
+            const factor = total > 0 ? restante / total : 0;
+
+            card.querySelectorAll('.sr-ing').forEach(td => {
+                const base = parseFloat(td.dataset.base) || 0;
+                const unidad = td.dataset.unidad || '';
+                const val = Math.round(base * factor * 10) / 10;
+                td.textContent = val + ' ' + unidad;
+            });
+
+            const restanteRow = card.querySelector('.sr-restante');
+            const restanteVal = card.querySelector('.sr-restante-val');
+            if (anterior > 0) {
+                restanteVal.textContent = (Math.round(restante * 10) / 10) + ' g';
+                restanteRow.style.display = '';
+            } else {
+                restanteRow.style.display = 'none';
+            }
+        }
+    </script>
+}

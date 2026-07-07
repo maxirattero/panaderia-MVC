@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using System.Globalization;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Panaderia.Models.DTOs;
@@ -36,11 +37,13 @@ namespace Panaderia.MVC.Controllers
             var (porProducto, porBolsa, porSubReceta, totalAgua) = await _pedidoService.GetResumenProduccionAsync();
             var vm = new ProduccionViewModel
             {
-                PorProducto  = porProducto,
-                PorBolsa     = porBolsa,
+                PorProducto = porProducto,
+                PorBolsa = porBolsa,
                 PorSubReceta = porSubReceta,
-                TotalAgua    = totalAgua
+                TotalAgua = totalAgua
             };
+
+            // Filas de pedidos pendientes
             foreach (var item in vm.PorProducto)
             {
                 var receta = await _recetaService.GetByProductoIdAsync(item.IdProducto);
@@ -48,16 +51,78 @@ namespace Panaderia.MVC.Controllers
                 {
                     vm.ItemsSeleccionables.Add(new ItemProduccionSeleccionable
                     {
-                        IdProducto        = item.IdProducto,
-                        IdReceta          = receta.Id,
-                        NombreProducto    = item.NombreProducto,
-                        CantidadSugerida  = item.CantidadTotal,
+                        IdProducto = item.IdProducto,
+                        IdReceta = receta.Id,
+                        NombreProducto = item.NombreProducto,
+                        CantidadSugerida = item.CantidadTotal,
                         CantidadAProducir = item.CantidadTotal,
-                        Seleccionado      = true
+                        Seleccionado = true,
+                        EsStock = false,
+                        IdProduccionStock = 0
                     });
                 }
             }
+
+            // Filas de producción para stock (buffer persistido)
+            var buffer = await _pedidoService.GetProduccionStockAsync();
+            foreach (var b in buffer)
+            {
+                var receta = await _recetaService.GetByProductoIdAsync(b.IdProducto);
+                if (receta != null)
+                {
+                    vm.ItemsSeleccionables.Add(new ItemProduccionSeleccionable
+                    {
+                        IdProducto = b.IdProducto,
+                        IdReceta = receta.Id,
+                        NombreProducto = b.Producto.NombreVisible,
+                        CantidadSugerida = b.Cantidad,
+                        CantidadAProducir = b.Cantidad,
+                        Seleccionado = true,
+                        EsStock = true,
+                        IdProduccionStock = b.Id
+                    });
+                }
+            }
+
+            // Dropdown de productos con receta para "producir para stock"
+            var recetas = await _recetaService.GetAllAsync();
+            var recetaPorProducto = recetas
+                .GroupBy(r => r.IdProducto)
+                .ToDictionary(g => g.Key, g => g.First().Id);
+            var productos = await _productoService.GetAllAsync();
+            vm.ProductosDisponibles = productos
+                .Where(p => recetaPorProducto.ContainsKey(p.Id))
+                .Select(p => new ProductoRecetaOption
+                {
+                    IdProducto = p.Id,
+                    IdReceta = recetaPorProducto[p.Id],
+                    NombreProducto = p.NombreVisible
+                })
+                .OrderBy(o => o.NombreProducto)
+                .ToList();
+
             return View(vm);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AgregarProduccionStock(int idProducto, int cantidad)
+        {
+            if (idProducto <= 0 || cantidad < 1)
+            {
+                TempData["Error"] = "Elegí un producto y una cantidad válida.";
+                return RedirectToAction(nameof(Produccion));
+            }
+            await _pedidoService.AgregarProduccionStockAsync(idProducto, cantidad);
+            return RedirectToAction(nameof(Produccion));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> QuitarProduccionStock(int id)
+        {
+            await _pedidoService.QuitarProduccionStockAsync(id);
+            return RedirectToAction(nameof(Produccion));
         }
 
         [HttpPost]
@@ -98,13 +163,34 @@ namespace Panaderia.MVC.Controllers
             return View();
         }
 
-        public async Task<IActionResult> ImprimirProduccion()
+        public async Task<IActionResult> ImprimirProduccion(string? anteriores = null)
         {
-            var (porProducto, _, porSubReceta, _) = await _pedidoService.GetResumenProduccionAsync();
+            var porProducto = await _pedidoService.GetProduccionCombinadaResumenAsync();
+            var (_, _, porSubReceta, _) = await _pedidoService.GetResumenProduccionAsync();
+
+            // Cantidad "anterior" ingresada en el dashboard, por sub-receta.
+            // Formato del parametro: "idSubReceta:gramos,idSubReceta:gramos"
+            var anterioresMapa = new Dictionary<int, decimal>();
+            if (!string.IsNullOrWhiteSpace(anteriores))
+            {
+                foreach (var par in anteriores.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                {
+                    var kv = par.Split(':');
+                    if (kv.Length == 2
+                        && int.TryParse(kv[0], out var idSub)
+                        && decimal.TryParse(kv[1], NumberStyles.Any, CultureInfo.InvariantCulture, out var ant)
+                        && ant > 0)
+                    {
+                        anterioresMapa[idSub] = ant;
+                    }
+                }
+            }
+
             var vm = new ImprimirProduccionViewModel
             {
-                Fecha      = DateTime.Today,
-                SubRecetas = porSubReceta
+                Fecha = DateTime.Today,
+                SubRecetas = porSubReceta,
+                Anteriores = anterioresMapa
             };
             foreach (var item in porProducto)
             {
@@ -112,9 +198,9 @@ namespace Panaderia.MVC.Controllers
                 if (receta == null) continue;
                 vm.Items.Add(new ImprimirProduccionItemViewModel
                 {
-                    NombreProducto   = item.NombreProducto,
+                    NombreProducto = item.NombreProducto,
                     CantidadUnidades = item.CantidadTotal,
-                    Receta           = receta
+                    Receta = receta
                 });
             }
             return View(vm);
@@ -219,11 +305,11 @@ namespace Panaderia.MVC.Controllers
 
                 pedido.Detalles.Add(new DetallePedido
                 {
-                    IdProducto    = d.IdProducto,
-                    Cantidad      = d.Cantidad,
+                    IdProducto = d.IdProducto,
+                    Cantidad = d.Cantidad,
                     PrecioUnitario = precio,
-                    Bolsa         = d.Bolsa,
-                    IdEmpaque     = d.IdEmpaque,
+                    Bolsa = d.Bolsa,
+                    IdEmpaque = d.IdEmpaque,
                     LlevaEtiqueta = d.LlevaEtiqueta
                 });
             }
@@ -250,10 +336,10 @@ namespace Panaderia.MVC.Controllers
                 Notas = pedido.Notas,
                 Detalles = pedido.Detalles.Select(d => new DetallePedidoViewModel
                 {
-                    IdProducto    = d.IdProducto,
-                    Cantidad      = d.Cantidad,
-                    Bolsa         = d.Bolsa,
-                    IdEmpaque     = d.IdEmpaque,
+                    IdProducto = d.IdProducto,
+                    Cantidad = d.Cantidad,
+                    Bolsa = d.Bolsa,
+                    IdEmpaque = d.IdEmpaque,
                     LlevaEtiqueta = d.LlevaEtiqueta
                 }).ToList()
             };
@@ -292,11 +378,11 @@ namespace Panaderia.MVC.Controllers
                 var precio = cliente.Revendedor ? producto.PrecioReventa : producto.PrecioFinal;
                 detalles.Add(new DetallePedido
                 {
-                    IdProducto    = d.IdProducto,
-                    Cantidad      = d.Cantidad,
+                    IdProducto = d.IdProducto,
+                    Cantidad = d.Cantidad,
                     PrecioUnitario = precio,
-                    Bolsa         = d.Bolsa,
-                    IdEmpaque     = d.IdEmpaque,
+                    Bolsa = d.Bolsa,
+                    IdEmpaque = d.IdEmpaque,
                     LlevaEtiqueta = d.LlevaEtiqueta
                 });
             }
@@ -374,7 +460,7 @@ namespace Panaderia.MVC.Controllers
             if (pedido == null) return NotFound();
             await _pedidoService.AnularAsync(id);
             TempData["Success"] = "Pedido anulado correctamente.";
-            return RedirectToAction(nameof(Index)); 
+            return RedirectToAction(nameof(Index));
         }
     }
 }

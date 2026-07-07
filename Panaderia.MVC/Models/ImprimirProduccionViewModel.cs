@@ -16,4 +16,7 @@ public class ImprimirProduccionViewModel
     public List<ImprimirProduccionItemViewModel> Items { get; set; } = new();
     public DateTime Fecha { get; set; }
     public List<ResumenSubRecetaItem> SubRecetas { get; set; } = new();
+
+    // masa madre anterior ingresada en el dashboard: IdSubReceta -> gramos
+    public Dictionary<int, decimal> Anteriores { get; set; } = new();
 }

@@ -136,13 +136,13 @@ namespace Panaderia.Services.Implementations
             {
                 existing.Detalles.Add(new DetallePedido
                 {
-                    IdProducto    = d.IdProducto,
-                    Cantidad      = d.Cantidad,
+                    IdProducto = d.IdProducto,
+                    Cantidad = d.Cantidad,
                     PrecioUnitario = d.PrecioUnitario,
-                    Bolsa         = d.Bolsa,
-                    IdEmpaque     = d.IdEmpaque,
+                    Bolsa = d.Bolsa,
+                    IdEmpaque = d.IdEmpaque,
                     LlevaEtiqueta = d.LlevaEtiqueta,
-                    CostoEmpaque  = d.CostoEmpaque
+                    CostoEmpaque = d.CostoEmpaque
                 });
             }
 
@@ -225,7 +225,7 @@ namespace Panaderia.Services.Implementations
                 .ToListAsync();
 
             decimal totalIngresos = movimientos.Where(r => r.Tipo == TipoMovimiento.Ingreso).Sum(r => r.Monto);
-            decimal totalEgresos  = movimientos.Where(r => r.Tipo == TipoMovimiento.Egreso).Sum(r => r.Monto);
+            decimal totalEgresos = movimientos.Where(r => r.Tipo == TipoMovimiento.Egreso).Sum(r => r.Monto);
 
             // Costo estimado desde recetas (informativo)
             var pedidos = await _context.Pedidos
@@ -264,9 +264,9 @@ namespace Panaderia.Services.Implementations
 
                 detalles.Add(new CostoProductoItem
                 {
-                    NombreProducto  = primerDetalle.Producto.NombreVisible,
+                    NombreProducto = primerDetalle.Producto.NombreVisible,
                     CantidadVendida = cantidadTotal,
-                    CostoUnitario   = costoUnitario
+                    CostoUnitario = costoUnitario
                 });
 
                 costoTotal += costoUnitario * cantidadTotal;
@@ -275,16 +275,18 @@ namespace Panaderia.Services.Implementations
             return new ResumenCierreSemanal
             {
                 TotalIngresos = totalIngresos,
-                TotalEgresos  = totalEgresos,
-                CostoInsumos  = costoTotal,
+                TotalEgresos = totalEgresos,
+                CostoInsumos = costoTotal,
                 DetallesCosto = detalles
             };
         }
 
-        // Confirmar producción y descontar stock de insumos
+        // Confirmar producción y descontar stock de insumos.
+        // Los items marcados como stock (EsStock) suman Producto.Stock y limpian su fila del buffer.
         public async Task<List<string>> ConfirmarProduccionAsync(List<ItemProduccionSeleccionable> items)
         {
             var warnings = new List<string>();
+            var bufferIdsAEliminar = new List<int>();
 
             foreach (var item in items.Where(i => i.Seleccionado))
             {
@@ -318,13 +320,125 @@ namespace Panaderia.Services.Implementations
 
                     insumo.StockActual -= cantidadNecesaria;
                 }
+
+                // Producción para stock: suma unidades al inventario del producto y marca el buffer para limpieza
+                if (item.EsStock)
+                {
+                    var producto = await _context.Productos.FindAsync(item.IdProducto);
+                    if (producto != null)
+                        producto.Stock += (int)item.CantidadAProducir;
+
+                    if (item.IdProduccionStock > 0)
+                        bufferIdsAEliminar.Add(item.IdProduccionStock);
+                }
+            }
+
+            if (bufferIdsAEliminar.Any())
+            {
+                var filas = await _context.ProduccionStock
+                    .Where(s => bufferIdsAEliminar.Contains(s.Id))
+                    .ToListAsync();
+                _context.ProduccionStock.RemoveRange(filas);
             }
 
             await _context.SaveChangesAsync();
             return warnings;
         }
 
-        // Resumen de producción (pedidos no entregados, anulados excluidos por query filter)
+        // ─── Buffer de producción para stock ────────────────────────────────
+
+        public async Task AgregarProduccionStockAsync(int idProducto, int cantidad)
+        {
+            if (cantidad < 1) return;
+
+            var existente = await _context.ProduccionStock
+                .FirstOrDefaultAsync(s => s.IdProducto == idProducto);
+
+            if (existente != null)
+            {
+                existente.Cantidad += cantidad;
+            }
+            else
+            {
+                _context.ProduccionStock.Add(new ProduccionStock
+                {
+                    IdProducto = idProducto,
+                    Cantidad = cantidad,
+                    Fecha = DateTime.UtcNow
+                });
+            }
+
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<List<ProduccionStock>> GetProduccionStockAsync()
+        {
+            return await _context.ProduccionStock
+                .Include(s => s.Producto).ThenInclude(p => p.Categoria)
+                .Include(s => s.Producto).ThenInclude(p => p.Formato)
+                .OrderBy(s => s.Fecha)
+                .ToListAsync();
+        }
+
+        public async Task QuitarProduccionStockAsync(int id)
+        {
+            var fila = await _context.ProduccionStock.FindAsync(id);
+            if (fila == null) return;
+
+            _context.ProduccionStock.Remove(fila);
+            await _context.SaveChangesAsync();
+        }
+
+        // Producción combinada: pedidos pendientes + buffer de stock, sumado por producto
+        private async Task<List<(int IdProducto, Producto Producto, int Cantidad)>> GetProduccionCombinadaAsync()
+        {
+            var detalles = await _context.DetallesPedido
+                .Include(d => d.Producto).ThenInclude(p => p.Categoria)
+                .Include(d => d.Producto).ThenInclude(p => p.Formato)
+                .Where(d => d.Pedido.Estado != EstadoPedido.Entregado)
+                .ToListAsync();
+
+            var acumulado = new Dictionary<int, (Producto Producto, int Cantidad)>();
+
+            foreach (var d in detalles)
+            {
+                if (acumulado.TryGetValue(d.IdProducto, out var actual))
+                    acumulado[d.IdProducto] = (actual.Producto, actual.Cantidad + d.Cantidad);
+                else
+                    acumulado[d.IdProducto] = (d.Producto, d.Cantidad);
+            }
+
+            var stock = await _context.ProduccionStock
+                .Include(s => s.Producto).ThenInclude(p => p.Categoria)
+                .Include(s => s.Producto).ThenInclude(p => p.Formato)
+                .ToListAsync();
+
+            foreach (var s in stock)
+            {
+                if (acumulado.TryGetValue(s.IdProducto, out var actual))
+                    acumulado[s.IdProducto] = (actual.Producto, actual.Cantidad + s.Cantidad);
+                else
+                    acumulado[s.IdProducto] = (s.Producto, s.Cantidad);
+            }
+
+            return acumulado
+                .Select(kv => (IdProducto: kv.Key, kv.Value.Producto, kv.Value.Cantidad))
+                .OrderBy(x => x.Producto.Categoria?.Nombre)
+                .ThenBy(x => x.Producto.Masa)
+                .ToList();
+        }
+
+        // Resumen combinado por producto (pedidos + stock) para impresión de plan
+        public async Task<List<ResumenProductoItem>> GetProduccionCombinadaResumenAsync()
+        {
+            var combinada = await GetProduccionCombinadaAsync();
+            return combinada
+                .Select(x => new ResumenProductoItem(x.IdProducto, x.Producto.NombreVisible, x.Cantidad))
+                .ToList();
+        }
+
+        // Resumen de producción (pedidos no entregados, anulados excluidos por query filter).
+        // PorProducto y PorBolsa son solo de pedidos; sub-recetas y agua reflejan produccion completa (pedidos + stock).
         public async Task<(List<ResumenProductoItem> PorProducto, List<ResumenBolsaItem> PorBolsa, List<ResumenSubRecetaItem> PorSubReceta, decimal TotalAgua)> GetResumenProduccionAsync()
         {
             var detalles = await _context.DetallesPedido
@@ -354,11 +468,13 @@ namespace Panaderia.Services.Implementations
                 .Select(g => new ResumenBolsaItem(g.Key, g.Sum(d => d.Cantidad)))
                 .ToList();
 
-            // Build sub-receta totals
+            // Produccion completa (pedidos + stock) para sub-recetas y agua
+            var combinada = await GetProduccionCombinadaAsync();
+
             var porSubReceta = new List<ResumenSubRecetaItem>();
             decimal totalAgua = 0m;
 
-            foreach (var productoItem in porProducto)
+            foreach (var prod in combinada)
             {
                 var receta = await _context.Recetas
                     .Include(r => r.Detalles)
@@ -367,11 +483,11 @@ namespace Panaderia.Services.Implementations
                         .ThenInclude(d => d.SubReceta)
                             .ThenInclude(s => s.Detalles)
                                 .ThenInclude(sd => sd.Insumo)
-                    .FirstOrDefaultAsync(r => r.IdProducto == productoItem.IdProducto);
+                    .FirstOrDefaultAsync(r => r.IdProducto == prod.IdProducto);
 
                 if (receta == null) continue;
 
-                decimal vecesReceta = (decimal)productoItem.CantidadTotal / receta.TamanioLote;
+                decimal vecesReceta = (decimal)prod.Cantidad / receta.TamanioLote;
 
                 foreach (var det in receta.Detalles.Where(d => d.IdSubReceta.HasValue && d.SubReceta != null))
                 {
@@ -389,7 +505,7 @@ namespace Panaderia.Services.Implementations
                         existing = new ResumenSubRecetaItem
                         {
                             IdSubReceta = det.SubReceta.Id,
-                            Nombre      = det.SubReceta.Nombre
+                            Nombre = det.SubReceta.Nombre
                         };
                         porSubReceta.Add(existing);
                     }
@@ -436,25 +552,25 @@ namespace Panaderia.Services.Implementations
                     if (sd.PorcentajePanadero.HasValue)
                     {
                         cantidad = srItem.TotalGramos / sumaPctSub * sd.PorcentajePanadero.Value;
-                        unidad   = sd.Insumo.UnidadBase switch
+                        unidad = sd.Insumo.UnidadBase switch
                         {
                             Panaderia.Models.Enums.UnidadMedida.Mililitros => "ml",
-                            Panaderia.Models.Enums.UnidadMedida.Unidades   => "u",
-                            _                                               => "g"
+                            Panaderia.Models.Enums.UnidadMedida.Unidades => "u",
+                            _ => "g"
                         };
                     }
                     else if (sd.CantidadFija.HasValue)
                     {
                         cantidad = sd.CantidadFija.Value * (srItem.TotalGramos / 100m);
-                        unidad   = "u";
+                        unidad = "u";
                     }
                     else continue;
 
                     srItem.Ingredientes.Add(new ResumenSubRecetaIngrediente
                     {
                         NombreInsumo = sd.Insumo.Nombre,
-                        Cantidad     = cantidad,
-                        Unidad       = unidad
+                        Cantidad = cantidad,
+                        Unidad = unidad
                     });
                 }
             }
@@ -496,27 +612,11 @@ namespace Panaderia.Services.Implementations
 
         public async Task<List<ProduccionProductoDetalle>> GetIngredientesProduccionAsync()
         {
-            var detalles = await _context.DetallesPedido
-                .Include(d => d.Producto).ThenInclude(p => p.Categoria)
-                .Include(d => d.Producto).ThenInclude(p => p.Formato)
-                .Where(d => d.Pedido.Estado != EstadoPedido.Entregado)
-                .ToListAsync();
-
-            var porProducto = detalles
-                .GroupBy(d => d.IdProducto)
-                .Select(g => new
-                {
-                    IdProducto = g.Key,
-                    Producto = g.First().Producto,
-                    Cantidad = g.Sum(d => d.Cantidad)
-                })
-                .OrderBy(x => x.Producto.Categoria?.Nombre)
-                .ThenBy(x => x.Producto.Masa)
-                .ToList();
+            var combinada = await GetProduccionCombinadaAsync();
 
             var resultado = new List<ProduccionProductoDetalle>();
 
-            foreach (var item in porProducto)
+            foreach (var item in combinada)
             {
                 var receta = await _context.Recetas
                     .Include(r => r.Detalles).ThenInclude(d => d.Insumo)
@@ -546,8 +646,8 @@ namespace Panaderia.Services.Implementations
                             unidad = det.Insumo.UnidadBase switch
                             {
                                 Panaderia.Models.Enums.UnidadMedida.Mililitros => "ml",
-                                Panaderia.Models.Enums.UnidadMedida.Unidades   => "u",
-                                _                                               => "g"
+                                Panaderia.Models.Enums.UnidadMedida.Unidades => "u",
+                                _ => "g"
                             };
                         }
                         else if (det.CantidadFija.HasValue)
@@ -559,10 +659,10 @@ namespace Panaderia.Services.Implementations
 
                         ingredientes.Add(new ProduccionIngredienteDetalle
                         {
-                            IdInsumo    = det.IdInsumo,
-                            Nombre      = det.Insumo.Nombre,
-                            Gramos      = gramos,
-                            Unidad      = unidad,
+                            IdInsumo = det.IdInsumo,
+                            Nombre = det.Insumo.Nombre,
+                            Gramos = gramos,
+                            Unidad = unidad,
                             EsSubReceta = false
                         });
                     }
@@ -577,21 +677,26 @@ namespace Panaderia.Services.Implementations
                         ingredientes.Add(new ProduccionIngredienteDetalle
                         {
                             IdSubReceta = det.IdSubReceta,
-                            Nombre      = det.SubReceta.Nombre,
-                            Gramos      = gramos,
-                            Unidad      = "g",
+                            Nombre = det.SubReceta.Nombre,
+                            Gramos = gramos,
+                            Unidad = "g",
                             EsSubReceta = true
                         });
                     }
                 }
 
+                var masaKey = $"{(int)item.Producto.Masa}-{(item.Producto.Variedad.HasValue ? ((int)item.Producto.Variedad.Value).ToString() : "")}";
+                var nombreMasa = item.Producto.Masa.ToString() + (item.Producto.Variedad.HasValue ? " " + item.Producto.Variedad.Value.ToString() : "");
+
                 resultado.Add(new ProduccionProductoDetalle
                 {
-                    IdProducto       = item.IdProducto,
-                    NombreProducto   = item.Producto.NombreVisible,
+                    IdProducto = item.IdProducto,
+                    NombreProducto = item.Producto.NombreVisible,
+                    MasaKey = masaKey,
+                    NombreMasa = nombreMasa,
                     CantidadUnidades = item.Cantidad,
-                    PesoMasaTotal    = pesoMasaTotal,
-                    Ingredientes     = ingredientes
+                    PesoMasaTotal = pesoMasaTotal,
+                    Ingredientes = ingredientes
                 });
             }
 

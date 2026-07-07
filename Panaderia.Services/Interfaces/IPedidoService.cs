@@ -51,5 +51,9 @@ namespace Panaderia.Services.Interfaces
         Task<bool> ExisteCierreSemanalAsync(DateTime inicioSemana, DateTime finSemana);
         // Ingredientes por producto para el planificador de amasadas
         Task<List<ProduccionProductoDetalle>> GetIngredientesProduccionAsync();
+        Task AgregarProduccionStockAsync(int idProducto, int cantidad);
+        Task<List<ProduccionStock>> GetProduccionStockAsync();
+        Task QuitarProduccionStockAsync(int id);
+        Task<List<ResumenProductoItem>> GetProduccionCombinadaResumenAsync();
     }
 }

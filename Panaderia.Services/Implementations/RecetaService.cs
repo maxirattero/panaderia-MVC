@@ -14,6 +14,11 @@ public class RecetaService : IRecetaService
         _context = context;
     }
 
+    public async Task<IEnumerable<Receta>> GetAllAsync()
+    {
+        return await _context.Recetas.ToListAsync();
+    }
+
     public async Task<Receta?> GetByProductoIdAsync(int idProducto)
     {
         return await _context.Recetas

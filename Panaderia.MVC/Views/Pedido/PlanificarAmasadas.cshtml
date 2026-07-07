@@ -162,6 +162,19 @@
         return Array.from(map.values());
     }
 
+    // ─── Pesos agrupados por masa ───────────────────────
+    function getPesosPorMasa(amasada) {
+        const map = new Map();
+        for (const p of amasada.productos) {
+            if (map.has(p.masaKey)) {
+                map.get(p.masaKey).pesoTotal += p.pesoMasaTotal;
+            } else {
+                map.set(p.masaKey, { nombreMasa: p.nombreMasa, pesoTotal: p.pesoMasaTotal });
+            }
+        }
+        return Array.from(map.values());
+    }
+
     // ─── Update action bar visibility ───────────────────
     function updateActionBar() {
         const checked = document.querySelectorAll('.batch-check:checked').length;
@@ -217,14 +230,14 @@
                         }
                     </div>
 
-                    <!-- Product list with individual weights -->
-                    ${am.productos.map(p => `
+                    <!-- Pesos agrupados por masa -->
+                    ${getPesosPorMasa(am).map(g => `
                         <div class="d-flex justify-content-between small mb-1">
-                            <span>${p.nombreProducto}</span>
-                            <strong>${Math.round(p.pesoMasaTotal)} g</strong>
+                            <span>${g.nombreMasa}</span>
+                            <strong>${Math.round(g.pesoTotal)} g</strong>
                         </div>
                     `).join('')}
-                    ${esCombinada ? `
+                    ${getPesosPorMasa(am).length > 1 ? `
                         <div class="d-flex justify-content-between small fw-bold border-top pt-1 mb-2">
                             <span>TOTAL</span>
                             <span>${Math.round(pesoTotal)} g</span>
@@ -277,14 +290,15 @@
             html += `<div class="amasada-card">`;
             html += `<h5 style="margin:0 0 4px 0; font-size:14px;">${titulo}</h5>`;
 
-            // Product list
-            for (const p of am.productos) {
+            // Pesos agrupados por masa
+            const pesosPorMasa = getPesosPorMasa(am);
+            for (const g of pesosPorMasa) {
                 html += `<div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:2px;">
-                    <span>${p.nombreProducto} \u2014 ${p.cantidadUnidades % 1 === 0 ? p.cantidadUnidades : p.cantidadUnidades.toFixed(1)} u.</span>
-                    <strong>${Math.round(p.pesoMasaTotal)} g</strong>
+                    <span>${g.nombreMasa}</span>
+                    <strong>${Math.round(g.pesoTotal)} g</strong>
                 </div>`;
             }
-            if (esCombinada) {
+            if (pesosPorMasa.length > 1) {
                 html += `<div style="display:flex; justify-content:space-between; font-size:11px; font-weight:bold; border-top:1px solid #ccc; padding-top:2px; margin-bottom:4px;">
                     <span>TOTAL</span>
                     <span>${Math.round(pesoTotal)} g</span>

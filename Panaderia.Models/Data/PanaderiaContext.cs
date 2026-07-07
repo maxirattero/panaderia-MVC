@@ -29,6 +29,7 @@ namespace Panaderia.Models.Data
         public DbSet<RecetaDetalle> RecetaDetalles { get; set; }
         public DbSet<SubReceta> SubRecetas { get; set; }
         public DbSet<SubRecetaDetalle> SubRecetaDetalles { get; set; }
+        public DbSet<ProduccionStock> ProduccionStock { get; set; }
         public DbSet<DataProtectionKey> DataProtectionKeys { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
