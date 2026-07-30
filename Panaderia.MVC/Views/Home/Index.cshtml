@@ -1,8 +1,158 @@
-﻿@{
+@model Panaderia.MVC.Models.DashboardViewModel
+@using System.Globalization
+
+@{
     ViewData["Title"] = "Dashboard";
+    var cultura = new CultureInfo("es-AR");
+
+    var mesRaw   = new DateTime(Model.Caja.Anio, Model.Caja.Mes, 1).ToString("MMMM yyyy", cultura);
+    var nombreMes = char.ToUpper(mesRaw[0]) + mesRaw[1..];
+
+    var classPedidos = Model.Alertas.PedidosHoyPendientes > 0 ? "warning" :
+                       Model.Alertas.PedidosHoyTotal > 0     ? "success" : "secondary";
+    var classSaldo   = Model.Alertas.SaldoPendienteTotal > 0        ? "warning" : "success";
+    var classStock   = Model.Alertas.InsumosBajoStockCount > 0      ? "danger"  : "success";
 }
 
-<div class="text-center">
-    <h1 class="display-4 titulo-pagina">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+<h1 class="titulo-pagina mb-1">Dashboard</h1>
+<p class="text-secondary mb-4 text-capitalize">@DateTime.UtcNow.ToString("dddd d 'de' MMMM", cultura)</p>
+
+@* ==================== BLOQUE 1: CAJA DEL MES ==================== *@
+<section class="mb-5">
+    <h5 class="fw-bold mb-3">Caja &middot; @nombreMes</h5>
+    <div class="row g-3">
+        <div class="col-12 col-md-4">
+            <div class="card-custom p-3 h-100">
+                <div class="text-muted small mb-1">Ingresos</div>
+                <div class="fs-3 fw-bold text-success">@Model.Caja.TotalIngresos.ToString("C", cultura)</div>
+                <div class="text-muted small">Del 1 al @DateTime.UtcNow.Day</div>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="card-custom p-3 h-100">
+                <div class="text-muted small mb-1">Egresos</div>
+                <div class="fs-3 fw-bold text-danger">@Model.Caja.TotalEgresos.ToString("C", cultura)</div>
+                <div class="text-muted small">Del 1 al @DateTime.UtcNow.Day</div>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="card-custom p-3 h-100">
+                <div class="text-muted small mb-1">Balance</div>
+                <div class="fs-3 fw-bold @(Model.Caja.Balance >= 0 ? "text-success" : "text-danger")">
+                    @Model.Caja.Balance.ToString("C", cultura)
+                </div>
+                <div class="text-muted small">Ingresos &minus; Egresos</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@* ==================== BLOQUE 2: ALERTAS DEL DÍA ==================== *@
+<section class="mb-5">
+    <h5 class="fw-bold mb-3">Necesita atenci&oacute;n hoy</h5>
+    <div class="row g-3">
+
+        <div class="col-12 col-md-4">
+            <div class="card-custom p-3 h-100 border-start border-4 border-@classPedidos">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="material-symbols-outlined text-@classPedidos">shopping_cart</span>
+                    <span class="fw-semibold">Pedidos del d&iacute;a</span>
+                </div>
+                <div class="fs-2 fw-bold text-@classPedidos">@Model.Alertas.PedidosHoyTotal</div>
+                @if (Model.Alertas.PedidosHoyTotal > 0)
+                {
+                    <div class="text-muted small">
+                        @Model.Alertas.PedidosHoyPendientes pendiente(s) &middot; @Model.Alertas.PedidosHoyListos entregado(s)
+                    </div>
+                }
+                else
+                {
+                    <div class="text-muted small">Sin pedidos para hoy</div>
+                }
+                <a asp-controller="Pedido" asp-action="Index" class="btn btn-mv-secondary btn-sm mt-3 w-100">
+                    Ver pedidos
+                </a>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-4">
+            <div class="card-custom p-3 h-100 border-start border-4 border-@classSaldo">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="material-symbols-outlined text-@classSaldo">payments</span>
+                    <span class="fw-semibold">Saldo a cobrar</span>
+                </div>
+                <div class="fs-3 fw-bold text-@classSaldo">@Model.Alertas.SaldoPendienteTotal.ToString("C", cultura)</div>
+                <div class="text-muted small">@Model.Alertas.PedidosSaldoPendienteCount pedido(s) sin cobrar</div>
+                <a asp-controller="Pedido" asp-action="Index" class="btn btn-mv-secondary btn-sm mt-3 w-100">
+                    Ver pedidos
+                </a>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-4">
+            <div class="card-custom p-3 h-100 border-start border-4 border-@classStock">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="material-symbols-outlined text-@classStock">inventory_2</span>
+                    <span class="fw-semibold">Stock bajo</span>
+                </div>
+                <div class="fs-2 fw-bold text-@classStock">@Model.Alertas.InsumosBajoStockCount</div>
+                @if (Model.Alertas.InsumosBajoStockNombres.Count > 0)
+                {
+                    <div class="text-muted small">
+                        @string.Join(", ", Model.Alertas.InsumosBajoStockNombres)@(Model.Alertas.InsumosBajoStockCount > 3 ? " y m&aacute;s..." : "")
+                    </div>
+                }
+                else
+                {
+                    <div class="text-muted small">Stock OK en todos los insumos</div>
+                }
+                <a asp-controller="Insumo" asp-action="Index" class="btn btn-mv-secondary btn-sm mt-3 w-100">
+                    Ver insumos
+                </a>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+@* ==================== BLOQUE 3: PRODUCCIÓN DE LA SEMANA ==================== *@
+<section class="mb-5">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+        <h5 class="fw-bold mb-0">
+            Producci&oacute;n de la semana
+            <span class="text-muted fw-normal fs-6 ms-1">
+                @Model.Produccion.LunesActual.ToString("dd/MM") &ndash; @Model.Produccion.DomingoActual.ToString("dd/MM")
+            </span>
+        </h5>
+        <a asp-controller="Pedido" asp-action="Produccion" class="btn btn-mv-primary">
+            <span class="material-symbols-outlined align-middle" style="font-size:1.1rem;">list_alt</span>
+            Planificador
+        </a>
+    </div>
+    <div class="card-custom p-3">
+        @if (Model.Produccion.PorProducto.Count > 0)
+        {
+            <ul class="list-unstyled mb-0">
+                @for (int i = 0; i < Model.Produccion.PorProducto.Count; i++)
+                {
+                    var item = Model.Produccion.PorProducto[i];
+                    var esUltimo = i == Model.Produccion.PorProducto.Count - 1;
+                    <li class="d-flex justify-content-between align-items-center py-2@(esUltimo ? "" : " border-bottom")">
+                        <span>@item.NombreProducto</span>
+                        <span class="badge rounded-pill px-3 py-1"
+                              style="background-color:var(--mv-primary-dark);">
+                            @item.CantidadTotal
+                        </span>
+                    </li>
+                }
+            </ul>
+        }
+        else
+        {
+            <p class="text-muted mb-0 d-flex align-items-center gap-2">
+                <span class="material-symbols-outlined text-secondary" style="font-size:1.2rem;">check_circle</span>
+                No hay pedidos pendientes para esta semana.
+            </p>
+        }
+    </div>
+</section>

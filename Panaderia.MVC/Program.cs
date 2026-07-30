@@ -87,6 +87,7 @@ builder.Services.AddScoped<IInsumoService, InsumoService>();
 builder.Services.AddScoped<IRecetaService, RecetaService>();
 builder.Services.AddScoped<ICompraService, CompraService>();
 builder.Services.AddScoped<ISubRecetaService, SubRecetaService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddDataProtection()
     .PersistKeysToDbContext<PanaderiaContext>()
     .SetApplicationName("MasaViva");

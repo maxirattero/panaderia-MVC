@@ -36,9 +36,27 @@ public class CompraController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(CompraViewModel vm)
     {
-        foreach (var key in ModelState.Keys
-            .Where(k => k.StartsWith("Detalles[") || k.StartsWith("Proveedor")).ToList())
-            ModelState.Remove(key);
+        ModelState.Remove("Proveedor");
+
+        if (vm.Detalles == null || vm.Detalles.Count == 0)
+        {
+            ModelState.AddModelError("Detalles", "Debe agregar al menos un ítem a la compra.");
+        }
+        else
+        {
+            for (int i = 0; i < vm.Detalles.Count; i++)
+            {
+                var d = vm.Detalles[i];
+                if (d.IdInsumo <= 0)
+                    ModelState.AddModelError($"Detalles[{i}].IdInsumo", "Debe seleccionar un insumo.");
+                if (d.IdUnidadCompra <= 0)
+                    ModelState.AddModelError($"Detalles[{i}].IdUnidadCompra", "Debe seleccionar una unidad de compra.");
+                if (d.Cantidad <= 0)
+                    ModelState.AddModelError($"Detalles[{i}].Cantidad", "La cantidad debe ser mayor a 0.");
+                if (d.PrecioUnitario < 0)
+                    ModelState.AddModelError($"Detalles[{i}].PrecioUnitario", "El precio no puede ser negativo.");
+            }
+        }
 
         if (!ModelState.IsValid)
         {

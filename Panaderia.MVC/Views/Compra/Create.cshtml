@@ -106,7 +106,7 @@
             </select>
         </td>
         <td>
-            <select name="__UNIDAD__" class="form-select form-select-sm sel-unidad">
+            <select name="__UNIDAD__" class="form-select form-select-sm sel-unidad" required>
                 <option value="">— Unidad —</option>
             </select>
         </td>
@@ -287,6 +287,37 @@
     });
 
     btnAgregar.addEventListener('click', agregarFila);
+
+    document.querySelector('form').addEventListener('submit', function (e) {
+        const alertId = 'validacion-cliente-alert';
+        const existing = document.getElementById(alertId);
+        if (existing) existing.remove();
+
+        const rows   = Array.from(tbody.querySelectorAll('tr'));
+        const errores = [];
+
+        if (rows.length === 0) {
+            errores.push('Debe agregar al menos un ítem a la compra.');
+        } else {
+            rows.forEach((tr, i) => {
+                if (!tr.querySelector('.sel-insumo').value)
+                    errores.push(`Ítem ${i + 1}: debe seleccionar un insumo.`);
+                if (!tr.querySelector('.sel-unidad').value)
+                    errores.push(`Ítem ${i + 1}: debe seleccionar una unidad de compra.`);
+            });
+        }
+
+        if (errores.length > 0) {
+            e.preventDefault();
+            const alertEl = document.createElement('div');
+            alertEl.id        = alertId;
+            alertEl.className = 'alert alert-danger mt-2';
+            alertEl.innerHTML = errores.map(m => `<div>${m}</div>`).join('');
+            this.prepend(alertEl);
+            alertEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    });
+
     agregarFila();
 })();
 </script>

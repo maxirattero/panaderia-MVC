@@ -17,11 +17,18 @@ namespace Panaderia.Services.Implementations
         //Listado Productos
         public async Task<IEnumerable<Producto>> GetAllAsync()
         {
-            return await _context.Productos
+            var productos = await _context.Productos
                 .Include(p => p.Categoria)
                 .Include(p => p.Formato)
                 .Include(p => p.Tamano)
                 .ToListAsync();
+
+            var comparer = StringComparer.Create(new System.Globalization.CultureInfo("es-AR"), ignoreCase: true);
+
+            return productos
+                .AsEnumerable()
+                .OrderBy(p => p.NombreVisible, comparer)
+                .ToList();
         }
 
         //Obtener Producto por su Id
