@@ -169,7 +169,7 @@
             if (map.has(p.masaKey)) {
                 map.get(p.masaKey).pesoTotal += p.pesoMasaTotal;
             } else {
-                map.set(p.masaKey, { nombreMasa: p.nombreMasa, pesoTotal: p.pesoMasaTotal });
+                map.set(p.masaKey, { nombreMasa: p.nombreMasa, nombreCategoria: p.nombreCategoria, pesoTotal: p.pesoMasaTotal });
             }
         }
         return Array.from(map.values());
@@ -233,7 +233,7 @@
                     <!-- Pesos agrupados por masa -->
                     ${getPesosPorMasa(am).map(g => `
                         <div class="d-flex justify-content-between small mb-1">
-                            <span>${g.nombreMasa}</span>
+                            <span>${g.nombreCategoria ? g.nombreCategoria + ' — ' : ''}${g.nombreMasa}</span>
                             <strong>${Math.round(g.pesoTotal)} g</strong>
                         </div>
                     `).join('')}
@@ -294,7 +294,7 @@
             const pesosPorMasa = getPesosPorMasa(am);
             for (const g of pesosPorMasa) {
                 html += `<div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:2px;">
-                    <span>${g.nombreMasa}</span>
+                    <span>${g.nombreCategoria ? g.nombreCategoria + ' — ' : ''}${g.nombreMasa}</span>
                     <strong>${Math.round(g.pesoTotal)} g</strong>
                 </div>`;
             }

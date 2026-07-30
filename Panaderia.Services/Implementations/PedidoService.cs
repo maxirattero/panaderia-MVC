@@ -694,6 +694,7 @@ namespace Panaderia.Services.Implementations
                     NombreProducto = item.Producto.NombreVisible,
                     MasaKey = masaKey,
                     NombreMasa = nombreMasa,
+                    NombreCategoria = item.Producto.Categoria?.Nombre ?? "",
                     CantidadUnidades = item.Cantidad,
                     PesoMasaTotal = pesoMasaTotal,
                     Ingredientes = ingredientes
