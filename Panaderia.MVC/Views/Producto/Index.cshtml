@@ -18,6 +18,14 @@
         </div>
     </div>
 
+    @if (TempData["ImagenError"] != null)
+    {
+        <div class="alert alert-danger d-flex align-items-center gap-2">
+            <span class="material-symbols-outlined">error</span>
+            @TempData["ImagenError"]
+        </div>
+    }
+
     <!-- Filters Bar -->
     <div class="card-custom p-3 mb-4">
         <div class="row g-3">
@@ -53,6 +61,7 @@
                             <th class="text-end">Precio Final</th>
                             <th class="text-end">Precio Reventa</th>
                             <th class="text-center">Stock</th>
+                            <th class="text-center">Tienda</th>
                             <th class="text-end">Acciones</th>
                         </tr>
                     </thead>
@@ -62,9 +71,16 @@
                             <tr data-busqueda="@producto.NombreVisible.ToLower()" data-categoria="@(producto.Categoria?.Id.ToString() ?? "")">
                                 <td>
                                     <div class="d-flex align-items-center gap-3">
-                                        <div class="avatar-circle" style="background-color: var(--mv-surface-variant); color: var(--mv-primary-dark);">
-                                            @producto.NombreVisible.Substring(0, 1).ToUpper()
-                                        </div>
+                                        @if (!string.IsNullOrEmpty(producto.ImagenURL))
+                                        {
+                                            <img src="@producto.ImagenURL" alt="@producto.NombreVisible" class="producto-thumb" />
+                                        }
+                                        else
+                                        {
+                                            <div class="avatar-circle" style="background-color: var(--mv-surface-variant); color: var(--mv-primary-dark);">
+                                                @producto.NombreVisible.Substring(0, 1).ToUpper()
+                                            </div>
+                                        }
                                         <div>
                                             <div class="fw-bold">@producto.NombreVisible</div>
                                             <small class="text-secondary">
@@ -97,6 +113,26 @@
                                 <td class="text-center">
                                     @producto.Stock
                                 </td>
+                                <td class="text-center">
+                                    <div class="d-flex justify-content-center gap-1">
+                                        <form asp-action="ToggleOculto" asp-route-id="@producto.Id" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit"
+                                                    class="btn btn-sm @(producto.OcultoEnTienda ? "btn-outline-secondary" : "btn-outline-success")"
+                                                    title="@(producto.OcultoEnTienda ? "Oculto en la tienda — clic para mostrarlo" : "Visible en la tienda — clic para ocultarlo")">
+                                                <span class="material-symbols-outlined">@(producto.OcultoEnTienda ? "visibility_off" : "storefront")</span>
+                                            </button>
+                                        </form>
+                                        <form asp-action="ToggleSinStock" asp-route-id="@producto.Id" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit"
+                                                    class="btn btn-sm @(producto.SinStock ? "btn-outline-danger" : "btn-outline-success")"
+                                                    title="@(producto.SinStock ? "Marcado sin stock — clic para quitar la marca" : "Con stock — clic para marcar sin stock")">
+                                                <span class="material-symbols-outlined">@(producto.SinStock ? "production_quantity_limits" : "check_circle")</span>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
                                 <td class="text-end">
                                     <div class="btn-group">
                                         <a asp-action="Details" asp-route-id="@producto.Id" class="btn btn-sm btn-outline-primary" title="Ver Detalles">
@@ -111,6 +147,16 @@
                                            title="Receta">
                                             <span class="material-symbols-outlined">menu_book</span>
                                         </a>
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-secondary"
+                                                title="Cargar imagen"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#imagenModal"
+                                                data-id="@producto.Id"
+                                                data-nombre="@producto.NombreVisible"
+                                                data-imagen="@producto.ImagenURL">
+                                            <span class="material-symbols-outlined">add_a_photo</span>
+                                        </button>
                                         <button type="button"
                                                 class="btn btn-sm btn-outline-danger"
                                                 title="Eliminar"
@@ -137,9 +183,16 @@
         {
             <div class="card-custom p-3 mb-3 producto-card" data-busqueda="@producto.NombreVisible.ToLower()" data-categoria="@(producto.Categoria?.Id.ToString() ?? "")">
                 <div class="d-flex align-items-center gap-3 mb-2">
-                    <div class="avatar-circle" style="background-color: var(--mv-surface-variant); color: var(--mv-primary-dark);">
-                        @producto.NombreVisible.Substring(0, 1).ToUpper()
-                    </div>
+                    @if (!string.IsNullOrEmpty(producto.ImagenURL))
+                    {
+                        <img src="@producto.ImagenURL" alt="@producto.NombreVisible" class="producto-thumb" />
+                    }
+                    else
+                    {
+                        <div class="avatar-circle" style="background-color: var(--mv-surface-variant); color: var(--mv-primary-dark);">
+                            @producto.NombreVisible.Substring(0, 1).ToUpper()
+                        </div>
+                    }
                     <div>
                         <div class="fw-bold">@producto.NombreVisible</div>
                         <small class="text-secondary">
@@ -175,6 +228,32 @@
                 </div>
 
                 <div class="d-flex justify-content-end gap-1 pt-2 border-top">
+                    <form asp-action="ToggleOculto" asp-route-id="@producto.Id" method="post" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <button type="submit"
+                                class="btn btn-sm @(producto.OcultoEnTienda ? "btn-outline-secondary" : "btn-outline-success")"
+                                title="@(producto.OcultoEnTienda ? "Oculto en la tienda" : "Visible en la tienda")">
+                            <span class="material-symbols-outlined">@(producto.OcultoEnTienda ? "visibility_off" : "storefront")</span>
+                        </button>
+                    </form>
+                    <form asp-action="ToggleSinStock" asp-route-id="@producto.Id" method="post" class="d-inline me-auto ms-1">
+                        @Html.AntiForgeryToken()
+                        <button type="submit"
+                                class="btn btn-sm @(producto.SinStock ? "btn-outline-danger" : "btn-outline-success")"
+                                title="@(producto.SinStock ? "Marcado sin stock" : "Con stock")">
+                            <span class="material-symbols-outlined">@(producto.SinStock ? "production_quantity_limits" : "check_circle")</span>
+                        </button>
+                    </form>
+                    <button type="button"
+                            class="btn btn-sm btn-outline-secondary"
+                            title="Cargar imagen"
+                            data-bs-toggle="modal"
+                            data-bs-target="#imagenModal"
+                            data-id="@producto.Id"
+                            data-nombre="@producto.NombreVisible"
+                            data-imagen="@producto.ImagenURL">
+                        <span class="material-symbols-outlined">add_a_photo</span>
+                    </button>
                     <a asp-action="Details" asp-route-id="@producto.Id" class="btn btn-sm btn-outline-primary" title="Ver Detalles">
                         <span class="material-symbols-outlined">visibility</span>
                     </a>
@@ -202,6 +281,40 @@
             </div>
         }
     </div>
+
+<!-- Modal: cargar imagen de producto -->
+<div class="modal fade" id="imagenModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 1rem;">
+            <form asp-action="SubirImagen" method="post" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" id="imagenProductoId" />
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title font-literata titulo-pagina">
+                        Imagen de <span id="imagenProductoNombre"></span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="imagenPreviewWrap" class="text-center mb-3" style="display:none;">
+                        <img id="imagenPreview" src="" alt="Vista previa"
+                             style="max-width: 220px; max-height: 220px; border-radius: 1rem; object-fit: cover; border: 1px solid var(--mv-outline);" />
+                    </div>
+                    <input class="form-control" type="file" name="imagen" id="imagenInput" accept="image/jpeg,image/png,image/webp" required />
+                    <small class="text-secondary d-block mt-2">
+                        JPG, PNG o WebP · máx. 2 MB · ideal cuadrada (ej. 800×800) con fondo claro.
+                    </small>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-mv-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-mv-primary d-inline-flex align-items-center gap-2">
+                        <span class="material-symbols-outlined">upload</span> Guardar imagen
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 @section Scripts {
     <script>
@@ -254,6 +367,39 @@
             inputTexto.addEventListener('input', filtrar);
 
             filtrar();
+        })();
+
+        // Modal de imagen: setear producto y previsualizar el archivo elegido
+        (function () {
+            const modal   = document.getElementById('imagenModal');
+            const inputId = document.getElementById('imagenProductoId');
+            const nombre  = document.getElementById('imagenProductoNombre');
+            const input   = document.getElementById('imagenInput');
+            const wrap    = document.getElementById('imagenPreviewWrap');
+            const preview = document.getElementById('imagenPreview');
+
+            modal.addEventListener('show.bs.modal', function (event) {
+                const btn = event.relatedTarget;
+                inputId.value = btn.getAttribute('data-id');
+                nombre.textContent = btn.getAttribute('data-nombre');
+                input.value = '';
+
+                const actual = btn.getAttribute('data-imagen');
+                if (actual) {
+                    preview.src = actual;
+                    wrap.style.display = '';
+                } else {
+                    preview.src = '';
+                    wrap.style.display = 'none';
+                }
+            });
+
+            input.addEventListener('change', function () {
+                if (input.files && input.files[0]) {
+                    preview.src = URL.createObjectURL(input.files[0]);
+                    wrap.style.display = '';
+                }
+            });
         })();
     </script>
 }

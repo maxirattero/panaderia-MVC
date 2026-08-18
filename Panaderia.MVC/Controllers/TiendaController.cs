@@ -23,7 +23,9 @@ namespace Panaderia.MVC.Controllers
         {
             var comparer = StringComparer.Create(new CultureInfo("es-AR"), ignoreCase: true);
 
-            var productos = (await _productoService.GetAllAsync()).ToList();
+            var productos = (await _productoService.GetAllAsync())
+                .Where(p => !p.OcultoEnTienda)
+                .ToList();
 
             // Categorías disponibles (solo las que tienen productos)
             var categorias = productos
@@ -63,12 +65,22 @@ namespace Panaderia.MVC.Controllers
         public async Task<IActionResult> Detalle(int id)
         {
             var producto = await _productoService.GetByIdAsync(id);
-            if (producto == null) return NotFound();
+            if (producto == null || producto.OcultoEnTienda) return NotFound();
 
             // Número de WhatsApp para pedidos (opcional): appsettings.json → "Tienda": { "WhatsApp": "549..." }
             ViewBag.WhatsApp = _configuration["Tienda:WhatsApp"];
 
             return View(producto);
+        }
+
+        // GET: /Tienda/Imagen/5 — sirve la imagen del producto guardada en la DB
+        public async Task<IActionResult> Imagen(int id)
+        {
+            var imagen = await _productoService.GetImagenAsync(id);
+            if (imagen == null) return NotFound();
+
+            Response.Headers.CacheControl = "public, max-age=86400";
+            return File(imagen.Datos, imagen.ContentType);
         }
     }
 }

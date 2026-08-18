@@ -38,7 +38,11 @@
 
             <div class="td-badges">
                 <span class="badge-tienda"><span class="material-symbols-outlined">grain</span> Masa madre</span>
-                @if (Model.Stock > 0)
+                @if (Model.SinStock)
+                {
+                    <span class="badge-tienda agotado"><span class="material-symbols-outlined">block</span> Sin stock</span>
+                }
+                else if (Model.Stock > 0)
                 {
                     <span class="badge-tienda ok"><span class="material-symbols-outlined">check_circle</span> Disponible</span>
                 }
@@ -48,7 +52,11 @@
                 }
             </div>
 
-            @if (!string.IsNullOrWhiteSpace(whatsApp))
+            @if (Model.SinStock)
+            {
+                <p class="td-nota">Este producto está temporalmente sin stock. Volvé a mirar en unos días o consultanos cuándo vuelve.</p>
+            }
+            else if (!string.IsNullOrWhiteSpace(whatsApp))
             {
                 <a class="btn-mv-primary td-cta" href="https://wa.me/@(whatsApp)?text=@textoPedido" target="_blank" rel="noopener">
                     <span class="material-symbols-outlined">chat</span> Pedir por WhatsApp

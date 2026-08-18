@@ -21,5 +21,17 @@ namespace Panaderia.Services.Interfaces
 
         //Verificar si Producto existe por Id
         Task<bool> ExistsAsync(int id);
+
+        //Mostrar/ocultar Producto en la tienda pública
+        Task ToggleOcultoEnTiendaAsync(int id);
+
+        //Marcar/desmarcar Producto como sin stock en la tienda
+        Task ToggleSinStockAsync(int id);
+
+        //Guardar (crear o reemplazar) la imagen del Producto
+        Task GuardarImagenAsync(int idProducto, byte[] datos, string contentType);
+
+        //Obtener la imagen del Producto (o null si no tiene)
+        Task<ProductoImagen?> GetImagenAsync(int idProducto);
     }
 }

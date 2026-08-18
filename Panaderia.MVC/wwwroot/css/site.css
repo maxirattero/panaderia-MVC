@@ -979,3 +979,32 @@ a.pill-filtro.activo {
 .tienda-footer small {
     color: var(--mv-secondary);
 }
+
+/* =============================================
+   TIENDA: sin stock + miniaturas admin
+   ============================================= */
+
+.tc-tag.agotado {
+    background-color: rgba(186, 26, 26, 0.1);
+    color: var(--mv-error);
+}
+
+.tienda-card.agotado .tc-img img {
+    filter: grayscale(0.85);
+    opacity: 0.75;
+}
+
+.badge-tienda.agotado {
+    background-color: rgba(186, 26, 26, 0.1);
+    color: var(--mv-error);
+}
+
+.producto-thumb {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--mv-outline);
+    background-color: #fff;
+    flex-shrink: 0;
+}

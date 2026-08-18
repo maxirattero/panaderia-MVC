@@ -30,6 +30,7 @@ namespace Panaderia.Models.Data
         public DbSet<SubReceta> SubRecetas { get; set; }
         public DbSet<SubRecetaDetalle> SubRecetaDetalles { get; set; }
         public DbSet<ProduccionStock> ProduccionStock { get; set; }
+        public DbSet<ProductoImagen> ProductoImagenes { get; set; }
         public DbSet<DataProtectionKey> DataProtectionKeys { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -162,6 +163,15 @@ namespace Panaderia.Models.Data
                 .WithMany()
                 .HasForeignKey(d => d.IdUnidadCompra)
                 .OnDelete(DeleteBehavior.Restrict);
+            // ProductoImagen -> Producto (cascade: la imagen muere con el producto; índice único: un producto, una imagen)
+            modelBuilder.Entity<ProductoImagen>()
+                .HasIndex(i => i.IdProducto)
+                .IsUnique();
+            modelBuilder.Entity<ProductoImagen>()
+                .HasOne(i => i.Producto)
+                .WithMany()
+                .HasForeignKey(i => i.IdProducto)
+                .OnDelete(DeleteBehavior.Cascade);
             //filtro global consulta - soft delete
             modelBuilder.Entity<Pedido>().HasQueryFilter(p => !p.Anulado);
             modelBuilder.Entity<DetallePedido>().HasQueryFilter(d => !d.Pedido.Anulado);

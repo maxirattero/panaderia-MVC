@@ -43,7 +43,7 @@
 <div class="tienda-grid">
     @foreach (var p in Model.Productos)
     {
-        <a class="tienda-card" asp-controller="Tienda" asp-action="Detalle" asp-route-id="@p.Id">
+        <a class="tienda-card @(p.SinStock ? "agotado" : "")" asp-controller="Tienda" asp-action="Detalle" asp-route-id="@p.Id">
             <div class="tc-img">
                 @if (!string.IsNullOrEmpty(p.ImagenURL))
                 {
@@ -53,7 +53,11 @@
                 {
                     <span class="material-symbols-outlined tc-placeholder">bakery_dining</span>
                 }
-                @if (p.Stock <= 0)
+                @if (p.SinStock)
+                {
+                    <span class="tc-tag agotado">Sin stock</span>
+                }
+                else if (p.Stock <= 0)
                 {
                     <span class="tc-tag">Por encargo</span>
                 }

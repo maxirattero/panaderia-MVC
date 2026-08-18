@@ -131,5 +131,55 @@ namespace Panaderia.MVC.Controllers
             await _productoService.DeleteAsync(id);
             return RedirectToAction(nameof(Index));
         }
+
+        //POST: Mostrar/Ocultar producto en la tienda pública
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleOculto(int id)
+        {
+            await _productoService.ToggleOcultoEnTiendaAsync(id);
+            return RedirectToAction(nameof(Index));
+        }
+
+        //POST: Marcar/desmarcar producto como sin stock en la tienda
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleSinStock(int id)
+        {
+            await _productoService.ToggleSinStockAsync(id);
+            return RedirectToAction(nameof(Index));
+        }
+
+        //POST: Subir imagen de producto (se guarda en la DB, tabla ProductoImagenes)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SubirImagen(int id, IFormFile? imagen)
+        {
+            if (imagen == null || imagen.Length == 0)
+            {
+                TempData["ImagenError"] = "No seleccionaste ninguna imagen.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var formatosPermitidos = new[] { "image/jpeg", "image/png", "image/webp" };
+            if (!formatosPermitidos.Contains(imagen.ContentType))
+            {
+                TempData["ImagenError"] = "Formato no soportado. Usá JPG, PNG o WebP.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            const int maxBytes = 2 * 1024 * 1024; // 2 MB
+            if (imagen.Length > maxBytes)
+            {
+                TempData["ImagenError"] = "La imagen supera los 2 MB. Achicala o comprimila e intentá de nuevo.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            using var ms = new MemoryStream();
+            await imagen.CopyToAsync(ms);
+            await _productoService.GuardarImagenAsync(id, ms.ToArray(), imagen.ContentType);
+
+            return RedirectToAction(nameof(Index));
+        }
     }
 }

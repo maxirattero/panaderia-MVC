@@ -81,5 +81,71 @@ namespace Panaderia.Services.Implementations
         {
             return await _context.Productos.AnyAsync(c => c.Id == id);
         }
+
+        //Mostrar/ocultar Producto en la tienda pública
+        public async Task ToggleOcultoEnTiendaAsync(int id)
+        {
+            var producto = await _context.Productos.FindAsync(id);
+            if (producto == null) return;
+
+            producto.OcultoEnTienda = !producto.OcultoEnTienda;
+            producto.FechaModificacion = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+        }
+
+        //Marcar/desmarcar Producto como sin stock en la tienda
+        public async Task ToggleSinStockAsync(int id)
+        {
+            var producto = await _context.Productos.FindAsync(id);
+            if (producto == null) return;
+
+            producto.SinStock = !producto.SinStock;
+            producto.FechaModificacion = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+        }
+
+        //Guardar (crear o reemplazar) la imagen del Producto
+        public async Task GuardarImagenAsync(int idProducto, byte[] datos, string contentType)
+        {
+            var producto = await _context.Productos.FindAsync(idProducto);
+            if (producto == null) return;
+
+            var imagen = await _context.ProductoImagenes
+                .FirstOrDefaultAsync(i => i.IdProducto == idProducto);
+
+            if (imagen == null)
+            {
+                imagen = new ProductoImagen
+                {
+                    IdProducto = idProducto,
+                    FechaCreacion = DateTime.UtcNow
+                };
+                await _context.ProductoImagenes.AddAsync(imagen);
+            }
+            else
+            {
+                imagen.FechaModificacion = DateTime.UtcNow;
+            }
+
+            imagen.Datos = datos;
+            imagen.ContentType = contentType;
+
+            // La tienda sirve la imagen desde la DB vía /Tienda/Imagen/{id}.
+            // El ?v= (ticks) burla la caché del navegador al reemplazar la imagen.
+            producto.ImagenURL = $"/Tienda/Imagen/{idProducto}?v={DateTime.UtcNow.Ticks}";
+            producto.FechaModificacion = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+        }
+
+        //Obtener la imagen del Producto (o null si no tiene)
+        public async Task<ProductoImagen?> GetImagenAsync(int idProducto)
+        {
+            return await _context.ProductoImagenes
+                .AsNoTracking()
+                .FirstOrDefaultAsync(i => i.IdProducto == idProducto);
+        }
     }
 }

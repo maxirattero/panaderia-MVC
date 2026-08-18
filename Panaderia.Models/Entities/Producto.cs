@@ -40,6 +40,8 @@ namespace Panaderia.Models.Entities
         public decimal PrecioReventa { get; set; }
         public int Stock { get; set; }
         public string? ImagenURL { get; set; }
+        public bool OcultoEnTienda { get; set; }
+        public bool SinStock { get; set; }
         public DateTime FechaCreacion { get; set; }
         public DateTime? FechaModificacion { get; set; }
         [ValidateNever]
