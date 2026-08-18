@@ -1,0 +1,63 @@
+@model Panaderia.Models.Entities.Producto
+@{
+    Layout = "_TiendaLayout";
+    ViewData["Title"] = Model.NombreVisible;
+    var ar = new System.Globalization.CultureInfo("es-AR");
+    var whatsApp = ViewBag.WhatsApp as string;
+    var textoPedido = Uri.EscapeDataString($"¡Hola Masa Viva! Quiero encargar: {Model.NombreVisible}");
+}
+
+<div class="tienda-detalle">
+    <a class="td-volver" asp-controller="Tienda" asp-action="Index">
+        <span class="material-symbols-outlined">arrow_back</span> Volver a la tienda
+    </a>
+
+    <div class="td-grid">
+        <div class="td-img">
+            @if (!string.IsNullOrEmpty(Model.ImagenURL))
+            {
+                <img src="@Model.ImagenURL" alt="@Model.NombreVisible" />
+            }
+            else
+            {
+                <span class="material-symbols-outlined tc-placeholder">bakery_dining</span>
+            }
+        </div>
+
+        <div class="td-info">
+            <h1 class="font-literata">@Model.NombreVisible</h1>
+
+            @if (Model.Categoria != null)
+            {
+                <div class="td-cat">
+                    @Model.Categoria.Nombre@(Model.Tamano != null ? $" · {Model.Tamano.Descripcion}" : "")
+                </div>
+            }
+
+            <div class="td-price">$@Model.PrecioFinal.ToString("N0", ar)</div>
+
+            <div class="td-badges">
+                <span class="badge-tienda"><span class="material-symbols-outlined">grain</span> Masa madre</span>
+                @if (Model.Stock > 0)
+                {
+                    <span class="badge-tienda ok"><span class="material-symbols-outlined">check_circle</span> Disponible</span>
+                }
+                else
+                {
+                    <span class="badge-tienda"><span class="material-symbols-outlined">schedule</span> Por encargo</span>
+                }
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(whatsApp))
+            {
+                <a class="btn-mv-primary td-cta" href="https://wa.me/@(whatsApp)?text=@textoPedido" target="_blank" rel="noopener">
+                    <span class="material-symbols-outlined">chat</span> Pedir por WhatsApp
+                </a>
+            }
+            else
+            {
+                <p class="td-nota">Hacé tu pedido por WhatsApp o Instagram y coordinamos el día de entrega.</p>
+            }
+        </div>
+    </div>
+</div>

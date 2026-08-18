@@ -1,0 +1,71 @@
+@model TiendaIndexViewModel
+@{
+    Layout = "_TiendaLayout";
+    ViewData["Title"] = "Tienda";
+    var ar = new System.Globalization.CultureInfo("es-AR");
+}
+
+<!-- Hero -->
+<section class="tienda-hero">
+    <h1 class="font-literata">Pan de masa madre,<br />hecho con tiempo</h1>
+    <p>Fermentación natural, sin apuro. Encargá hoy y retiralo recién horneado.</p>
+    <a class="th-btn" href="#productos">Ver productos</a>
+</section>
+
+<!-- Buscador -->
+<form method="get" asp-controller="Tienda" asp-action="Index" class="tienda-search">
+    <span class="material-symbols-outlined">search</span>
+    <input type="text" name="q" value="@Model.Busqueda" class="search-input" placeholder="Buscar pan, crackers, untables..." />
+    @if (!string.IsNullOrEmpty(Model.CategoriaSeleccionada))
+    {
+        <input type="hidden" name="categoria" value="@Model.CategoriaSeleccionada" />
+    }
+</form>
+
+<!-- Categorías -->
+<div class="tienda-chips">
+    <a class="pill-filtro @(string.IsNullOrEmpty(Model.CategoriaSeleccionada) ? "activo" : "")"
+       asp-controller="Tienda" asp-action="Index" asp-route-q="@Model.Busqueda">Todos</a>
+    @foreach (var cat in Model.Categorias)
+    {
+        <a class="pill-filtro @(string.Equals(cat, Model.CategoriaSeleccionada, StringComparison.OrdinalIgnoreCase) ? "activo" : "")"
+           asp-controller="Tienda" asp-action="Index" asp-route-categoria="@cat" asp-route-q="@Model.Busqueda">@cat</a>
+    }
+</div>
+
+<h2 id="productos" class="tienda-section-title font-literata">Nuestros productos</h2>
+
+@if (!Model.Productos.Any())
+{
+    <p class="tienda-empty">No encontramos productos con esa búsqueda.</p>
+}
+
+<div class="tienda-grid">
+    @foreach (var p in Model.Productos)
+    {
+        <a class="tienda-card" asp-controller="Tienda" asp-action="Detalle" asp-route-id="@p.Id">
+            <div class="tc-img">
+                @if (!string.IsNullOrEmpty(p.ImagenURL))
+                {
+                    <img src="@p.ImagenURL" alt="@p.NombreVisible" loading="lazy" />
+                }
+                else
+                {
+                    <span class="material-symbols-outlined tc-placeholder">bakery_dining</span>
+                }
+                @if (p.Stock <= 0)
+                {
+                    <span class="tc-tag">Por encargo</span>
+                }
+            </div>
+            <div class="tc-body">
+                <div class="tc-name">@p.NombreVisible</div>
+                @if (p.Categoria != null)
+                {
+                    <div class="tc-meta">@p.Categoria.Nombre</div>
+                }
+                <div class="tc-price">$@p.PrecioFinal.ToString("N0", ar)</div>
+            </div>
+        </a>
+    }
+</div>

@@ -10,10 +10,14 @@ namespace Panaderia.MVC.Controllers;
 public class AccountController : Controller
 {
     private readonly SignInManager<ApplicationUser> _signInManager;
+    private readonly UserManager<ApplicationUser> _userManager;
 
-    public AccountController(SignInManager<ApplicationUser> signInManager)
+    public AccountController(
+        SignInManager<ApplicationUser> signInManager,
+        UserManager<ApplicationUser> userManager)
     {
         _signInManager = signInManager;
+        _userManager = userManager;
     }
 
     [HttpGet]
@@ -36,7 +40,21 @@ public class AccountController : Controller
             model.Email, model.Password, model.RememberMe, lockoutOnFailure: true);
 
         if (result.Succeeded)
-            return LocalRedirect(returnUrl ?? "/");
+        {
+            if (!string.IsNullOrEmpty(returnUrl))
+                return LocalRedirect(returnUrl);
+
+            // Admin y Revendedor van a la parte administrativa; el resto, a la tienda.
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            if (user != null &&
+                (await _userManager.IsInRoleAsync(user, "Admin") ||
+                 await _userManager.IsInRoleAsync(user, "Revendedor")))
+            {
+                return RedirectToAction("Index", "Home");
+            }
+
+            return RedirectToAction("Index", "Tienda");
+        }
 
         ModelState.AddModelError(string.Empty, result.IsLockedOut
             ? "Cuenta bloqueada por demasiados intentos. Intentá en unos minutos."
@@ -50,6 +68,6 @@ public class AccountController : Controller
     public async Task<IActionResult> Logout()
     {
         await _signInManager.SignOutAsync();
-        return RedirectToAction(nameof(Login));
+        return RedirectToAction("Index", "Tienda");
     }
 }
