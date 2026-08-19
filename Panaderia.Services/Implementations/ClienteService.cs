@@ -65,5 +65,23 @@ namespace Panaderia.Services.Implementations
         {
             return await _context.Clientes.AnyAsync(c => c.Id == id);
         }
+
+        //buscar un cliente por teléfono (comparación por dígitos, ignora espacios y guiones)
+        public async Task<Cliente?> GetByTelefonoAsync(string telefono)
+        {
+            var buscado = SoloDigitos(telefono);
+            if (string.IsNullOrEmpty(buscado)) return null;
+
+            var clientes = await _context.Clientes
+                .Where(c => c.Telefono != null && c.Telefono != "")
+                .ToListAsync();
+
+            return clientes.FirstOrDefault(c => SoloDigitos(c.Telefono!) == buscado);
+        }
+
+        private static string SoloDigitos(string valor)
+        {
+            return new string(valor.Where(char.IsDigit).ToArray());
+        }
     }
 }

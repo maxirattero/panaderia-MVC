@@ -150,6 +150,15 @@ namespace Panaderia.MVC.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        //POST: Marcar/desmarcar producto como "por encargo" en la tienda
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> TogglePorEncargo(int id)
+        {
+            await _productoService.TogglePorEncargoAsync(id);
+            return RedirectToAction(nameof(Index));
+        }
+
         //POST: Subir imagen de producto (se guarda en la DB, tabla ProductoImagenes)
         [HttpPost]
         [ValidateAntiForgeryToken]

@@ -42,6 +42,7 @@ namespace Panaderia.Models.Entities
         public string? ImagenURL { get; set; }
         public bool OcultoEnTienda { get; set; }
         public bool SinStock { get; set; }
+        public bool PorEncargo { get; set; }
         public DateTime FechaCreacion { get; set; }
         public DateTime? FechaModificacion { get; set; }
         [ValidateNever]

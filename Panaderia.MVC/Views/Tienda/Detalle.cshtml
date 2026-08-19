@@ -3,8 +3,13 @@
     Layout = "_TiendaLayout";
     ViewData["Title"] = Model.NombreVisible;
     var ar = new System.Globalization.CultureInfo("es-AR");
-    var whatsApp = ViewBag.WhatsApp as string;
-    var textoPedido = Uri.EscapeDataString($"¡Hola Masa Viva! Quiero encargar: {Model.NombreVisible}");
+}
+
+@if (TempData["TiendaMsg"] != null)
+{
+    <div class="tienda-toast">
+        <span class="material-symbols-outlined">info</span> @TempData["TiendaMsg"]
+    </div>
 }
 
 <div class="tienda-detalle">
@@ -42,13 +47,13 @@
                 {
                     <span class="badge-tienda agotado"><span class="material-symbols-outlined">block</span> Sin stock</span>
                 }
-                else if (Model.Stock > 0)
+                else if (Model.PorEncargo)
                 {
-                    <span class="badge-tienda ok"><span class="material-symbols-outlined">check_circle</span> Disponible</span>
+                    <span class="badge-tienda"><span class="material-symbols-outlined">schedule</span> Por encargo</span>
                 }
                 else
                 {
-                    <span class="badge-tienda"><span class="material-symbols-outlined">schedule</span> Por encargo</span>
+                    <span class="badge-tienda ok"><span class="material-symbols-outlined">check_circle</span> Disponible</span>
                 }
             </div>
 
@@ -56,16 +61,40 @@
             {
                 <p class="td-nota">Este producto está temporalmente sin stock. Volvé a mirar en unos días o consultanos cuándo vuelve.</p>
             }
-            else if (!string.IsNullOrWhiteSpace(whatsApp))
-            {
-                <a class="btn-mv-primary td-cta" href="https://wa.me/@(whatsApp)?text=@textoPedido" target="_blank" rel="noopener">
-                    <span class="material-symbols-outlined">chat</span> Pedir por WhatsApp
-                </a>
-            }
             else
             {
-                <p class="td-nota">Hacé tu pedido por WhatsApp o Instagram y coordinamos el día de entrega.</p>
+                <form asp-controller="Tienda" asp-action="Agregar" method="post" class="td-agregar">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <div class="td-cantidad">
+                        <span class="td-cantidad-label">Cantidad</span>
+                        <div class="stepper-tienda">
+                            <button type="button" aria-label="Restar" onclick="cambiarCantidad(-1)">
+                                <span class="material-symbols-outlined">remove</span>
+                            </button>
+                            <input type="text" name="cantidad" id="cantidadInput" value="1" readonly />
+                            <button type="button" aria-label="Sumar" onclick="cambiarCantidad(1)">
+                                <span class="material-symbols-outlined">add</span>
+                            </button>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-mv-primary td-cta">
+                        <span class="material-symbols-outlined">add_shopping_cart</span> Agregar al carrito
+                    </button>
+                </form>
+                <p class="td-nota">Entrega los sábados de 10:30 a 12:30 hs — delivery sin cargo o retiro en el punto de entrega.</p>
             }
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        function cambiarCantidad(delta) {
+            const input = document.getElementById('cantidadInput');
+            let valor = parseInt(input.value, 10) || 1;
+            valor = Math.min(50, Math.max(1, valor + delta));
+            input.value = valor;
+        }
+    </script>
+}

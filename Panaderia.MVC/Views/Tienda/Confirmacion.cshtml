@@ -1,0 +1,47 @@
+@{
+    Layout = "_TiendaLayout";
+    ViewData["Title"] = "Pedido confirmado";
+    var ar = new System.Globalization.CultureInfo("es-AR");
+    var fechaEntrega = ViewBag.FechaEntrega as DateTime?;
+    var esRetiro = (ViewBag.Entrega as string) == "retiro";
+    var esTransferencia = (ViewBag.MedioPago as string) == "transferencia";
+    var fechaTexto = fechaEntrega.HasValue ? fechaEntrega.Value.ToString("dddd d 'de' MMMM", ar) : "el sábado";
+}
+
+<div class="tienda-confirmacion">
+    <div class="conf-icono">
+        <span class="material-symbols-outlined">check_circle</span>
+    </div>
+    <h1 class="font-literata">¡Pedido confirmado!</h1>
+    <div class="conf-numero">Pedido #@ViewBag.PedidoId</div>
+
+    @if (esRetiro)
+    {
+        <p class="conf-texto">
+            Retiralo el <b>@fechaTexto</b> en <b>Kiosco Suyay</b> (San Martín 888),<br />
+            de 10 a 12:30 o de 16:30 a 22 hs.
+        </p>
+    }
+    else
+    {
+        <p class="conf-texto">
+            Te lo llevamos el <b>@fechaTexto</b> de 10:30 a 12:30 hs.<br />
+            Coordinamos por WhatsApp.
+        </p>
+    }
+
+    @if (esTransferencia)
+    {
+        <div class="entrega-banner" style="margin: 14px 0; text-align: left;">
+            <span class="material-symbols-outlined">account_balance</span>
+            <div>
+                <b style="text-transform: none;">Alias para transferir: masaviva.pan</b>
+                <small>Envianos el comprobante por WhatsApp.</small>
+            </div>
+        </div>
+    }
+
+    <p class="conf-texto">Te vamos a escribir por WhatsApp para confirmar.</p>
+
+    <a class="btn-mv-primary carrito-cta" asp-controller="Tienda" asp-action="Index">Volver a la tienda</a>
+</div>

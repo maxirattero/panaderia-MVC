@@ -1,0 +1,96 @@
+@model CarritoViewModel
+@{
+    Layout = "_TiendaLayout";
+    ViewData["Title"] = "Mi pedido";
+    var ar = new System.Globalization.CultureInfo("es-AR");
+}
+
+@if (TempData["TiendaMsg"] != null)
+{
+    <div class="tienda-toast">
+        <span class="material-symbols-outlined">check_circle</span> @TempData["TiendaMsg"]
+    </div>
+}
+
+<div class="tienda-carrito">
+    <a class="td-volver" asp-controller="Tienda" asp-action="Index">
+        <span class="material-symbols-outlined">arrow_back</span> Seguir comprando
+    </a>
+
+    <h1 class="font-literata carrito-titulo">Mi pedido</h1>
+
+    @if (!Model.Items.Any())
+    {
+        <div class="carrito-vacio">
+            <span class="material-symbols-outlined">shopping_basket</span>
+            <h2 class="font-literata">Tu carrito está vacío</h2>
+            <p>Agregá panes, crackers y untables desde la tienda.</p>
+            <a class="btn-mv-primary" asp-controller="Tienda" asp-action="Index">Ver productos</a>
+        </div>
+    }
+    else
+    {
+        <div class="carrito-lista">
+            @foreach (var item in Model.Items)
+            {
+                <div class="carrito-item">
+                    <div class="ci-img">
+                        @if (!string.IsNullOrEmpty(item.Producto.ImagenURL))
+                        {
+                            <img src="@item.Producto.ImagenURL" alt="@item.Producto.NombreVisible" />
+                        }
+                        else
+                        {
+                            <span class="material-symbols-outlined">bakery_dining</span>
+                        }
+                    </div>
+                    <div class="ci-info">
+                        <div class="ci-nombre">@item.Producto.NombreVisible</div>
+                        <div class="ci-precio">$@item.Producto.PrecioFinal.ToString("N0", ar) c/u</div>
+                    </div>
+                    <div class="ci-derecha">
+                        <div class="ci-subtotal">$@item.Subtotal.ToString("N0", ar)</div>
+                        <div class="stepper-tienda sm">
+                            <form asp-controller="Tienda" asp-action="Actualizar" method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@item.Producto.Id" />
+                                <input type="hidden" name="cantidad" value="@(item.Cantidad - 1)" />
+                                <button type="submit" aria-label="Restar" title="@(item.Cantidad == 1 ? "Quitar del carrito" : "Restar uno")">
+                                    <span class="material-symbols-outlined">@(item.Cantidad == 1 ? "delete" : "remove")</span>
+                                </button>
+                            </form>
+                            <span class="cantidad">@item.Cantidad</span>
+                            <form asp-controller="Tienda" asp-action="Actualizar" method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@item.Producto.Id" />
+                                <input type="hidden" name="cantidad" value="@(item.Cantidad + 1)" />
+                                <button type="submit" aria-label="Sumar" title="Sumar uno">
+                                    <span class="material-symbols-outlined">add</span>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="carrito-resumen">
+            <div class="cr-fila">
+                <span>Productos (@Model.CantidadTotal)</span>
+                <span>$@Model.Total.ToString("N0", ar)</span>
+            </div>
+            <div class="cr-fila">
+                <span>Entrega (delivery o retiro)</span>
+                <span>Sin cargo</span>
+            </div>
+            <div class="cr-fila total">
+                <span>Total</span>
+                <span>$@Model.Total.ToString("N0", ar)</span>
+            </div>
+        </div>
+
+        <a class="btn-mv-primary carrito-cta" asp-controller="Tienda" asp-action="Checkout">
+            Continuar <span class="material-symbols-outlined">arrow_forward</span>
+        </a>
+    }
+</div>

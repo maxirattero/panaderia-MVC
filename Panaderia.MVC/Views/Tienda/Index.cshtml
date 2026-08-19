@@ -5,10 +5,17 @@
     var ar = new System.Globalization.CultureInfo("es-AR");
 }
 
+@if (TempData["TiendaMsg"] != null)
+{
+    <div class="tienda-toast">
+        <span class="material-symbols-outlined">check_circle</span> @TempData["TiendaMsg"]
+    </div>
+}
+
 <!-- Hero -->
-<section class="tienda-hero">
-    <h1 class="font-literata">Pan de masa madre,<br />hecho con tiempo</h1>
-    <p>Fermentación natural, sin apuro. Encargá hoy y retiralo recién horneado.</p>
+<section class="tienda-hero con-foto">
+    <h1 class="font-literata">Del horno a tu mesa,<br />cada sábado</h1>
+    <p>Pan de masa madre, fermentado con paciencia.<br />Pedí online y recibilo recién horneado.</p>
     <a class="th-btn" href="#productos">Ver productos</a>
 </section>
 
@@ -43,33 +50,67 @@
 <div class="tienda-grid">
     @foreach (var p in Model.Productos)
     {
-        <a class="tienda-card @(p.SinStock ? "agotado" : "")" asp-controller="Tienda" asp-action="Detalle" asp-route-id="@p.Id">
-            <div class="tc-img">
-                @if (!string.IsNullOrEmpty(p.ImagenURL))
-                {
-                    <img src="@p.ImagenURL" alt="@p.NombreVisible" loading="lazy" />
-                }
-                else
-                {
-                    <span class="material-symbols-outlined tc-placeholder">bakery_dining</span>
-                }
-                @if (p.SinStock)
-                {
-                    <span class="tc-tag agotado">Sin stock</span>
-                }
-                else if (p.Stock <= 0)
-                {
-                    <span class="tc-tag">Por encargo</span>
-                }
-            </div>
-            <div class="tc-body">
-                <div class="tc-name">@p.NombreVisible</div>
-                @if (p.Categoria != null)
-                {
-                    <div class="tc-meta">@p.Categoria.Nombre</div>
-                }
-                <div class="tc-price">$@p.PrecioFinal.ToString("N0", ar)</div>
-            </div>
-        </a>
+        <div class="tienda-card @(p.SinStock ? "agotado" : "")">
+            <a class="tc-link" asp-controller="Tienda" asp-action="Detalle" asp-route-id="@p.Id">
+                <div class="tc-img">
+                    @if (!string.IsNullOrEmpty(p.ImagenURL))
+                    {
+                        <img src="@p.ImagenURL" alt="@p.NombreVisible" loading="lazy" />
+                    }
+                    else
+                    {
+                        <span class="material-symbols-outlined tc-placeholder">bakery_dining</span>
+                    }
+                    @if (p.SinStock)
+                    {
+                        <span class="tc-tag agotado">Sin stock</span>
+                    }
+                    else if (p.PorEncargo)
+                    {
+                        <span class="tc-tag">Por encargo</span>
+                    }
+                </div>
+                <div class="tc-body">
+                    <div class="tc-name">@p.NombreVisible</div>
+                    @if (p.Categoria != null)
+                    {
+                        <div class="tc-meta">@p.Categoria.Nombre</div>
+                    }
+                    <div class="tc-price">$@p.PrecioFinal.ToString("N0", ar)</div>
+                </div>
+            </a>
+            @if (!p.SinStock)
+            {
+                <form asp-controller="Tienda" asp-action="Agregar" method="post" class="tc-agregar">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@p.Id" />
+                    <input type="hidden" name="origen" value="tienda" />
+                    <input type="hidden" name="categoria" value="@Model.CategoriaSeleccionada" />
+                    <input type="hidden" name="q" value="@Model.Busqueda" />
+                    <div class="stepper-tienda sm">
+                        <button type="button" aria-label="Restar" onclick="cambiarCantidadCard(this, -1)">
+                            <span class="material-symbols-outlined">remove</span>
+                        </button>
+                        <input type="text" name="cantidad" value="1" readonly />
+                        <button type="button" aria-label="Sumar" onclick="cambiarCantidadCard(this, 1)">
+                            <span class="material-symbols-outlined">add</span>
+                        </button>
+                    </div>
+                    <button type="submit" class="tc-add" title="Agregar al carrito">
+                        <span class="material-symbols-outlined">add_shopping_cart</span>
+                    </button>
+                </form>
+            }
+        </div>
     }
 </div>
+
+@section Scripts {
+    <script>
+        function cambiarCantidadCard(btn, delta) {
+            const input = btn.closest('.stepper-tienda').querySelector('input[name="cantidad"]');
+            let valor = parseInt(input.value, 10) || 1;
+            input.value = Math.min(50, Math.max(1, valor + delta));
+        }
+    </script>
+}

@@ -28,6 +28,9 @@ namespace Panaderia.Services.Interfaces
         //Marcar/desmarcar Producto como sin stock en la tienda
         Task ToggleSinStockAsync(int id);
 
+        //Marcar/desmarcar Producto como "por encargo" en la tienda
+        Task TogglePorEncargoAsync(int id);
+
         //Guardar (crear o reemplazar) la imagen del Producto
         Task GuardarImagenAsync(int idProducto, byte[] datos, string contentType);
 

@@ -106,6 +106,18 @@ namespace Panaderia.Services.Implementations
             await _context.SaveChangesAsync();
         }
 
+        //Marcar/desmarcar Producto como "por encargo" en la tienda
+        public async Task TogglePorEncargoAsync(int id)
+        {
+            var producto = await _context.Productos.FindAsync(id);
+            if (producto == null) return;
+
+            producto.PorEncargo = !producto.PorEncargo;
+            producto.FechaModificacion = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+        }
+
         //Guardar (crear o reemplazar) la imagen del Producto
         public async Task GuardarImagenAsync(int idProducto, byte[] datos, string contentType)
         {

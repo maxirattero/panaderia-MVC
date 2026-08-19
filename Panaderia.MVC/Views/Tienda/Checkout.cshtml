@@ -1,0 +1,132 @@
+@model CheckoutViewModel
+@{
+    Layout = "_TiendaLayout";
+    ViewData["Title"] = "Finalizar pedido";
+    var ar = new System.Globalization.CultureInfo("es-AR");
+    var fechaEntrega = Model.FechaEntrega.ToString("dddd d 'de' MMMM", ar);
+}
+
+<div class="tienda-checkout">
+    <a class="td-volver" asp-controller="Tienda" asp-action="Carrito">
+        <span class="material-symbols-outlined">arrow_back</span> Volver al carrito
+    </a>
+
+    <h1 class="font-literata carrito-titulo">Finalizar pedido</h1>
+
+    <div class="entrega-banner">
+        <span class="material-symbols-outlined">event</span>
+        <div>
+            <b>Entrega: @fechaEntrega</b>
+            <small>Los pedidos se entregan los sábados de 10:30 a 12:30 hs.</small>
+        </div>
+    </div>
+
+    <div class="checkout-resumen">
+        @foreach (var item in Model.Carrito.Items)
+        {
+            <div class="cr-fila">
+                <span>@item.Cantidad× @item.Producto.NombreVisible</span>
+                <span>$@item.Subtotal.ToString("N0", ar)</span>
+            </div>
+        }
+        <div class="cr-fila total">
+            <span>Total</span>
+            <span>$@Model.Carrito.Total.ToString("N0", ar)</span>
+        </div>
+    </div>
+
+    <form asp-controller="Tienda" asp-action="Confirmar" method="post" class="checkout-form">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="text-danger small mb-2"></div>
+
+        <span class="checkout-label">¿Cómo lo recibís?</span>
+
+        <label class="entrega-opt">
+            <input type="radio" asp-for="Entrega" value="delivery" onchange="toggleDireccion()" />
+            <span class="material-symbols-outlined">pedal_bike</span>
+            <span class="eo-texto">
+                <b>Delivery sin cargo</b>
+                <small>Te lo llevamos el sábado de 10:30 a 12:30 hs. Coordinamos por WhatsApp.</small>
+            </span>
+        </label>
+        <label class="entrega-opt">
+            <input type="radio" asp-for="Entrega" value="retiro" onchange="toggleDireccion()" />
+            <span class="material-symbols-outlined">storefront</span>
+            <span class="eo-texto">
+                <b>Retiro en punto de entrega</b>
+                <small>Kiosco Suyay (San Martín 888) — 10 a 12:30 y de 16:30 a 22 hs.</small>
+            </span>
+        </label>
+
+        <div id="campoDireccion">
+            <span class="checkout-label">Dirección para el delivery</span>
+            <input asp-for="Direccion" class="checkout-input" placeholder="Calle, número y localidad" />
+            <span asp-validation-for="Direccion" class="text-danger small"></span>
+        </div>
+
+        <span class="checkout-label">¿Cómo pagás?</span>
+
+        <label class="entrega-opt">
+            <input type="radio" asp-for="MedioPago" value="efectivo" onchange="toggleAlias()" />
+            <span class="material-symbols-outlined">payments</span>
+            <span class="eo-texto">
+                <b>Efectivo</b>
+                <small>Pagás al recibir o retirar tu pedido</small>
+            </span>
+        </label>
+        <label class="entrega-opt">
+            <input type="radio" asp-for="MedioPago" value="transferencia" onchange="toggleAlias()" />
+            <span class="material-symbols-outlined">currency_exchange</span>
+            <span class="eo-texto">
+                <b>Transferencia</b>
+                <small>Te pasamos los datos y enviás el comprobante</small>
+            </span>
+        </label>
+
+        <div id="aliasAviso" class="entrega-banner" style="margin-top: 4px;">
+            <span class="material-symbols-outlined">account_balance</span>
+            <div>
+                <b style="text-transform: none;">Alias para transferir: masaviva.pan</b>
+                <small>Envianos el comprobante por WhatsApp al confirmar.</small>
+            </div>
+        </div>
+
+        <span class="checkout-label">Tus datos</span>
+        <div class="checkout-fila">
+            <div>
+                <input asp-for="Nombre" class="checkout-input" placeholder="Nombre *" />
+                <span asp-validation-for="Nombre" class="text-danger small"></span>
+            </div>
+            <div>
+                <input asp-for="Apellido" class="checkout-input" placeholder="Apellido" />
+            </div>
+        </div>
+        <div>
+            <input asp-for="Telefono" class="checkout-input" placeholder="Teléfono (WhatsApp) *" />
+            <span asp-validation-for="Telefono" class="text-danger small"></span>
+        </div>
+
+        <span class="checkout-label">Nota para la panadería (opcional)</span>
+        <textarea asp-for="Notas" class="checkout-input" rows="2" placeholder="Ej.: pan cortado en rodajas, tocar timbre..."></textarea>
+
+        <button type="submit" class="btn-mv-primary carrito-cta">
+            <span class="material-symbols-outlined">check_circle</span> Confirmar pedido
+        </button>
+        <p class="td-nota checkout-aviso">Te contactamos por WhatsApp para confirmar el pedido.</p>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        function toggleDireccion() {
+            const esDelivery = document.querySelector('input[name="Entrega"]:checked').value === 'delivery';
+            document.getElementById('campoDireccion').style.display = esDelivery ? '' : 'none';
+        }
+        function toggleAlias() {
+            const esTransferencia = document.querySelector('input[name="MedioPago"]:checked').value === 'transferencia';
+            document.getElementById('aliasAviso').style.display = esTransferencia ? '' : 'none';
+        }
+        toggleDireccion();
+        toggleAlias();
+    </script>
+}

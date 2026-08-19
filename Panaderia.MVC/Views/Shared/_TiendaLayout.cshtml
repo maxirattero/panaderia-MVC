@@ -14,6 +14,19 @@
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet" />
 </head>
 <body class="tienda-body">
+    @{
+        var carritoCantidad = 0;
+        var cookieCarrito = Context.Request.Cookies["mv_carrito"];
+        if (!string.IsNullOrEmpty(cookieCarrito))
+        {
+            try
+            {
+                carritoCantidad = System.Text.Json.JsonSerializer
+                    .Deserialize<Dictionary<int, int>>(cookieCarrito)?.Values.Sum() ?? 0;
+            }
+            catch (System.Text.Json.JsonException) { }
+        }
+    }
     <header class="tienda-topbar">
         <a class="tt-brand" asp-controller="Tienda" asp-action="Index">
             <span class="tt-logo"><span class="material-symbols-outlined">bakery_dining</span></span>
@@ -21,6 +34,13 @@
                 <span class="font-literata">Masa Viva</span>
                 <small>Fermento natural</small>
             </span>
+        </a>
+        <a class="tt-cart" asp-controller="Tienda" asp-action="Carrito" title="Mi pedido">
+            <span class="material-symbols-outlined">shopping_basket</span>
+            @if (carritoCantidad > 0)
+            {
+                <span class="tt-cart-badge">@carritoCantidad</span>
+            }
         </a>
         @if (User.Identity?.IsAuthenticated == true)
         {

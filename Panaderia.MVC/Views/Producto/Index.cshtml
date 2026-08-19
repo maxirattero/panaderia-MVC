@@ -131,6 +131,14 @@
                                                 <span class="material-symbols-outlined">@(producto.SinStock ? "production_quantity_limits" : "check_circle")</span>
                                             </button>
                                         </form>
+                                        <form asp-action="TogglePorEncargo" asp-route-id="@producto.Id" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit"
+                                                    class="btn btn-sm @(producto.PorEncargo ? "btn-outline-warning" : "btn-outline-secondary")"
+                                                    title="@(producto.PorEncargo ? "Con cartel «Por encargo» — clic para quitarlo" : "Sin cartel «Por encargo» — clic para mostrarlo")">
+                                                <span class="material-symbols-outlined">schedule</span>
+                                            </button>
+                                        </form>
                                     </div>
                                 </td>
                                 <td class="text-end">
@@ -236,12 +244,20 @@
                             <span class="material-symbols-outlined">@(producto.OcultoEnTienda ? "visibility_off" : "storefront")</span>
                         </button>
                     </form>
-                    <form asp-action="ToggleSinStock" asp-route-id="@producto.Id" method="post" class="d-inline me-auto ms-1">
+                    <form asp-action="ToggleSinStock" asp-route-id="@producto.Id" method="post" class="d-inline ms-1">
                         @Html.AntiForgeryToken()
                         <button type="submit"
                                 class="btn btn-sm @(producto.SinStock ? "btn-outline-danger" : "btn-outline-success")"
                                 title="@(producto.SinStock ? "Marcado sin stock" : "Con stock")">
                             <span class="material-symbols-outlined">@(producto.SinStock ? "production_quantity_limits" : "check_circle")</span>
+                        </button>
+                    </form>
+                    <form asp-action="TogglePorEncargo" asp-route-id="@producto.Id" method="post" class="d-inline me-auto ms-1">
+                        @Html.AntiForgeryToken()
+                        <button type="submit"
+                                class="btn btn-sm @(producto.PorEncargo ? "btn-outline-warning" : "btn-outline-secondary")"
+                                title="@(producto.PorEncargo ? "Con cartel «Por encargo»" : "Sin cartel «Por encargo»")">
+                            <span class="material-symbols-outlined">schedule</span>
                         </button>
                     </form>
                     <button type="button"
