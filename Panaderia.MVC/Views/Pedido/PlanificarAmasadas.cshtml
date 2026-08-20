@@ -15,6 +15,17 @@
     </div>
 </div>
 
+@if ((int)(ViewBag.CantidadExcluidos ?? 0) > 0)
+{
+    <div class="alert alert-warning d-flex align-items-center gap-2 no-print" style="max-width:900px;">
+        <span class="material-symbols-outlined">visibility_off</span>
+        <div>
+            Hay <strong>@ViewBag.CantidadExcluidos producto(s) excluidos</strong> desde Producción.
+            El plan de abajo no los incluye.
+        </div>
+    </div>
+}
+
 <!-- Action bar for combining — shown when 2+ batches selected -->
 <div id="action-bar" class="mb-3 no-print" style="display:none; max-width:900px;">
     <button onclick="combinar()" class="btn btn-mv-primary d-inline-flex align-items-center gap-2">
@@ -230,14 +241,14 @@
                         }
                     </div>
 
-                    <!-- Productos de la amasada -->
-                    ${am.productos.map(p => `
+                    <!-- Pesos agrupados por masa -->
+                    ${getPesosPorMasa(am).map(g => `
                         <div class="d-flex justify-content-between small mb-1">
-                            <span>${p.nombreProducto} <span class="text-muted">(${p.cantidadUnidades} u)</span></span>
-                            <strong>${Math.round(p.pesoMasaTotal)} g</strong>
+                            <span>${g.nombreCategoria ? g.nombreCategoria + ' — ' : ''}${g.nombreMasa}</span>
+                            <strong>${Math.round(g.pesoTotal)} g</strong>
                         </div>
                     `).join('')}
-                    ${am.productos.length > 1 ? `
+                    ${getPesosPorMasa(am).length > 1 ? `
                         <div class="d-flex justify-content-between small fw-bold border-top pt-1 mb-2">
                             <span>TOTAL</span>
                             <span>${Math.round(pesoTotal)} g</span>
@@ -290,14 +301,15 @@
             html += `<div class="amasada-card">`;
             html += `<h5 style="margin:0 0 4px 0; font-size:14px;">${titulo}</h5>`;
 
-            // Productos de la amasada
-            for (const p of am.productos) {
+            // Pesos agrupados por masa
+            const pesosPorMasa = getPesosPorMasa(am);
+            for (const g of pesosPorMasa) {
                 html += `<div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:2px;">
-                    <span>${p.nombreProducto} (${p.cantidadUnidades} u)</span>
-                    <strong>${Math.round(p.pesoMasaTotal)} g</strong>
+                    <span>${g.nombreCategoria ? g.nombreCategoria + ' — ' : ''}${g.nombreMasa}</span>
+                    <strong>${Math.round(g.pesoTotal)} g</strong>
                 </div>`;
             }
-            if (am.productos.length > 1) {
+            if (pesosPorMasa.length > 1) {
                 html += `<div style="display:flex; justify-content:space-between; font-size:11px; font-weight:bold; border-top:1px solid #ccc; padding-top:2px; margin-bottom:4px;">
                     <span>TOTAL</span>
                     <span>${Math.round(pesoTotal)} g</span>

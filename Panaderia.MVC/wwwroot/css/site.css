@@ -1684,3 +1684,60 @@ a.badge-tienda:hover {
     justify-content: center;
     text-decoration: none;
 }
+
+/* =============================================
+   CHECKOUT: datos recordados del cliente
+   ============================================= */
+
+.datos-recordados {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background-color: rgba(46, 125, 50, 0.08);
+    border: 1px solid rgba(46, 125, 50, 0.25);
+    border-radius: 1rem;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+}
+
+.datos-recordados > .material-symbols-outlined {
+    color: var(--mv-success);
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.dr-texto {
+    flex: 1;
+    min-width: 0;
+}
+
+.dr-texto b {
+    display: block;
+    font-size: 0.92rem;
+    color: var(--mv-primary-dark);
+}
+
+.dr-texto small {
+    color: var(--mv-secondary);
+    font-size: 0.76rem;
+    line-height: 1.35;
+    display: block;
+}
+
+.dr-limpiar {
+    border: 1px solid var(--mv-outline);
+    background-color: var(--mv-surface);
+    color: var(--mv-secondary);
+    border-radius: 99px;
+    padding: 6px 12px;
+    font-family: inherit;
+    font-size: 0.76rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.dr-limpiar:hover {
+    background-color: var(--mv-surface-low);
+    color: var(--mv-primary-dark);
+}

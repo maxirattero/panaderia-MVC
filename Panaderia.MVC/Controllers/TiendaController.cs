@@ -12,6 +12,7 @@ namespace Panaderia.MVC.Controllers
     public class TiendaController : Controller
     {
         private const string CookieCarrito = "mv_carrito";
+        private const string CookieDatosCliente = "mv_datos_cliente";
 
         private readonly IProductoService _productoService;
         private readonly IClienteService _clienteService;
@@ -189,7 +190,43 @@ namespace Panaderia.MVC.Controllers
                 FechaEntrega = ProximoSabado()
             };
 
+            // Precargar con los datos de la compra anterior (guardados en el equipo del cliente)
+            var recordados = LeerDatosCliente();
+            if (recordados != null)
+            {
+                vm.Nombre = recordados.Nombre;
+                vm.Apellido = recordados.Apellido;
+                vm.Telefono = recordados.Telefono;
+                vm.Direccion = recordados.Direccion;
+                vm.Entrega = string.IsNullOrWhiteSpace(recordados.Entrega) ? "delivery" : recordados.Entrega;
+                vm.MedioPago = string.IsNullOrWhiteSpace(recordados.MedioPago) ? "efectivo" : recordados.MedioPago;
+                vm.DatosRecordados = true;
+
+                // El admin es la fuente de verdad: si Maxi corrigió el nombre o la dirección,
+                // gana lo que está en la ficha del cliente.
+                if (!string.IsNullOrWhiteSpace(recordados.Telefono))
+                {
+                    var cliente = await _clienteService.GetByTelefonoAsync(recordados.Telefono);
+                    if (cliente != null)
+                    {
+                        vm.Nombre = cliente.Nombre;
+                        vm.Apellido = cliente.Apellido;
+                        if (!string.IsNullOrWhiteSpace(cliente.Direccion))
+                            vm.Direccion = cliente.Direccion;
+                    }
+                }
+            }
+
             return View(vm);
+        }
+
+        // POST: /Tienda/OlvidarDatos — limpia los datos guardados en el equipo del cliente
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult OlvidarDatos()
+        {
+            Response.Cookies.Delete(CookieDatosCliente);
+            return RedirectToAction(nameof(Checkout));
         }
 
         // POST: /Tienda/Confirmar — crea el pedido real
@@ -263,6 +300,17 @@ namespace Panaderia.MVC.Controllers
             // Vaciar el carrito
             GuardarCarrito(new Dictionary<int, int>());
 
+            // Recordar los datos para el próximo pedido
+            GuardarDatosCliente(new DatosClienteRecordados
+            {
+                Nombre = model.Nombre.Trim(),
+                Apellido = string.IsNullOrWhiteSpace(model.Apellido) ? null : model.Apellido.Trim(),
+                Telefono = model.Telefono.Trim(),
+                Direccion = esDelivery ? model.Direccion?.Trim() : null,
+                Entrega = model.Entrega,
+                MedioPago = model.MedioPago
+            });
+
             TempData["PedidoId"] = pedido.Id;
             TempData["PedidoFechaEntrega"] = pedido.FechaEntrega?.ToString("O");
             TempData["PedidoEntrega"] = model.Entrega;
@@ -302,7 +350,8 @@ namespace Panaderia.MVC.Controllers
             var ar = new CultureInfo("es-AR");
             var sb = new System.Text.StringBuilder();
 
-            sb.AppendLine($"¡Hola Masa Viva! Confirmo mi pedido #{pedido.Id}");
+            // Sin número de pedido: es un dato interno, el cliente no lo necesita ver.
+            sb.AppendLine("¡Hola Masa Viva! Confirmo mi pedido 🍞");
             sb.AppendLine();
             sb.AppendLine($"*Cliente:* {cliente.NombreCompleto}");
             sb.AppendLine($"*Entrega:* {pedido.FechaEntrega:dd/MM} — {entregaTexto}");
@@ -334,6 +383,44 @@ namespace Panaderia.MVC.Controllers
             var dias = ((int)DayOfWeek.Saturday - (int)hoyArgentina.DayOfWeek + 7) % 7;
             if (dias == 0) dias = 7;
             return DateTime.SpecifyKind(hoyArgentina.AddDays(dias), DateTimeKind.Utc);
+        }
+
+        // Datos del cliente guardados en su propio equipo para no recargarlos en cada compra
+        private class DatosClienteRecordados
+        {
+            public string Nombre { get; set; } = string.Empty;
+            public string? Apellido { get; set; }
+            public string Telefono { get; set; } = string.Empty;
+            public string? Direccion { get; set; }
+            public string? Entrega { get; set; }
+            public string? MedioPago { get; set; }
+        }
+
+        private DatosClienteRecordados? LeerDatosCliente()
+        {
+            var cookie = Request.Cookies[CookieDatosCliente];
+            if (string.IsNullOrEmpty(cookie)) return null;
+
+            try
+            {
+                var datos = JsonSerializer.Deserialize<DatosClienteRecordados>(cookie);
+                return string.IsNullOrWhiteSpace(datos?.Telefono) ? null : datos;
+            }
+            catch (JsonException)
+            {
+                return null;
+            }
+        }
+
+        private void GuardarDatosCliente(DatosClienteRecordados datos)
+        {
+            Response.Cookies.Append(CookieDatosCliente, JsonSerializer.Serialize(datos), new CookieOptions
+            {
+                HttpOnly = true,
+                SameSite = SameSiteMode.Lax,
+                IsEssential = true,
+                Expires = DateTimeOffset.UtcNow.AddDays(180)
+            });
         }
 
         private Dictionary<int, int> LeerCarrito()

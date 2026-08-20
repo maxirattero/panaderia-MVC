@@ -28,5 +28,8 @@ namespace Panaderia.MVC.Models
         // Solo para mostrar en la vista (no se postea)
         public CarritoViewModel Carrito { get; set; } = new();
         public DateTime FechaEntrega { get; set; }
+
+        // true cuando los datos vienen precargados de una compra anterior
+        public bool DatosRecordados { get; set; }
     }
 }

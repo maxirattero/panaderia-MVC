@@ -13,6 +13,21 @@
 
     <h1 class="font-literata carrito-titulo">Finalizar pedido</h1>
 
+    @if (Model.DatosRecordados)
+    {
+        <div class="datos-recordados">
+            <span class="material-symbols-outlined">how_to_reg</span>
+            <div class="dr-texto">
+                <b>¡Hola de nuevo, @Model.Nombre!</b>
+                <small>Completamos tus datos de la última vez. Revisalos y cambiá lo que haga falta.</small>
+            </div>
+            <form asp-controller="Tienda" asp-action="OlvidarDatos" method="post">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="dr-limpiar">No soy yo</button>
+            </form>
+        </div>
+    }
+
     <div class="entrega-banner">
         <span class="material-symbols-outlined">event</span>
         <div>

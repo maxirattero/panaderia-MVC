@@ -66,7 +66,12 @@ namespace Panaderia.Services.Implementations
             return await _context.Clientes.AnyAsync(c => c.Id == id);
         }
 
-        //buscar un cliente por teléfono (comparación por dígitos, ignora espacios y guiones)
+        // Cantidad de dígitos finales que se comparan para identificar un teléfono.
+        // Con los últimos 6 el mismo número coincide se haya cargado con o sin característica,
+        // con o sin el 15, con +54, con espacios o con guiones.
+        private const int DigitosComparados = 6;
+
+        //buscar un cliente por teléfono (compara los últimos dígitos, ignora formato)
         public async Task<Cliente?> GetByTelefonoAsync(string telefono)
         {
             var buscado = SoloDigitos(telefono);
@@ -76,7 +81,40 @@ namespace Panaderia.Services.Implementations
                 .Where(c => c.Telefono != null && c.Telefono != "")
                 .ToListAsync();
 
-            return clientes.FirstOrDefault(c => SoloDigitos(c.Telefono!) == buscado);
+            var candidatos = clientes
+                .Select(c => new { Cliente = c, Digitos = SoloDigitos(c.Telefono!) })
+                .Where(x => CoincidenTelefonos(x.Digitos, buscado))
+                .ToList();
+
+            if (candidatos.Count <= 1)
+                return candidatos.FirstOrDefault()?.Cliente;
+
+            // Si varios coinciden por los últimos 6 (misma terminación, distinta característica),
+            // gana el que comparte más dígitos finales con el que se ingresó.
+            return candidatos
+                .OrderByDescending(x => LargoSufijoComun(x.Digitos, buscado))
+                .ThenByDescending(x => x.Cliente.Id)
+                .First()
+                .Cliente;
+        }
+
+        private static bool CoincidenTelefonos(string a, string b)
+        {
+            if (a.Length == 0 || b.Length == 0) return false;
+
+            // Números cortos o mal cargados: exigimos coincidencia exacta para no unir clientes distintos
+            if (a.Length < DigitosComparados || b.Length < DigitosComparados)
+                return a == b;
+
+            return a[^DigitosComparados..] == b[^DigitosComparados..];
+        }
+
+        private static int LargoSufijoComun(string a, string b)
+        {
+            var largo = 0;
+            while (largo < a.Length && largo < b.Length && a[^(largo + 1)] == b[^(largo + 1)])
+                largo++;
+            return largo;
         }
 
         private static string SoloDigitos(string valor)

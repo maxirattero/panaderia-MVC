@@ -37,8 +37,10 @@ namespace Panaderia.Services.Interfaces
         Task<bool> ExistsAsync(int id);
         // Anular pedido
         Task AnularAsync(int id);
-        // Resumen de producción (pedidos no entregados)
-        Task<(List<ResumenProductoItem> PorProducto, List<ResumenBolsaItem> PorBolsa, List<ResumenSubRecetaItem> PorSubReceta, decimal TotalAgua)> GetResumenProduccionAsync();
+        // Resumen de producción (pedidos no entregados).
+        // productosExcluidos: ids destildados en el dashboard de Producción; quedan fuera
+        // de los totales, de las sub-recetas y del agua.
+        Task<(List<ResumenProductoItem> PorProducto, List<ResumenBolsaItem> PorBolsa, List<ResumenSubRecetaItem> PorSubReceta, decimal TotalAgua)> GetResumenProduccionAsync(IEnumerable<int>? productosExcluidos = null);
         // Confirmar producción y descontar stock
         Task<List<string>> ConfirmarProduccionAsync(List<ItemProduccionSeleccionable> items);
         // Marcar pedido como entregado
@@ -50,10 +52,10 @@ namespace Panaderia.Services.Interfaces
         // Verificar si ya existe un cierre registrado para el rango dado
         Task<bool> ExisteCierreSemanalAsync(DateTime inicioSemana, DateTime finSemana);
         // Ingredientes por producto para el planificador de amasadas
-        Task<List<ProduccionProductoDetalle>> GetIngredientesProduccionAsync();
+        Task<List<ProduccionProductoDetalle>> GetIngredientesProduccionAsync(IEnumerable<int>? productosExcluidos = null);
         Task AgregarProduccionStockAsync(int idProducto, int cantidad);
         Task<List<ProduccionStock>> GetProduccionStockAsync();
         Task QuitarProduccionStockAsync(int id);
-        Task<List<ResumenProductoItem>> GetProduccionCombinadaResumenAsync();
+        Task<List<ResumenProductoItem>> GetProduccionCombinadaResumenAsync(IEnumerable<int>? productosExcluidos = null);
     }
 }

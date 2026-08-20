@@ -32,19 +32,62 @@ namespace Panaderia.MVC.Controllers
             _insumoService = insumoService;
         }
 
+        // Cookie de sesión con los productos destildados en el dashboard de Producción.
+        // Se comparte con el planificador y la impresión para que todo muestre lo mismo.
+        private const string CookieExcluidos = "mv_prod_excluidos";
+
+        private List<int> LeerProductosExcluidos()
+        {
+            var cookie = Request.Cookies[CookieExcluidos];
+            if (string.IsNullOrWhiteSpace(cookie)) return new List<int>();
+
+            return cookie.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(s => int.TryParse(s, out var id) ? id : 0)
+                .Where(id => id > 0)
+                .Distinct()
+                .ToList();
+        }
+
+        private void GuardarProductosExcluidos(IEnumerable<int> ids)
+        {
+            var lista = ids.Distinct().ToList();
+            if (!lista.Any())
+            {
+                Response.Cookies.Delete(CookieExcluidos);
+                return;
+            }
+
+            // Cookie de sesión (sin Expires): se limpia al cerrar el navegador
+            Response.Cookies.Append(CookieExcluidos, string.Join(',', lista), new CookieOptions
+            {
+                HttpOnly = true,
+                SameSite = SameSiteMode.Lax,
+                IsEssential = true
+            });
+        }
+
         public async Task<IActionResult> Produccion()
         {
-            var (porProducto, porBolsa, porSubReceta, totalAgua) = await _pedidoService.GetResumenProduccionAsync();
+            var excluidos = LeerProductosExcluidos();
+
+            // Sin filtrar: alimenta la tabla de selección (los excluidos siguen visibles, destildados)
+            var resumenTodos = await _pedidoService.GetResumenProduccionAsync();
+
+            // Filtrado: alimenta los totales, las sub-recetas y el agua
+            var resumen = resumenTodos;
+            if (excluidos.Any())
+                resumen = await _pedidoService.GetResumenProduccionAsync(excluidos);
+
             var vm = new ProduccionViewModel
             {
-                PorProducto = porProducto,
-                PorBolsa = porBolsa,
-                PorSubReceta = porSubReceta,
-                TotalAgua = totalAgua
+                PorProducto = resumen.PorProducto,
+                PorBolsa = resumen.PorBolsa,
+                PorSubReceta = resumen.PorSubReceta,
+                TotalAgua = resumen.TotalAgua
             };
 
             // Filas de pedidos pendientes
-            foreach (var item in vm.PorProducto)
+            foreach (var item in resumenTodos.PorProducto)
             {
                 var receta = await _recetaService.GetByProductoIdAsync(item.IdProducto);
                 if (receta != null)
@@ -56,7 +99,7 @@ namespace Panaderia.MVC.Controllers
                         NombreProducto = item.NombreProducto,
                         CantidadSugerida = item.CantidadTotal,
                         CantidadAProducir = item.CantidadTotal,
-                        Seleccionado = true,
+                        Seleccionado = !excluidos.Contains(item.IdProducto),
                         EsStock = false,
                         IdProduccionStock = 0
                     });
@@ -77,12 +120,15 @@ namespace Panaderia.MVC.Controllers
                         NombreProducto = b.Producto.NombreVisible,
                         CantidadSugerida = b.Cantidad,
                         CantidadAProducir = b.Cantidad,
-                        Seleccionado = true,
+                        Seleccionado = !excluidos.Contains(b.IdProducto),
                         EsStock = true,
                         IdProduccionStock = b.Id
                     });
                 }
             }
+
+            ViewBag.HayExcluidos = excluidos.Any();
+            ViewBag.CantidadExcluidos = excluidos.Count;
 
             // Dropdown de productos con receta para "producir para stock"
             var recetas = await _recetaService.GetAllAsync();
@@ -125,6 +171,33 @@ namespace Panaderia.MVC.Controllers
             return RedirectToAction(nameof(Produccion));
         }
 
+        // POST: aplica los tildes a los cálculos (totales, sub-recetas, agua, planificador e impresión)
+        // sin confirmar la producción ni descontar stock.
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult AplicarSeleccionProduccion(ProduccionViewModel vm)
+        {
+            // Un producto queda excluido solo si TODAS sus filas están destildadas
+            // (puede aparecer dos veces: por pedidos y por stock).
+            var excluidos = vm.ItemsSeleccionables
+                .GroupBy(i => i.IdProducto)
+                .Where(g => g.All(i => !i.Seleccionado))
+                .Select(g => g.Key)
+                .ToList();
+
+            GuardarProductosExcluidos(excluidos);
+            return RedirectToAction(nameof(Produccion));
+        }
+
+        // POST: vuelve a incluir todos los productos en los cálculos
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult MostrarTodosProduccion()
+        {
+            GuardarProductosExcluidos(Array.Empty<int>());
+            return RedirectToAction(nameof(Produccion));
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ConfirmarProduccion(ProduccionViewModel vm)
@@ -152,8 +225,10 @@ namespace Panaderia.MVC.Controllers
         [HttpGet]
         public async Task<IActionResult> PlanificarAmasadas()
         {
-            var productos = await _pedidoService.GetIngredientesProduccionAsync();
-            var (_, _, porSubReceta, _) = await _pedidoService.GetResumenProduccionAsync();
+            var excluidos = LeerProductosExcluidos();
+            var productos = await _pedidoService.GetIngredientesProduccionAsync(excluidos);
+            var (_, _, porSubReceta, _) = await _pedidoService.GetResumenProduccionAsync(excluidos);
+            ViewBag.CantidadExcluidos = excluidos.Count;
             var jsonOptions = new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
@@ -165,8 +240,9 @@ namespace Panaderia.MVC.Controllers
 
         public async Task<IActionResult> ImprimirProduccion(string? anteriores = null)
         {
-            var porProducto = await _pedidoService.GetProduccionCombinadaResumenAsync();
-            var (_, _, porSubReceta, _) = await _pedidoService.GetResumenProduccionAsync();
+            var excluidos = LeerProductosExcluidos();
+            var porProducto = await _pedidoService.GetProduccionCombinadaResumenAsync(excluidos);
+            var (_, _, porSubReceta, _) = await _pedidoService.GetResumenProduccionAsync(excluidos);
 
             // Cantidad "anterior" ingresada en el dashboard, por sub-receta.
             // Formato del parametro: "idSubReceta:gramos,idSubReceta:gramos"

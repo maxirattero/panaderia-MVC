@@ -389,9 +389,11 @@ namespace Panaderia.Services.Implementations
             await _context.SaveChangesAsync();
         }
 
-        // Producción combinada: pedidos pendientes + buffer de stock, sumado por producto
-        private async Task<List<(int IdProducto, Producto Producto, int Cantidad)>> GetProduccionCombinadaAsync()
+        // Producción combinada: pedidos pendientes + buffer de stock, sumado por producto.
+        // Los productos destildados en el dashboard de Producción quedan fuera.
+        private async Task<List<(int IdProducto, Producto Producto, int Cantidad)>> GetProduccionCombinadaAsync(IEnumerable<int>? productosExcluidos = null)
         {
+            var excluidos = productosExcluidos?.ToHashSet() ?? new HashSet<int>();
             var detalles = await _context.DetallesPedido
                 .Include(d => d.Producto).ThenInclude(p => p.Categoria)
                 .Include(d => d.Producto).ThenInclude(p => p.Formato)
@@ -422,6 +424,7 @@ namespace Panaderia.Services.Implementations
             }
 
             return acumulado
+                .Where(kv => !excluidos.Contains(kv.Key))
                 .Select(kv => (IdProducto: kv.Key, kv.Value.Producto, kv.Value.Cantidad))
                 .OrderBy(x => x.Producto.Categoria?.Nombre)
                 .ThenBy(x => x.Producto.Masa)
@@ -429,9 +432,9 @@ namespace Panaderia.Services.Implementations
         }
 
         // Resumen combinado por producto (pedidos + stock) para impresión de plan
-        public async Task<List<ResumenProductoItem>> GetProduccionCombinadaResumenAsync()
+        public async Task<List<ResumenProductoItem>> GetProduccionCombinadaResumenAsync(IEnumerable<int>? productosExcluidos = null)
         {
-            var combinada = await GetProduccionCombinadaAsync();
+            var combinada = await GetProduccionCombinadaAsync(productosExcluidos);
             return combinada
                 .Select(x => new ResumenProductoItem(x.IdProducto, x.Producto.NombreVisible, x.Cantidad))
                 .ToList();
@@ -439,15 +442,19 @@ namespace Panaderia.Services.Implementations
 
         // Resumen de producción (pedidos no entregados, anulados excluidos por query filter).
         // PorProducto y PorBolsa son solo de pedidos; sub-recetas y agua reflejan produccion completa (pedidos + stock).
-        public async Task<(List<ResumenProductoItem> PorProducto, List<ResumenBolsaItem> PorBolsa, List<ResumenSubRecetaItem> PorSubReceta, decimal TotalAgua)> GetResumenProduccionAsync()
+        public async Task<(List<ResumenProductoItem> PorProducto, List<ResumenBolsaItem> PorBolsa, List<ResumenSubRecetaItem> PorSubReceta, decimal TotalAgua)> GetResumenProduccionAsync(IEnumerable<int>? productosExcluidos = null)
         {
-            var detalles = await _context.DetallesPedido
+            var excluidos = productosExcluidos?.ToHashSet() ?? new HashSet<int>();
+
+            var detalles = (await _context.DetallesPedido
                 .Include(d => d.Producto)
                     .ThenInclude(p => p.Categoria)
                 .Include(d => d.Producto)
                     .ThenInclude(p => p.Formato)
                 .Where(d => d.Pedido.Estado != EstadoPedido.Entregado)
-                .ToListAsync();
+                .ToListAsync())
+                .Where(d => !excluidos.Contains(d.IdProducto))
+                .ToList();
 
             var porProducto = detalles
                 .GroupBy(d => d.IdProducto)
@@ -469,7 +476,7 @@ namespace Panaderia.Services.Implementations
                 .ToList();
 
             // Produccion completa (pedidos + stock) para sub-recetas y agua
-            var combinada = await GetProduccionCombinadaAsync();
+            var combinada = await GetProduccionCombinadaAsync(productosExcluidos);
 
             var porSubReceta = new List<ResumenSubRecetaItem>();
             decimal totalAgua = 0m;
@@ -610,9 +617,9 @@ namespace Panaderia.Services.Implementations
             }
         }
 
-        public async Task<List<ProduccionProductoDetalle>> GetIngredientesProduccionAsync()
+        public async Task<List<ProduccionProductoDetalle>> GetIngredientesProduccionAsync(IEnumerable<int>? productosExcluidos = null)
         {
-            var combinada = await GetProduccionCombinadaAsync();
+            var combinada = await GetProduccionCombinadaAsync(productosExcluidos);
 
             var resultado = new List<ProduccionProductoDetalle>();
 
@@ -685,8 +692,8 @@ namespace Panaderia.Services.Implementations
                     }
                 }
 
-                var masaKey = $"{(item.Producto.Masa.HasValue ? ((int)item.Producto.Masa.Value).ToString() : "x")}-{(item.Producto.Variedad.HasValue ? ((int)item.Producto.Variedad.Value).ToString() : "")}";
-                var nombreMasa = (item.Producto.Masa?.ToString() ?? "Sin masa") + (item.Producto.Variedad.HasValue ? " " + item.Producto.Variedad.Value.ToString() : "");
+                var masaKey = $"{(int)item.Producto.Masa}-{(item.Producto.Variedad.HasValue ? ((int)item.Producto.Variedad.Value).ToString() : "")}";
+                var nombreMasa = item.Producto.Masa.ToString() + (item.Producto.Variedad.HasValue ? " " + item.Producto.Variedad.Value.ToString() : "");
 
                 resultado.Add(new ProduccionProductoDetalle
                 {

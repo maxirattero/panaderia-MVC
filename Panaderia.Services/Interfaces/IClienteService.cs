@@ -22,7 +22,8 @@ namespace Panaderia.Services.Interfaces
         //verificar si un cliente existe por id
         Task<bool> ExistsAsync(int id);
 
-        //buscar un cliente por teléfono (comparación por dígitos, ignora espacios y guiones)
+        //buscar un cliente por teléfono: compara los últimos 6 dígitos, así coincide
+        //con o sin característica, con o sin el 15, y con cualquier formato de escritura
         Task<Cliente?> GetByTelefonoAsync(string telefono);
     }
 }

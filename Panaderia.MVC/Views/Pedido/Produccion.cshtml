@@ -22,6 +22,21 @@
 </div>
 
 <div style="max-width: 900px;">
+    @if (ViewBag.HayExcluidos == true)
+    {
+        <div class="alert alert-warning d-flex align-items-center gap-2 mb-4">
+            <span class="material-symbols-outlined">visibility_off</span>
+            <div class="flex-grow-1">
+                Hay <strong>@ViewBag.CantidadExcluidos producto(s) excluidos</strong> de los cálculos.
+                Los totales, las sub-recetas, el agua, el planificador y la impresión no los incluyen.
+            </div>
+            <form asp-action="MostrarTodosProduccion" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-sm btn-outline-secondary text-nowrap">Incluir todos</button>
+            </form>
+        </div>
+    }
+
     <div class="row g-4">
         <div class="col-md-6">
             <div class="card card-custom p-4">
@@ -176,7 +191,11 @@
     }
 
     <div class="card card-custom p-4 mt-4">
-        <h5 class="fw-semibold mb-3">Confirmar producción</h5>
+        <h5 class="fw-semibold mb-1">Confirmar producción</h5>
+        <p class="text-muted small mb-3">
+            Destildá lo que no vayas a hacer y tocá <strong>Actualizar cálculos</strong>: se recalculan los
+            totales, las sub-recetas y el agua, y queda igual en el planificador y la impresión.
+        </p>
 
         <div class="border rounded p-3 mb-3" style="background-color: var(--mv-background);">
             <label class="form-label fw-semibold mb-2">Producir para stock (sin pedido)</label>
@@ -222,7 +241,7 @@
                         @for (int i = 0; i < Model.ItemsSeleccionables.Count; i++)
                         {
                             var item = Model.ItemsSeleccionables[i];
-                            <tr>
+                            <tr class="@(item.Seleccionado ? "" : "fila-excluida")">
                                 <td>
                                     <input type="hidden" name="ItemsSeleccionables[@i].IdProducto" value="@item.IdProducto" />
                                     <input type="hidden" name="ItemsSeleccionables[@i].IdReceta" value="@item.IdReceta" />
@@ -270,9 +289,15 @@
             </div>
             @if (Model.ItemsSeleccionables.Any())
             {
-                <button type="submit" class="btn btn-mv-primary d-inline-flex align-items-center gap-2">
-                    <span class="material-symbols-outlined">check_circle</span>Confirmar producción
-                </button>
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="submit" formaction="@Url.Action("AplicarSeleccionProduccion", "Pedido")"
+                            class="btn btn-mv-secondary d-inline-flex align-items-center gap-2">
+                        <span class="material-symbols-outlined">calculate</span>Actualizar cálculos
+                    </button>
+                    <button type="submit" class="btn btn-mv-primary d-inline-flex align-items-center gap-2">
+                        <span class="material-symbols-outlined">check_circle</span>Confirmar producción
+                    </button>
+                </div>
             }
             else
             {
@@ -282,8 +307,29 @@
     </div>
 </div>
 
+<style>
+    /* Fila de un producto excluido de los cálculos */
+    .fila-excluida td {
+        opacity: 0.5;
+        text-decoration: line-through;
+    }
+
+    .fila-excluida td:first-child,
+    .fila-excluida td:last-child {
+        text-decoration: none;
+    }
+</style>
+
 @section Scripts {
     <script>
+        // Marca visualmente la fila al tildar/destildar, antes de recargar
+        document.querySelectorAll('input[type="checkbox"][name$=".Seleccionado"]').forEach(function (chk) {
+            chk.addEventListener('change', function () {
+                const fila = chk.closest('tr');
+                if (fila) fila.classList.toggle('fila-excluida', !chk.checked);
+            });
+        });
+
         function imprimirPlan(e) {
             const params = [];
             document.querySelectorAll('.sr-card').forEach(card => {
