@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Panaderia.Models.Data;
@@ -11,9 +12,11 @@ using Panaderia.Models.Data;
 namespace Panaderia.Models.Migrations
 {
     [DbContext(typeof(PanaderiaContext))]
-    partial class PanaderiaContextModelSnapshot : ModelSnapshot
+    [Migration("20260820053345_MasaOpcionalProducto")]
+    partial class MasaOpcionalProducto
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -422,38 +425,6 @@ namespace Panaderia.Models.Migrations
                     b.ToTable("DetallesPedido");
                 });
 
-            modelBuilder.Entity("Panaderia.Models.Entities.Etiqueta", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("FechaCreacion")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("FechaModificacion")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Icono")
-                        .IsRequired()
-                        .HasMaxLength(40)
-                        .HasColumnType("character varying(40)");
-
-                    b.Property<string>("Nombre")
-                        .IsRequired()
-                        .HasMaxLength(40)
-                        .HasColumnType("character varying(40)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Nombre")
-                        .IsUnique();
-
-                    b.ToTable("Etiquetas");
-                });
-
             modelBuilder.Entity("Panaderia.Models.Entities.Formato", b =>
                 {
                     b.Property<int>("Id")
@@ -651,21 +622,6 @@ namespace Panaderia.Models.Migrations
                     b.HasIndex("IdTamano");
 
                     b.ToTable("Productos");
-                });
-
-            modelBuilder.Entity("Panaderia.Models.Entities.ProductoEtiqueta", b =>
-                {
-                    b.Property<int>("IdProducto")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("IdEtiqueta")
-                        .HasColumnType("integer");
-
-                    b.HasKey("IdProducto", "IdEtiqueta");
-
-                    b.HasIndex("IdEtiqueta");
-
-                    b.ToTable("ProductoEtiquetas");
                 });
 
             modelBuilder.Entity("Panaderia.Models.Entities.ProductoImagen", b =>
@@ -1118,25 +1074,6 @@ namespace Panaderia.Models.Migrations
                     b.Navigation("Tamano");
                 });
 
-            modelBuilder.Entity("Panaderia.Models.Entities.ProductoEtiqueta", b =>
-                {
-                    b.HasOne("Panaderia.Models.Entities.Etiqueta", "Etiqueta")
-                        .WithMany()
-                        .HasForeignKey("IdEtiqueta")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Panaderia.Models.Entities.Producto", "Producto")
-                        .WithMany("ProductoEtiquetas")
-                        .HasForeignKey("IdProducto")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Etiqueta");
-
-                    b.Navigation("Producto");
-                });
-
             modelBuilder.Entity("Panaderia.Models.Entities.ProductoImagen", b =>
                 {
                     b.HasOne("Panaderia.Models.Entities.Producto", "Producto")
@@ -1244,11 +1181,6 @@ namespace Panaderia.Models.Migrations
                     b.Navigation("Detalles");
 
                     b.Navigation("Reportes");
-                });
-
-            modelBuilder.Entity("Panaderia.Models.Entities.Producto", b =>
-                {
-                    b.Navigation("ProductoEtiquetas");
                 });
 
             modelBuilder.Entity("Panaderia.Models.Entities.Receta", b =>

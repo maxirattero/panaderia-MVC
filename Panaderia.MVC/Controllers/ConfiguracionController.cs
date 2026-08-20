@@ -10,15 +10,18 @@ namespace Panaderia.MVC.Controllers
         private readonly ICategoriaService _categoriaService;
         private readonly IFormatoService _formatoService;
         private readonly ITamanoService _tamanoService;
+        private readonly IEtiquetaService _etiquetaService;
 
         public ConfiguracionController(
             ICategoriaService categoriaService,
             IFormatoService formatoService,
-            ITamanoService tamanoService)
+            ITamanoService tamanoService,
+            IEtiquetaService etiquetaService)
         {
             _categoriaService = categoriaService;
             _formatoService = formatoService;
             _tamanoService = tamanoService;
+            _etiquetaService = etiquetaService;
         }
 
         // GET: Configuracion
@@ -28,7 +31,8 @@ namespace Panaderia.MVC.Controllers
             {
                 Categorias = await _categoriaService.GetAllAsync(),
                 Formatos = await _formatoService.GetAllAsync(),
-                Tamanos = await _tamanoService.GetAllAsync()
+                Tamanos = await _tamanoService.GetAllAsync(),
+                Etiquetas = await _etiquetaService.GetAllAsync()
             };
             return View(vm);
         }
@@ -73,6 +77,30 @@ namespace Panaderia.MVC.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        // POST: Agregar Etiqueta de tienda
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CrearEtiqueta(string nombre, string? icono)
+        {
+            if (string.IsNullOrWhiteSpace(nombre))
+                return RedirectToAction(nameof(Index));
+
+            if (await _etiquetaService.ExisteNombreAsync(nombre))
+            {
+                TempData["EtiquetaError"] = $"Ya existe una etiqueta llamada «{nombre.Trim()}».";
+                return RedirectToAction(nameof(Index));
+            }
+
+            await _etiquetaService.CreateAsync(new Etiqueta
+            {
+                Nombre = nombre.Trim(),
+                Icono = string.IsNullOrWhiteSpace(icono) ? "grain" : icono,
+                FechaCreacion = DateTime.UtcNow
+            });
+
+            return RedirectToAction(nameof(Index));
+        }
+
         // POST: Eliminar Categoria
         [HttpPost, ActionName("EliminarCategoria")]
         [ValidateAntiForgeryToken]
@@ -97,6 +125,15 @@ namespace Panaderia.MVC.Controllers
         public async Task<IActionResult> EliminarTamano(int id)
         {
             await _tamanoService.DeleteAsync(id);
+            return RedirectToAction(nameof(Index));
+        }
+
+        // POST: Eliminar Etiqueta (se quita también de los productos que la tenían)
+        [HttpPost, ActionName("EliminarEtiqueta")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EliminarEtiqueta(int id)
+        {
+            await _etiquetaService.DeleteAsync(id);
             return RedirectToAction(nameof(Index));
         }
     }

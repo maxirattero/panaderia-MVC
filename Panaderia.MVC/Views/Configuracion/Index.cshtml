@@ -3,19 +3,47 @@
 
 @{
     ViewData["Title"] = "Configuración";
+
+    // Íconos de Material Symbols disponibles para las etiquetas de tienda
+    var iconosDisponibles = new Dictionary<string, string>
+    {
+        ["grain"]                 = "Espiga (masa madre)",
+        ["eco"]                   = "Hoja (natural / vegano)",
+        ["spa"]                   = "Flor (integral)",
+        ["nutrition"]             = "Nutrición",
+        ["block"]                 = "Sin... (sin gluten / sin azúcar)",
+        ["local_fire_department"] = "Horno",
+        ["schedule"]              = "Reloj (fermentación)",
+        ["favorite"]              = "Corazón (recomendado)",
+        ["star"]                  = "Estrella (destacado)",
+        ["water_drop"]            = "Gota",
+        ["egg_alt"]               = "Huevo",
+        ["cookie"]                = "Galleta",
+        ["set_meal"]              = "Plato",
+        ["ac_unit"]               = "Copo (congelado)",
+        ["verified"]              = "Verificado"
+    };
 }
     <!-- Header Section -->
     <div class="row align-items-end mb-5 gy-4">
         <div class="col-md-7">
             <h1 class="display-6 fw-bold titulo-pagina mb-1">Configuración</h1>
-            <p class="text-secondary m-0">Administra las categorías, formatos y tamaños del catálogo.</p>
+            <p class="text-secondary m-0">Administra las categorías, formatos, tamaños y etiquetas del catálogo.</p>
         </div>
     </div>
+
+    @if (TempData["EtiquetaError"] != null)
+    {
+        <div class="alert alert-danger d-flex align-items-center gap-2">
+            <span class="material-symbols-outlined">error</span>
+            @TempData["EtiquetaError"]
+        </div>
+    }
 
     <div class="row g-4">
 
         <!-- Categorías -->
-        <div class="col-lg-4">
+        <div class="col-lg-3 col-md-6">
             <div class="card-custom overflow-hidden">
                 <div class="p-3 border-bottom">
                     <h5 class="fw-bold mb-0">Categorías</h5>
@@ -60,7 +88,7 @@
         </div>
 
         <!-- Formatos -->
-        <div class="col-lg-4">
+        <div class="col-lg-3 col-md-6">
             <div class="card-custom overflow-hidden">
                 <div class="p-3 border-bottom">
                     <h5 class="fw-bold mb-0">Formatos</h5>
@@ -105,7 +133,7 @@
         </div>
 
         <!-- Tamaños -->
-        <div class="col-lg-4">
+        <div class="col-lg-3 col-md-6">
             <div class="card-custom overflow-hidden">
                 <div class="p-3 border-bottom">
                     <h5 class="fw-bold mb-0">Tamaños</h5>
@@ -149,4 +177,79 @@
             </div>
         </div>
 
+        <!-- Etiquetas de tienda -->
+        <div class="col-lg-3 col-md-6">
+            <div class="card-custom overflow-hidden">
+                <div class="p-3 border-bottom">
+                    <h5 class="fw-bold mb-0">Etiquetas de tienda</h5>
+                    <small class="text-secondary">Masa madre, Vegano, Sin gluten...</small>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-custom table-hover m-0">
+                        <tbody>
+                            @foreach (var etiqueta in Model.Etiquetas)
+                            {
+                                <tr>
+                                    <td>
+                                        <span class="badge-tienda">
+                                            <span class="material-symbols-outlined">@etiqueta.Icono</span>
+                                            @etiqueta.Nombre
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-danger"
+                                                title="Eliminar"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#deleteModal"
+                                                data-id="@etiqueta.Id"
+                                                data-nombre="@etiqueta.Nombre"
+                                                data-delete-url="@Url.Action("EliminarEtiqueta", "Configuracion", new { id = etiqueta.Id })"
+                                                data-token="@Antiforgery.GetAndStoreTokens(Context).RequestToken">
+                                            <span class="material-symbols-outlined">delete</span>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="p-3 border-top">
+                    <form asp-action="CrearEtiqueta" asp-controller="Configuracion" method="post">
+                        @Html.AntiForgeryToken()
+                        <select name="icono" class="form-select mb-2" id="selectIcono">
+                            @foreach (var ico in iconosDisponibles)
+                            {
+                                <option value="@ico.Key">@ico.Value</option>
+                            }
+                        </select>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <span class="material-symbols-outlined" id="previewIcono">grain</span>
+                            </span>
+                            <input type="text" name="nombre" class="form-control" placeholder="Nueva etiqueta..." maxlength="40" />
+                            <button type="submit" class="btn btn-mv-primary d-flex align-items-center gap-1">
+                                <span class="material-symbols-outlined">add</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
     </div>
+
+@section Scripts {
+    <script>
+        // Vista previa del ícono elegido para la nueva etiqueta
+        (function () {
+            const select = document.getElementById('selectIcono');
+            const preview = document.getElementById('previewIcono');
+            if (!select || !preview) return;
+
+            select.addEventListener('change', function () {
+                preview.textContent = select.value;
+            });
+        })();
+    </script>
+}

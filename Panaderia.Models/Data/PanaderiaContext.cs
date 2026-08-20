@@ -31,6 +31,8 @@ namespace Panaderia.Models.Data
         public DbSet<SubRecetaDetalle> SubRecetaDetalles { get; set; }
         public DbSet<ProduccionStock> ProduccionStock { get; set; }
         public DbSet<ProductoImagen> ProductoImagenes { get; set; }
+        public DbSet<Etiqueta> Etiquetas { get; set; }
+        public DbSet<ProductoEtiqueta> ProductoEtiquetas { get; set; }
         public DbSet<DataProtectionKey> DataProtectionKeys { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -171,6 +173,23 @@ namespace Panaderia.Models.Data
                 .HasOne(i => i.Producto)
                 .WithMany()
                 .HasForeignKey(i => i.IdProducto)
+                .OnDelete(DeleteBehavior.Cascade);
+            // Etiqueta: nombre único (evita duplicados tipo "Vegano" / "vegano")
+            modelBuilder.Entity<Etiqueta>()
+                .HasIndex(e => e.Nombre)
+                .IsUnique();
+            // ProductoEtiqueta: clave compuesta, ambas FKs en cascade (la asignación no guarda historial)
+            modelBuilder.Entity<ProductoEtiqueta>()
+                .HasKey(pe => new { pe.IdProducto, pe.IdEtiqueta });
+            modelBuilder.Entity<ProductoEtiqueta>()
+                .HasOne(pe => pe.Producto)
+                .WithMany(p => p.ProductoEtiquetas)
+                .HasForeignKey(pe => pe.IdProducto)
+                .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<ProductoEtiqueta>()
+                .HasOne(pe => pe.Etiqueta)
+                .WithMany()
+                .HasForeignKey(pe => pe.IdEtiqueta)
                 .OnDelete(DeleteBehavior.Cascade);
             //filtro global consulta - soft delete
             modelBuilder.Entity<Pedido>().HasQueryFilter(p => !p.Anulado);

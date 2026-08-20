@@ -12,26 +12,35 @@ namespace Panaderia.MVC.Controllers
         private readonly IFormatoService _formatoService;
         private readonly ITamanoService _tamanoService;
         private readonly IRecetaService _recetaService;
+        private readonly IEtiquetaService _etiquetaService;
 
         public ProductoController(
             IProductoService productoService,
             ICategoriaService categoriaService,
             IFormatoService formatoService,
             ITamanoService tamanoService,
-            IRecetaService recetaService)
+            IRecetaService recetaService,
+            IEtiquetaService etiquetaService)
         {
             _productoService = productoService;
             _categoriaService = categoriaService;
             _formatoService = formatoService;
             _tamanoService = tamanoService;
             _recetaService = recetaService;
+            _etiquetaService = etiquetaService;
         }
 
-        private async Task CargarDropdowns(Producto? producto = null)
+        private async Task CargarDropdowns(Producto? producto = null, IEnumerable<int>? etiquetasSeleccionadas = null)
         {
             ViewBag.Categorias = new SelectList(await _categoriaService.GetAllAsync(), "Id", "Nombre", producto?.IdCategoria);
             ViewBag.Formatos = new SelectList(await _formatoService.GetAllAsync(), "Id", "Descripcion", producto?.IdFormato);
             ViewBag.Tamanos = new SelectList(await _tamanoService.GetAllAsync(), "Id", "Descripcion", producto?.IdTamano);
+
+            ViewBag.Etiquetas = await _etiquetaService.GetAllAsync();
+            ViewBag.EtiquetasSeleccionadas = etiquetasSeleccionadas?.ToList()
+                ?? (producto is { Id: > 0 }
+                        ? await _etiquetaService.GetIdsPorProductoAsync(producto.Id)
+                        : new List<int>());
         }
 
         // GET: Productos
@@ -68,16 +77,21 @@ namespace Panaderia.MVC.Controllers
         //POST : Crear Producto
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<ActionResult> Create(Producto producto)
+        public async Task<ActionResult> Create(Producto producto, int[]? idsEtiquetas, IFormFile? archivoImagen)
         {
             ModelState.Remove(nameof(Producto.Nombre));
             if (ModelState.IsValid)
             {
                 producto.FechaCreacion = DateTime.UtcNow;
                 await _productoService.CreateAsync(producto);
+                await _etiquetaService.AsignarAProductoAsync(producto.Id, idsEtiquetas ?? Array.Empty<int>());
+
+                var errorImagen = await GuardarImagenSubidaAsync(producto.Id, archivoImagen);
+                if (errorImagen != null) TempData["ImagenError"] = errorImagen;
+
                 return RedirectToAction(nameof(Index));
             }
-            await CargarDropdowns(producto);
+            await CargarDropdowns(producto, idsEtiquetas);
             ViewBag.CostoUnidad = 0m;
             return View(producto);
         }
@@ -104,7 +118,7 @@ namespace Panaderia.MVC.Controllers
         //POST: Editar Producto
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, Producto producto)
+        public async Task<IActionResult> Edit(int id, Producto producto, int[]? idsEtiquetas, IFormFile? archivoImagen)
         {
             if (id != producto.Id) return NotFound();
 
@@ -115,9 +129,15 @@ namespace Panaderia.MVC.Controllers
                 if (existe == null) return NotFound();
 
                 await _productoService.UpdateAsync(producto);
+                await _etiquetaService.AsignarAProductoAsync(id, idsEtiquetas ?? Array.Empty<int>());
+
+                // Si subió un archivo, pisa la ImagenURL del form (GuardarImagenAsync la reescribe)
+                var errorImagen = await GuardarImagenSubidaAsync(id, archivoImagen);
+                if (errorImagen != null) TempData["ImagenError"] = errorImagen;
+
                 return RedirectToAction(nameof(Index));
             }
-            await CargarDropdowns(producto);
+            await CargarDropdowns(producto, idsEtiquetas);
             var recetaEdit = await _recetaService.GetByProductoIdAsync(producto.Id);
             ViewBag.CostoUnidad = recetaEdit?.CostoPorUnidad ?? 0m;
             return View(producto);
@@ -159,7 +179,28 @@ namespace Panaderia.MVC.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        //POST: Subir imagen de producto (se guarda en la DB, tabla ProductoImagenes)
+        // Valida y guarda una imagen subida. Devuelve el mensaje de error, o null si salió bien
+        // (o si no vino archivo: es válido, significa que no se quiso cambiar la imagen).
+        private async Task<string?> GuardarImagenSubidaAsync(int idProducto, IFormFile? imagen)
+        {
+            if (imagen == null || imagen.Length == 0) return null;
+
+            var formatosPermitidos = new[] { "image/jpeg", "image/png", "image/webp" };
+            if (!formatosPermitidos.Contains(imagen.ContentType))
+                return "Formato no soportado. Usá JPG, PNG o WebP.";
+
+            const int maxBytes = 2 * 1024 * 1024; // 2 MB
+            if (imagen.Length > maxBytes)
+                return "La imagen supera los 2 MB. Achicala o comprimila e intentá de nuevo.";
+
+            using var ms = new MemoryStream();
+            await imagen.CopyToAsync(ms);
+            await _productoService.GuardarImagenAsync(idProducto, ms.ToArray(), imagen.ContentType);
+
+            return null;
+        }
+
+        //POST: Subir imagen de producto desde el listado (se guarda en la DB, tabla ProductoImagenes)
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> SubirImagen(int id, IFormFile? imagen)
@@ -170,25 +211,11 @@ namespace Panaderia.MVC.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            var formatosPermitidos = new[] { "image/jpeg", "image/png", "image/webp" };
-            if (!formatosPermitidos.Contains(imagen.ContentType))
-            {
-                TempData["ImagenError"] = "Formato no soportado. Usá JPG, PNG o WebP.";
-                return RedirectToAction(nameof(Index));
-            }
-
-            const int maxBytes = 2 * 1024 * 1024; // 2 MB
-            if (imagen.Length > maxBytes)
-            {
-                TempData["ImagenError"] = "La imagen supera los 2 MB. Achicala o comprimila e intentá de nuevo.";
-                return RedirectToAction(nameof(Index));
-            }
-
-            using var ms = new MemoryStream();
-            await imagen.CopyToAsync(ms);
-            await _productoService.GuardarImagenAsync(id, ms.ToArray(), imagen.ContentType);
+            var error = await GuardarImagenSubidaAsync(id, imagen);
+            if (error != null) TempData["ImagenError"] = error;
 
             return RedirectToAction(nameof(Index));
         }
+
     }
 }

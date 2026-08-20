@@ -21,6 +21,7 @@ namespace Panaderia.Services.Implementations
                 .Include(p => p.Categoria)
                 .Include(p => p.Formato)
                 .Include(p => p.Tamano)
+                .Include(p => p.ProductoEtiquetas).ThenInclude(pe => pe.Etiqueta)
                 .ToListAsync();
 
             var comparer = StringComparer.Create(new System.Globalization.CultureInfo("es-AR"), ignoreCase: true);
@@ -38,6 +39,7 @@ namespace Panaderia.Services.Implementations
                 .Include(p => p.Categoria)
                 .Include(p => p.Formato)
                 .Include(p => p.Tamano)
+                .Include(p => p.ProductoEtiquetas).ThenInclude(pe => pe.Etiqueta)
                 .FirstOrDefaultAsync(x => x.Id == id);
         }
 

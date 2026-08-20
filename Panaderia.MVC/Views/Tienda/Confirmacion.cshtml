@@ -6,6 +6,7 @@
     var esRetiro = (ViewBag.Entrega as string) == "retiro";
     var esTransferencia = (ViewBag.MedioPago as string) == "transferencia";
     var fechaTexto = fechaEntrega.HasValue ? fechaEntrega.Value.ToString("dddd d 'de' MMMM", ar) : "el sábado";
+    var linkWhatsApp = ViewBag.LinkWhatsApp as string;
 }
 
 <div class="tienda-confirmacion">
@@ -41,7 +42,42 @@
         </div>
     }
 
-    <p class="conf-texto">Te vamos a escribir por WhatsApp para confirmar.</p>
+    @if (!string.IsNullOrEmpty(linkWhatsApp))
+    {
+        <p class="conf-texto">
+            Estamos abriendo WhatsApp con el detalle de tu pedido.<br />
+            <b>Tocá enviar</b> para que nos llegue.
+        </p>
 
-    <a class="btn-mv-primary carrito-cta" asp-controller="Tienda" asp-action="Index">Volver a la tienda</a>
+        <a id="btnWhatsApp" class="btn-whatsapp carrito-cta" href="@linkWhatsApp" target="_blank" rel="noopener">
+            <span class="material-symbols-outlined">chat</span> Enviar pedido por WhatsApp
+        </a>
+        <a class="btn-mv-secondary carrito-cta" asp-controller="Tienda" asp-action="Index">Volver a la tienda</a>
+    }
+    else
+    {
+        <p class="conf-texto">Te vamos a escribir por WhatsApp para confirmar.</p>
+        <a class="btn-mv-primary carrito-cta" asp-controller="Tienda" asp-action="Index">Volver a la tienda</a>
+    }
 </div>
+
+@section Scripts {
+    <script>
+        // Abrimos WhatsApp solo. Si el navegador bloquea el popup, queda el botón visible.
+        (function () {
+            const link = document.getElementById('btnWhatsApp');
+            if (!link) return;
+
+            // Una sola vez por pedido: si el cliente recarga, no se vuelve a abrir
+            const clave = 'mv_wa_@ViewBag.PedidoId';
+            try {
+                if (sessionStorage.getItem(clave)) return;
+                sessionStorage.setItem(clave, '1');
+            } catch (e) { /* modo privado: seguimos igual */ }
+
+            setTimeout(function () {
+                window.open(link.href, '_blank');
+            }, 900);
+        })();
+    </script>
+}

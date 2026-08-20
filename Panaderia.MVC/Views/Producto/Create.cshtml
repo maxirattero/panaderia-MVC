@@ -12,7 +12,7 @@
 </div>
 
 <div class="card card-custom p-4 mb-4">
-    <form asp-action="Create">
+    <form asp-action="Create" enctype="multipart/form-data">
         <div class="row g-4">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
@@ -38,7 +38,7 @@
 
             <!-- Masa -->
             <div class="col-md-6">
-                <label asp-for="Masa" class="form-label small fw-bold text-muted">Masa <span class="text-danger">*</span></label>
+                <label asp-for="Masa" class="form-label small fw-bold text-muted">Masa <small class="text-secondary">(opcional en «Otros»)</small></label>
                 <select asp-for="Masa" asp-items="Html.GetEnumSelectList<Masa>()" class="form-select">
                     <option value="">-- Seleccionar masa --</option>
                 </select>
@@ -101,10 +101,29 @@
 
             <!-- Imagen URL -->
             <div class="col-md-6">
-                <label asp-for="ImagenURL" class="form-label small fw-bold text-muted">URL de Imagen</label>
-                <input asp-for="ImagenURL" class="form-control" placeholder="https://..." />
-                <span asp-validation-for="ImagenURL" class="text-danger"></span>
+                <label class="form-label small fw-bold text-muted">Imagen del producto</label>
+                <div class="d-flex align-items-center gap-3">
+                    <div class="imagen-preview" id="imagenPreviewWrap">
+                        <img id="imagenPreview" src="@Model?.ImagenURL" alt="Vista previa"
+                             style="@(string.IsNullOrEmpty(Model?.ImagenURL) ? "display:none;" : "")" />
+                        <span class="material-symbols-outlined" id="imagenPlaceholder"
+                              style="@(string.IsNullOrEmpty(Model?.ImagenURL) ? "" : "display:none;")">add_a_photo</span>
+                    </div>
+                    <div class="flex-grow-1">
+                        <input type="file" name="archivoImagen" id="archivoImagen" class="form-control"
+                               accept="image/jpeg,image/png,image/webp" />
+                        <div class="text-muted small mt-1">JPG, PNG o WebP · máx. 2 MB · ideal cuadrada.</div>
+                    </div>
+                </div>
+                <details class="mt-2">
+                    <summary class="small text-secondary" style="cursor:pointer;">O usar una URL externa</summary>
+                    <input asp-for="ImagenURL" class="form-control mt-2" placeholder="https://..." />
+                    <span asp-validation-for="ImagenURL" class="text-danger"></span>
+                </details>
             </div>
+
+            <!-- Etiquetas de tienda -->
+            <partial name="_EtiquetasProducto" />
         </div>
 
         @{ var costoUnidad = (decimal)(ViewBag.CostoUnidad ?? 0m); }
@@ -171,6 +190,42 @@
 </div>
 
 @section Scripts {
+<script>
+// Vista previa de la imagen elegida desde el archivo
+(function () {
+    const input = document.getElementById('archivoImagen');
+    const preview = document.getElementById('imagenPreview');
+    const placeholder = document.getElementById('imagenPlaceholder');
+    if (!input || !preview) return;
+
+    input.addEventListener('change', function () {
+        if (input.files && input.files[0]) {
+            preview.src = URL.createObjectURL(input.files[0]);
+            preview.style.display = '';
+            if (placeholder) placeholder.style.display = 'none';
+        }
+    });
+})();
+</script>
+
+<script>
+// Categoría «Otros» (productos de reventa): la Masa no aplica, se limpia y deshabilita
+(function () {
+    const categoria = document.getElementById('IdCategoria');
+    const masa = document.getElementById('Masa');
+    if (!categoria || !masa) return;
+
+    function ajustarMasa() {
+        const texto = (categoria.options[categoria.selectedIndex]?.text || '').trim().toLowerCase();
+        const esOtros = texto === 'otros' || texto === 'otro';
+        if (esOtros) masa.value = '';
+        masa.disabled = esOtros;
+    }
+
+    categoria.addEventListener('change', ajustarMasa);
+    ajustarMasa();
+})();
+</script>
 <script>
 (function () {
     const costoEl = document.querySelector('[data-costo]');

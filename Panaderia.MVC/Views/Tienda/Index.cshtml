@@ -27,18 +27,40 @@
     {
         <input type="hidden" name="categoria" value="@Model.CategoriaSeleccionada" />
     }
+    @if (Model.EtiquetaSeleccionada.HasValue)
+    {
+        <input type="hidden" name="etiqueta" value="@Model.EtiquetaSeleccionada" />
+    }
 </form>
 
 <!-- Categorías -->
 <div class="tienda-chips">
     <a class="pill-filtro @(string.IsNullOrEmpty(Model.CategoriaSeleccionada) ? "activo" : "")"
-       asp-controller="Tienda" asp-action="Index" asp-route-q="@Model.Busqueda">Todos</a>
+       asp-controller="Tienda" asp-action="Index" asp-route-q="@Model.Busqueda" asp-route-etiqueta="@Model.EtiquetaSeleccionada">Todos</a>
     @foreach (var cat in Model.Categorias)
     {
         <a class="pill-filtro @(string.Equals(cat, Model.CategoriaSeleccionada, StringComparison.OrdinalIgnoreCase) ? "activo" : "")"
-           asp-controller="Tienda" asp-action="Index" asp-route-categoria="@cat" asp-route-q="@Model.Busqueda">@cat</a>
+           asp-controller="Tienda" asp-action="Index" asp-route-categoria="@cat" asp-route-q="@Model.Busqueda" asp-route-etiqueta="@Model.EtiquetaSeleccionada">@cat</a>
     }
 </div>
+
+<!-- Etiquetas -->
+@if (Model.Etiquetas.Any())
+{
+    <div class="tienda-chips etiquetas">
+        @foreach (var et in Model.Etiquetas)
+        {
+            var activa = Model.EtiquetaSeleccionada == et.Id;
+            <a class="pill-filtro etiqueta @(activa ? "activo" : "")"
+               asp-controller="Tienda" asp-action="Index"
+               asp-route-categoria="@Model.CategoriaSeleccionada"
+               asp-route-q="@Model.Busqueda"
+               asp-route-etiqueta="@(activa ? null : (int?)et.Id)">
+                <span class="material-symbols-outlined">@(activa ? "close" : et.Icono)</span>@et.Nombre
+            </a>
+        }
+    </div>
+}
 
 <h2 id="productos" class="tienda-section-title font-literata">Nuestros productos</h2>
 
@@ -87,6 +109,7 @@
                     <input type="hidden" name="origen" value="tienda" />
                     <input type="hidden" name="categoria" value="@Model.CategoriaSeleccionada" />
                     <input type="hidden" name="q" value="@Model.Busqueda" />
+                    <input type="hidden" name="etiqueta" value="@Model.EtiquetaSeleccionada" />
                     <div class="stepper-tienda sm">
                         <button type="button" aria-label="Restar" onclick="cambiarCantidadCard(this, -1)">
                             <span class="material-symbols-outlined">remove</span>

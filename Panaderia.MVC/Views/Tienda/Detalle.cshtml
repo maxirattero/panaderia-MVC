@@ -42,7 +42,12 @@
             <div class="td-price">$@Model.PrecioFinal.ToString("N0", ar)</div>
 
             <div class="td-badges">
-                <span class="badge-tienda"><span class="material-symbols-outlined">grain</span> Masa madre</span>
+                @foreach (var etiqueta in Model.Etiquetas)
+                {
+                    <a class="badge-tienda" asp-controller="Tienda" asp-action="Index" asp-route-etiqueta="@etiqueta.Id">
+                        <span class="material-symbols-outlined">@etiqueta.Icono</span> @etiqueta.Nombre
+                    </a>
+                }
                 @if (Model.SinStock)
                 {
                     <span class="badge-tienda agotado"><span class="material-symbols-outlined">block</span> Sin stock</span>

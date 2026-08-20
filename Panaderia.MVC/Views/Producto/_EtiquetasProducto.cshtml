@@ -1,0 +1,36 @@
+@{
+    var etiquetas = ViewBag.Etiquetas as IEnumerable<Panaderia.Models.Entities.Etiqueta>
+                    ?? Enumerable.Empty<Panaderia.Models.Entities.Etiqueta>();
+    var seleccionadas = ViewBag.EtiquetasSeleccionadas as List<int> ?? new List<int>();
+}
+
+<div class="col-12">
+    <label class="form-label small fw-bold text-muted">Etiquetas de tienda</label>
+
+    @if (!etiquetas.Any())
+    {
+        <div class="text-muted small">
+            Todavía no hay etiquetas cargadas.
+            <a asp-controller="Configuracion" asp-action="Index">Crealas en Configuración</a>
+            para poder asignarlas y que los clientes filtren por ellas en la tienda.
+        </div>
+    }
+    else
+    {
+        <div class="etiquetas-picker">
+            @foreach (var etiqueta in etiquetas)
+            {
+                var marcada = seleccionadas.Contains(etiqueta.Id);
+                <label class="etiqueta-check">
+                    @* El name NO puede ser "etiquetas": colisiona con Producto.Etiquetas en el model binder *@
+                    <input type="checkbox" name="idsEtiquetas" value="@etiqueta.Id" checked="@marcada" />
+                    <span class="material-symbols-outlined">@etiqueta.Icono</span>
+                    @etiqueta.Nombre
+                </label>
+            }
+        </div>
+        <div class="text-muted small mt-1">
+            Se muestran como badges en el detalle del producto y sirven de filtro en la tienda.
+        </div>
+    }
+</div>

@@ -7,5 +7,6 @@ namespace Panaderia.MVC.Models
         public IEnumerable<CategoriaProducto> Categorias { get; set; } = new List<CategoriaProducto>();
         public IEnumerable<Formato> Formatos { get; set; } = new List<Formato>();
         public IEnumerable<Tamano> Tamanos { get; set; } = new List<Tamano>();
+        public IEnumerable<Etiqueta> Etiquetas { get; set; } = new List<Etiqueta>();
     }
 }

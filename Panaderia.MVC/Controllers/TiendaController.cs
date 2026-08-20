@@ -16,19 +16,22 @@ namespace Panaderia.MVC.Controllers
         private readonly IProductoService _productoService;
         private readonly IClienteService _clienteService;
         private readonly IPedidoService _pedidoService;
+        private readonly IConfiguration _configuration;
 
         public TiendaController(
             IProductoService productoService,
             IClienteService clienteService,
-            IPedidoService pedidoService)
+            IPedidoService pedidoService,
+            IConfiguration configuration)
         {
             _productoService = productoService;
             _clienteService = clienteService;
             _pedidoService = pedidoService;
+            _configuration = configuration;
         }
 
         // GET: / (tienda pública)
-        public async Task<IActionResult> Index(string? categoria, string? q)
+        public async Task<IActionResult> Index(string? categoria, string? q, int? etiqueta)
         {
             var comparer = StringComparer.Create(new CultureInfo("es-AR"), ignoreCase: true);
 
@@ -43,6 +46,21 @@ namespace Panaderia.MVC.Controllers
                 .Distinct(comparer)
                 .OrderBy(n => n, comparer)
                 .ToList();
+
+            // Etiquetas disponibles (solo las asignadas a algún producto visible)
+            var etiquetas = productos
+                .SelectMany(p => p.Etiquetas)
+                .GroupBy(e => e.Id)
+                .Select(g => g.First())
+                .OrderBy(e => e.Nombre, comparer)
+                .ToList();
+
+            if (etiqueta.HasValue)
+            {
+                productos = productos
+                    .Where(p => p.Etiquetas.Any(e => e.Id == etiqueta.Value))
+                    .ToList();
+            }
 
             if (!string.IsNullOrWhiteSpace(categoria))
             {
@@ -64,7 +82,9 @@ namespace Panaderia.MVC.Controllers
                 Productos = productos,
                 Categorias = categorias,
                 CategoriaSeleccionada = categoria,
-                Busqueda = q
+                Busqueda = q,
+                Etiquetas = etiquetas,
+                EtiquetaSeleccionada = etiqueta
             };
 
             return View(vm);
@@ -93,7 +113,7 @@ namespace Panaderia.MVC.Controllers
         // origen "tienda" vuelve al catálogo (manteniendo filtros); si no, va al carrito.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Agregar(int id, int cantidad = 1, string? origen = null, string? categoria = null, string? q = null)
+        public async Task<IActionResult> Agregar(int id, int cantidad = 1, string? origen = null, string? categoria = null, string? q = null, int? etiqueta = null)
         {
             var producto = await _productoService.GetByIdAsync(id);
             if (producto == null || producto.OcultoEnTienda) return NotFound();
@@ -116,7 +136,7 @@ namespace Panaderia.MVC.Controllers
 
             if (origen == "tienda")
             {
-                var url = Url.Action(nameof(Index), new { categoria, q });
+                var url = Url.Action(nameof(Index), new { categoria, q, etiqueta });
                 return Redirect(url + "#productos");
             }
 
@@ -247,6 +267,7 @@ namespace Panaderia.MVC.Controllers
             TempData["PedidoFechaEntrega"] = pedido.FechaEntrega?.ToString("O");
             TempData["PedidoEntrega"] = model.Entrega;
             TempData["PedidoMedioPago"] = model.MedioPago;
+            TempData["PedidoWhatsApp"] = ArmarMensajeWhatsApp(pedido, cliente, carrito, entregaTexto, pagoTexto, model.Notas);
             return RedirectToAction(nameof(Confirmacion));
         }
 
@@ -262,7 +283,46 @@ namespace Panaderia.MVC.Controllers
             ViewBag.Entrega = TempData["PedidoEntrega"] as string;
             ViewBag.MedioPago = TempData["PedidoMedioPago"] as string;
 
+            // Link de WhatsApp hacia la panadería con el detalle del pedido.
+            // Lo inicia el cliente, así que no requiere la API paga de Meta.
+            var numero = new string((_configuration["Tienda:WhatsApp"] ?? "").Where(char.IsDigit).ToArray());
+            var mensaje = TempData["PedidoWhatsApp"] as string;
+            ViewBag.LinkWhatsApp = (!string.IsNullOrEmpty(numero) && !string.IsNullOrEmpty(mensaje))
+                ? $"https://wa.me/{numero}?text={Uri.EscapeDataString(mensaje)}"
+                : null;
+
             return View();
+        }
+
+        // Mensaje que el cliente le envía a la panadería al confirmar
+        private static string ArmarMensajeWhatsApp(
+            Pedido pedido, Cliente cliente, CarritoViewModel carrito,
+            string entregaTexto, string pagoTexto, string? notaCliente)
+        {
+            var ar = new CultureInfo("es-AR");
+            var sb = new System.Text.StringBuilder();
+
+            sb.AppendLine($"¡Hola Masa Viva! Confirmo mi pedido #{pedido.Id}");
+            sb.AppendLine();
+            sb.AppendLine($"*Cliente:* {cliente.NombreCompleto}");
+            sb.AppendLine($"*Entrega:* {pedido.FechaEntrega:dd/MM} — {entregaTexto}");
+            sb.AppendLine($"*Pago:* {pagoTexto}");
+            sb.AppendLine();
+            sb.AppendLine("*Pedido:*");
+
+            foreach (var item in carrito.Items)
+                sb.AppendLine($"• {item.Cantidad}x {item.Producto.NombreVisible} — ${item.Subtotal.ToString("N0", ar)}");
+
+            sb.AppendLine();
+            sb.AppendLine($"*TOTAL: ${carrito.Total.ToString("N0", ar)}*");
+
+            if (!string.IsNullOrWhiteSpace(notaCliente))
+            {
+                sb.AppendLine();
+                sb.AppendLine($"_Nota: {notaCliente.Trim()}_");
+            }
+
+            return sb.ToString();
         }
 
         // ---------- Helpers ----------

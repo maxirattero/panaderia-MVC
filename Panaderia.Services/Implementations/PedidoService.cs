@@ -685,8 +685,8 @@ namespace Panaderia.Services.Implementations
                     }
                 }
 
-                var masaKey = $"{(int)item.Producto.Masa}-{(item.Producto.Variedad.HasValue ? ((int)item.Producto.Variedad.Value).ToString() : "")}";
-                var nombreMasa = item.Producto.Masa.ToString() + (item.Producto.Variedad.HasValue ? " " + item.Producto.Variedad.Value.ToString() : "");
+                var masaKey = $"{(item.Producto.Masa.HasValue ? ((int)item.Producto.Masa.Value).ToString() : "x")}-{(item.Producto.Variedad.HasValue ? ((int)item.Producto.Variedad.Value).ToString() : "")}";
+                var nombreMasa = (item.Producto.Masa?.ToString() ?? "Sin masa") + (item.Producto.Variedad.HasValue ? " " + item.Producto.Variedad.Value.ToString() : "");
 
                 resultado.Add(new ProduccionProductoDetalle
                 {

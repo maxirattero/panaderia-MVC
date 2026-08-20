@@ -1537,3 +1537,150 @@ a.pill-filtro.activo {
 .tc-add .material-symbols-outlined {
     font-size: 20px;
 }
+
+/* =============================================
+   ETIQUETAS: filtros en tienda y selector en admin
+   ============================================= */
+
+/* Fila de chips de etiquetas (debajo de las categorías) */
+.tienda-chips.etiquetas {
+    padding-top: 0;
+}
+
+.pill-filtro.etiqueta {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    text-decoration: none;
+}
+
+.pill-filtro.etiqueta .material-symbols-outlined {
+    font-size: 16px;
+}
+
+/* El badge del detalle ahora es un link al filtro */
+a.badge-tienda {
+    text-decoration: none;
+    transition: background-color 0.15s;
+}
+
+a.badge-tienda:hover {
+    background-color: var(--mv-surface-variant);
+    color: var(--mv-tertiary);
+}
+
+/* Selector de etiquetas en el form de producto */
+.etiquetas-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.etiqueta-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: 999px;
+    border: 1px solid #cebaac;
+    background-color: #fff;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--mv-secondary);
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.etiqueta-check .material-symbols-outlined {
+    font-size: 18px;
+}
+
+.etiqueta-check input {
+    accent-color: var(--mv-primary-dark);
+    width: 15px;
+    height: 15px;
+    margin: 0;
+}
+
+.etiqueta-check:has(input:checked) {
+    background-color: var(--mv-surface-low);
+    border-color: var(--mv-primary-dark);
+    color: var(--mv-primary-dark);
+}
+
+/* =============================================
+   LOGO, SUBIDA DE IMAGEN Y BOTÓN WHATSAPP
+   ============================================= */
+
+/* Logo blanco dentro del círculo marrón de la tienda */
+.tt-logo img {
+    width: 30px;
+    height: 30px;
+    object-fit: contain;
+}
+
+/* Logo en el pie de la tienda */
+.tf-logo {
+    width: 44px;
+    height: 44px;
+    object-fit: contain;
+    opacity: 0.85;
+    margin-bottom: 6px;
+}
+
+/* Vista previa de la imagen en el form de producto */
+.imagen-preview {
+    width: 76px;
+    height: 76px;
+    border-radius: 0.9rem;
+    border: 1px solid var(--mv-outline);
+    background-color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.imagen-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.imagen-preview .material-symbols-outlined {
+    color: #cebaac;
+    font-size: 30px;
+}
+
+/* Botón de WhatsApp (verde de marca WhatsApp, no de la paleta Masa Viva) */
+.btn-whatsapp {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background-color: #25d366;
+    color: #fff;
+    border: none;
+    border-radius: 0.9rem;
+    padding: 15px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    font-family: inherit;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.btn-whatsapp:hover,
+.btn-whatsapp:focus {
+    background-color: #1da851;
+    color: #fff;
+}
+
+.btn-mv-secondary.carrito-cta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+}

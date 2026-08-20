@@ -1,5 +1,6 @@
 ﻿using Panaderia.Models.Enums;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
 namespace Panaderia.Models.Entities
@@ -8,7 +9,7 @@ namespace Panaderia.Models.Entities
     {
         public int Id { get; set; }
         public int IdCategoria { get; set; }
-        public Masa Masa { get; set; }
+        public Masa? Masa { get; set; }
         public Variedad? Variedad { get; set; }
         public int? IdFormato { get; set; }
         public int? IdTamano { get; set; }
@@ -26,7 +27,7 @@ namespace Panaderia.Models.Entities
                 if (Categoria != null) partes.Add(Categoria.Nombre);
                 else if (IdCategoria > 0) partes.Add($"Cat.{IdCategoria}");
 
-                partes.Add(Masa.ToString());
+                if (Masa.HasValue) partes.Add(Masa.Value.ToString());
 
                 if (Variedad.HasValue) partes.Add(Variedad.Value.ToString());
                 if (Formato != null) partes.Add(Formato.Descripcion);
@@ -45,6 +46,22 @@ namespace Panaderia.Models.Entities
         public bool PorEncargo { get; set; }
         public DateTime FechaCreacion { get; set; }
         public DateTime? FechaModificacion { get; set; }
+        // Etiquetas de tienda asignadas (Masa madre, Vegano, ...).
+        // [BindNever] es obligatorio: sin él, el model binder intenta escribir estas
+        // colecciones desde el form del producto y revienta (Etiquetas es solo lectura).
+        [ValidateNever]
+        [BindNever]
+        public ICollection<ProductoEtiqueta> ProductoEtiquetas { get; set; } = new List<ProductoEtiqueta>();
+
+        [NotMapped]
+        [ValidateNever]
+        [BindNever]
+        public IEnumerable<Etiqueta> Etiquetas =>
+            (ProductoEtiquetas ?? new List<ProductoEtiqueta>())
+                .Where(pe => pe.Etiqueta != null)
+                .Select(pe => pe.Etiqueta)
+                .OrderBy(e => e.Nombre, StringComparer.Create(new System.Globalization.CultureInfo("es-AR"), ignoreCase: true));
+
         [ValidateNever]
         public CategoriaProducto Categoria { get; set; } = null!;
         [ValidateNever]
