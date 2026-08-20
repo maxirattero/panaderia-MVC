@@ -52,6 +52,7 @@ public class InsumoService : IInsumoService
         existe.IdProveedor = insumo.IdProveedor;
         existe.Notas = insumo.Notas;
         existe.TipoInsumo = insumo.TipoInsumo;
+        existe.EsBolsaPapel = insumo.EsBolsaPapel;
         existe.Activo = insumo.Activo;
         existe.StockActual = insumo.StockActual;
         existe.StockMinimo = insumo.StockMinimo;

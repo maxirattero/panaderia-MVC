@@ -30,6 +30,10 @@ public class Insumo
 
     public TipoInsumo TipoInsumo { get; set; } = TipoInsumo.Ingrediente;
 
+    // Solo aplica a los insumos de tipo Empaque: define si en Producción
+    // este empaque suma como bolsa de papel o como sellada.
+    public bool EsBolsaPapel { get; set; }
+
     public bool Activo { get; set; } = true;
 
     [Range(0, double.MaxValue, ErrorMessage = "Debe ser mayor o igual a cero.")]

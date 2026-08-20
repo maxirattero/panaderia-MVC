@@ -310,8 +310,7 @@ namespace Panaderia.MVC.Controllers
                     NombreProducto = d.Producto.NombreVisible,
                     Cantidad = d.Cantidad,
                     PrecioUnitario = d.PrecioUnitario,
-                    Subtotal = d.Cantidad * d.PrecioUnitario,
-                    Bolsa = d.Bolsa
+                    Subtotal = d.Cantidad * d.PrecioUnitario
                 }).ToList()
             };
 
@@ -384,7 +383,6 @@ namespace Panaderia.MVC.Controllers
                     IdProducto = d.IdProducto,
                     Cantidad = d.Cantidad,
                     PrecioUnitario = precio,
-                    Bolsa = d.Bolsa,
                     IdEmpaque = d.IdEmpaque,
                     LlevaEtiqueta = d.LlevaEtiqueta
                 });
@@ -414,7 +412,6 @@ namespace Panaderia.MVC.Controllers
                 {
                     IdProducto = d.IdProducto,
                     Cantidad = d.Cantidad,
-                    Bolsa = d.Bolsa,
                     IdEmpaque = d.IdEmpaque,
                     LlevaEtiqueta = d.LlevaEtiqueta
                 }).ToList()
@@ -457,7 +454,6 @@ namespace Panaderia.MVC.Controllers
                     IdProducto = d.IdProducto,
                     Cantidad = d.Cantidad,
                     PrecioUnitario = precio,
-                    Bolsa = d.Bolsa,
                     IdEmpaque = d.IdEmpaque,
                     LlevaEtiqueta = d.LlevaEtiqueta
                 });

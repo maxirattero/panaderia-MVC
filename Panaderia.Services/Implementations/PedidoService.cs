@@ -139,7 +139,6 @@ namespace Panaderia.Services.Implementations
                     IdProducto = d.IdProducto,
                     Cantidad = d.Cantidad,
                     PrecioUnitario = d.PrecioUnitario,
-                    Bolsa = d.Bolsa,
                     IdEmpaque = d.IdEmpaque,
                     LlevaEtiqueta = d.LlevaEtiqueta,
                     CostoEmpaque = d.CostoEmpaque
@@ -451,6 +450,7 @@ namespace Panaderia.Services.Implementations
                     .ThenInclude(p => p.Categoria)
                 .Include(d => d.Producto)
                     .ThenInclude(p => p.Formato)
+                .Include(d => d.Empaque)
                 .Where(d => d.Pedido.Estado != EstadoPedido.Entregado)
                 .ToListAsync())
                 .Where(d => !excluidos.Contains(d.IdProducto))
@@ -469,8 +469,11 @@ namespace Panaderia.Services.Implementations
                 .Select(x => new ResumenProductoItem(x.IdProducto, x.Producto.NombreVisible, x.Cantidad))
                 .ToList();
 
+            // El tipo de bolsa sale del empaque elegido: los marcados como "bolsa de papel"
+            // suman en Papel y el resto en Sellado. Los renglones sin empaque no cuentan.
             var porBolsa = detalles
-                .GroupBy(d => d.Bolsa)
+                .Where(d => d.Empaque != null)
+                .GroupBy(d => d.Empaque!.EsBolsaPapel ? TipoBolsa.Papel : TipoBolsa.Sellado)
                 .OrderBy(g => g.Key)
                 .Select(g => new ResumenBolsaItem(g.Key, g.Sum(d => d.Cantidad)))
                 .ToList();

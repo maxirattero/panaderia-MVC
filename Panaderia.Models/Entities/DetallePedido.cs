@@ -10,7 +10,6 @@ namespace Panaderia.Models.Entities
         public int IdProducto { get; set; }
         public int Cantidad { get; set; }
         public decimal PrecioUnitario { get; set; }
-        public TipoBolsa Bolsa { get; set; } = TipoBolsa.Sellado;
         public int? IdEmpaque { get; set; }
         public bool LlevaEtiqueta { get; set; } = false;
         public decimal CostoEmpaque { get; set; } = 0m;

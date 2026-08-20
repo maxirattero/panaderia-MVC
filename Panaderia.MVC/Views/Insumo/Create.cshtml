@@ -61,6 +61,15 @@
                     <label asp-for="Notas" class="form-label small fw-bold text-muted">Notas</label>
                     <textarea asp-for="Notas" class="form-control" rows="2"></textarea>
                 </div>
+                <div class="col-12" id="bloqueBolsaPapel">
+                    <div class="form-check">
+                        <input asp-for="EsBolsaPapel" type="checkbox" class="form-check-input" />
+                        <label asp-for="EsBolsaPapel" class="form-check-label">Es bolsa de papel</label>
+                    </div>
+                    <div class="text-muted small ms-4">
+                        En Producción, los pedidos con este empaque suman en «Papel»; el resto, en «Sellado».
+                    </div>
+                </div>
                 <div class="col-12">
                     <div class="form-check">
                         <input asp-for="Activo" type="checkbox" class="form-check-input" />
@@ -78,3 +87,22 @@
         </form>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        // La casilla "Es bolsa de papel" solo aplica a los insumos de tipo Empaque
+        (function () {
+            const tipo = document.getElementById('TipoInsumo');
+            const bloque = document.getElementById('bloqueBolsaPapel');
+            if (!tipo || !bloque) return;
+
+            function ajustar() {
+                const texto = (tipo.options[tipo.selectedIndex]?.text || '').trim().toLowerCase();
+                bloque.style.display = texto === 'empaque' ? '' : 'none';
+            }
+
+            tipo.addEventListener('change', ajustar);
+            ajustar();
+        })();
+    </script>
+}

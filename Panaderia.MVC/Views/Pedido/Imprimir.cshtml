@@ -63,7 +63,7 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>Producto</th><th>Cant.</th><th>Bolsa</th>
+                            <th>Producto</th><th>Cant.</th>
                             <th>Precio unit.</th><th>Subtotal</th>
                         </tr>
                     </thead>
@@ -73,7 +73,6 @@
                             <tr>
                                 <td>@d.Producto.NombreVisible</td>
                                 <td>@d.Cantidad</td>
-                                <td>@d.Bolsa</td>
                                 <td>@d.PrecioUnitario.ToString("C", new System.Globalization.CultureInfo("es-AR"))</td>
                                 <td>@((d.Cantidad * d.PrecioUnitario).ToString("C", new System.Globalization.CultureInfo("es-AR")))</td>
                             </tr>

@@ -56,7 +56,6 @@
                 <tr>
                     <th>Producto</th>
                     <th class="text-center">Cantidad</th>
-                    <th class="text-center">Bolsa</th>
                     <th class="text-end">Precio unit.</th>
                     <th class="text-end">Subtotal</th>
                 </tr>
@@ -67,7 +66,6 @@
                     <tr>
                         <td>@detalle.NombreProducto</td>
                         <td class="text-center">@detalle.Cantidad</td>
-                        <td class="text-center text-muted small">@detalle.Bolsa</td>
                         <td class="text-end">@detalle.PrecioUnitario.ToString("C", new System.Globalization.CultureInfo("es-AR"))</td>
                         <td class="text-end">@detalle.Subtotal.ToString("C", new System.Globalization.CultureInfo("es-AR"))</td>
                     </tr>

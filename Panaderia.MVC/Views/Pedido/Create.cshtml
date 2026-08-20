@@ -46,7 +46,6 @@
                 <tr>
                     <th>Producto</th>
                     <th style="width: 80px;">Cant.</th>
-                    <th style="width: 130px;">Bolsa</th>
                     <th style="width: 160px;">Empaque</th>
                     <th style="width: 80px;" class="text-center">Etiqueta</th>
                     <th style="width: 100px;">Subtotal</th>
@@ -87,12 +86,9 @@
         <td data-label="Cantidad">
             <input name="__CANT__" type="number" min="1" placeholder="Cant." class="form-control cant-input" required />
         </td>
-        <td data-label="Bolsa">
-            <select name="__BOLSA__" class="form-select bolsa-select" asp-items="Html.GetEnumSelectList<TipoBolsa>()"></select>
-        </td>
         <td data-label="Empaque">
-            <select name="__EMPAQUE__" class="form-select empaque-select" required>
-                <option value="">Empaque...</option>
+            <select name="__EMPAQUE__" class="form-select empaque-select">
+                <option value="">-- Sin empaque --</option>
                 @foreach (var e in (IEnumerable<Insumo>)ViewBag.Empaques)
                 {
                     <option value="@e.Id">@e.Nombre</option>
@@ -142,7 +138,6 @@
                 tbody.querySelectorAll('tr').forEach((tr, i) => {
                     tr.querySelector('.prod-select').name    = `Detalles[${i}].IdProducto`;
                     tr.querySelector('.cant-input').name     = `Detalles[${i}].Cantidad`;
-                    tr.querySelector('.bolsa-select').name   = `Detalles[${i}].Bolsa`;
                     tr.querySelector('.empaque-select').name = `Detalles[${i}].IdEmpaque`;
                     tr.querySelector('.etiqueta-check').name = `Detalles[${i}].LlevaEtiqueta`;
                 });
