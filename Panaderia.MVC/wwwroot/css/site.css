@@ -1741,3 +1741,36 @@ a.badge-tienda:hover {
     background-color: var(--mv-surface-low);
     color: var(--mv-primary-dark);
 }
+
+/* =============================================
+   SELECTS CON BÚSQUEDA (Tom Select)
+   El marco, la flecha y el foco los dibuja Bootstrap sobre el contenedor
+   (.ts-wrapper hereda la clase .form-select del <select> original), así que
+   el campo se ve idéntico a cualquier otro del formulario. Acá solo se ajusta
+   el desplegable a la paleta Masa Viva.
+   ============================================= */
+
+.ts-dropdown {
+    /* Por encima del sidebar (1000) y de la top bar (999) */
+    z-index: 1100;
+}
+
+.ts-dropdown .option {
+    padding: 0.5rem 0.75rem;
+}
+
+.ts-dropdown .active {
+    background-color: var(--mv-surface-low);
+    color: var(--mv-primary-dark);
+}
+
+.ts-dropdown .selected {
+    background-color: #f5f0eb;
+    font-weight: 600;
+}
+
+.ts-dropdown .no-results {
+    padding: 0.6rem 0.75rem;
+    color: var(--mv-secondary);
+    font-style: italic;
+}
