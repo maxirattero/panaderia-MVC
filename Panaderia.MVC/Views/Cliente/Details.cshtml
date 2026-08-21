@@ -37,6 +37,14 @@
             <p class="mb-0">@Model.Telefono</p>
         </div>
         <div class="col-md-6">
+            <p class="small fw-bold text-muted mb-1">Descuento habitual</p>
+            <p class="mb-0">
+                @(Model.DescuentoPorcentaje.HasValue && Model.DescuentoPorcentaje.Value > 0
+                    ? Model.DescuentoPorcentaje.Value.ToString("0.##") + "%"
+                    : "—")
+            </p>
+        </div>
+        <div class="col-md-6">
             <p class="small fw-bold text-muted mb-1">Tipo</p>
             @if (Model.Revendedor)
             {

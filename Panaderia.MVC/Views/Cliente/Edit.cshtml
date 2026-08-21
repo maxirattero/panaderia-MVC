@@ -45,7 +45,17 @@
                 <input asp-for="Telefono" class="form-control" placeholder="+54 000 000000" />
                 <span asp-validation-for="Telefono" class="text-danger"></span>
             </div>
-            <div class="col-md-6 d-flex align-items-center">
+            <div class="col-md-3">
+                <label asp-for="DescuentoPorcentaje" class="form-label small fw-bold text-muted">Descuento habitual</label>
+                <div class="input-group">
+                    <input asp-for="DescuentoPorcentaje" type="number" min="0" max="100" step="0.01"
+                           class="form-control" placeholder="Sin descuento" />
+                    <span class="input-group-text">%</span>
+                </div>
+                <span asp-validation-for="DescuentoPorcentaje" class="text-danger"></span>
+                <div class="form-text">Se autocompleta al crear un pedido de este cliente.</div>
+            </div>
+            <div class="col-md-3 d-flex align-items-center">
                 <div class="form-check">
                     <input asp-for="Revendedor" class="form-check-input" type="checkbox" />
                     <label asp-for="Revendedor" class="form-check-label small fw-bold text-muted">Revendedor</label>

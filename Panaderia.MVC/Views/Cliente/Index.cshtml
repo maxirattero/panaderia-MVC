@@ -69,6 +69,13 @@
                             Revendedor
                         </span>
                     }
+                    @if (c.DescuentoPorcentaje > 0)
+                    {
+                        <span class="badge rounded-pill bg-secondary" style="font-size:0.7rem;"
+                              title="Descuento habitual">
+                            -@(c.DescuentoPorcentaje.GetValueOrDefault().ToString("0.##"))%
+                        </span>
+                    }
                 </div>
             </div>
 
@@ -160,6 +167,12 @@
                                 <span class="status-badge status-inactive">
                                     <span class="dot" style="background-color:var(--mv-error);"></span>
                                     Minorista
+                                </span>
+                            }
+                            @if (c.DescuentoPorcentaje > 0)
+                            {
+                                <span class="badge bg-secondary ms-1" title="Descuento habitual">
+                                    -@(c.DescuentoPorcentaje.GetValueOrDefault().ToString("0.##"))%
                                 </span>
                             }
                         </td>

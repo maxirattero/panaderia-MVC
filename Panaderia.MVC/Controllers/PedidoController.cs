@@ -378,7 +378,7 @@ namespace Panaderia.MVC.Controllers
                     ? DateTime.SpecifyKind(vm.FechaEntrega.Value, DateTimeKind.Utc)
                     : null,
                 Notas = vm.Notas,
-                DescuentoPorcentaje = Math.Clamp(vm.DescuentoPorcentaje, 0m, 100m),
+                DescuentoPorcentaje = Math.Clamp(vm.DescuentoPorcentaje ?? 0m, 0m, 100m),
                 FechaCreacion = DateTime.UtcNow,
                 Detalles = new List<DetallePedido>()
             };
@@ -420,7 +420,8 @@ namespace Panaderia.MVC.Controllers
                 FechaEntrega = pedido.FechaEntrega,
                 FechaCreacion = pedido.FechaCreacion,
                 Notas = pedido.Notas,
-                DescuentoPorcentaje = pedido.DescuentoPorcentaje,
+                // Sin descuento → null para que el input quede vacío
+                DescuentoPorcentaje = pedido.DescuentoPorcentaje > 0 ? pedido.DescuentoPorcentaje : (decimal?)null,
                 Detalles = pedido.Detalles.Select(d => new DetallePedidoViewModel
                 {
                     IdProducto = d.IdProducto,
@@ -472,7 +473,7 @@ namespace Panaderia.MVC.Controllers
                 });
             }
 
-            var descuento = Math.Clamp(vm.DescuentoPorcentaje, 0m, 100m);
+            var descuento = Math.Clamp(vm.DescuentoPorcentaje ?? 0m, 0m, 100m);
 
             var pedido = new Pedido
             {

@@ -26,7 +26,9 @@
                         <option value="">-- Seleccionar cliente --</option>
                         @foreach (var c in (IEnumerable<Cliente>)ViewBag.Clientes)
                         {
-                            <option value="@c.Id" data-revendedor="@c.Revendedor.ToString().ToLower()">
+                            <option value="@c.Id"
+                                    data-revendedor="@c.Revendedor.ToString().ToLower()"
+                                    data-descuento="@((c.DescuentoPorcentaje ?? 0m).ToString(System.Globalization.CultureInfo.InvariantCulture))">
                                 @c.NombreCompleto
                             </option>
                         }
@@ -39,7 +41,8 @@
                 <div class="col-md-3">
                     <label asp-for="DescuentoPorcentaje" class="form-label small fw-bold text-muted">Descuento (%)</label>
                     <div class="input-group">
-                        <input asp-for="DescuentoPorcentaje" type="number" min="0" max="100" step="0.01" class="form-control" />
+                        <input asp-for="DescuentoPorcentaje" type="number" min="0" max="100" step="0.01"
+                               class="form-control" placeholder="Sin descuento" />
                         <span class="input-group-text">%</span>
                     </div>
                     <span asp-validation-for="DescuentoPorcentaje" class="text-danger small"></span>
@@ -263,7 +266,15 @@
 
             btnAgregar.addEventListener('click', () => agregarFila(null));
 
+            // Solo al cambiar de cliente se trae su descuento habitual; el valor guardado del pedido se respeta al abrir.
+            function aplicarDescuentoDelCliente() {
+                const opt = clienteSelect.options[clienteSelect.selectedIndex];
+                const pct = opt ? parseFloat(opt.dataset.descuento) : 0;
+                descuentoInput.value = (!isNaN(pct) && pct > 0) ? pct : '';
+            }
+
             clienteSelect.addEventListener('change', () => {
+                aplicarDescuentoDelCliente();
                 tbody.querySelectorAll('tr').forEach(recalcularFila);
                 recalcularTotales();
             });

@@ -10,9 +10,10 @@ namespace Panaderia.MVC.Models
         public EstadoPedido Estado { get; set; }
         public DateTime? FechaEntrega { get; set; }
 
+        // Nullable a propósito: sin descuento el input se ve vacío (no "0,00").
         [Display(Name = "Descuento (%)")]
         [Range(0, 100, ErrorMessage = "El descuento debe estar entre 0 y 100.")]
-        public decimal DescuentoPorcentaje { get; set; } = 0m;
+        public decimal? DescuentoPorcentaje { get; set; }
 
         public DateTime FechaCreacion { get; set; }
         public string? Notas { get; set; }
