@@ -8,8 +8,9 @@
     var mesRaw   = new DateTime(Model.Caja.Anio, Model.Caja.Mes, 1).ToString("MMMM yyyy", cultura);
     var nombreMes = char.ToUpper(mesRaw[0]) + mesRaw[1..];
 
-    var classPedidos = Model.Alertas.PedidosHoyPendientes > 0 ? "warning" :
-                       Model.Alertas.PedidosHoyTotal > 0     ? "success" : "secondary";
+    var classPedidos = Model.Alertas.PedidosSemanaPendientes > 0 ? "warning" :
+                       Model.Alertas.PedidosSemanaTotal > 0     ? "success" : "secondary";
+    var rangoSemana = $"{Model.Produccion.LunesActual:dd/MM} al {Model.Produccion.DomingoActual:dd/MM}";
     var classSaldo   = Model.Alertas.SaldoPendienteTotal > 0        ? "warning" : "success";
     var classStock   = Model.Alertas.InsumosBajoStockCount > 0      ? "danger"  : "success";
 }
@@ -56,19 +57,20 @@
             <div class="card-custom p-3 h-100 border-start border-4 border-@classPedidos">
                 <div class="d-flex align-items-center gap-2 mb-2">
                     <span class="material-symbols-outlined text-@classPedidos">shopping_cart</span>
-                    <span class="fw-semibold">Pedidos del d&iacute;a</span>
+                    <span class="fw-semibold">Pedidos de la semana</span>
                 </div>
-                <div class="fs-2 fw-bold text-@classPedidos">@Model.Alertas.PedidosHoyTotal</div>
-                @if (Model.Alertas.PedidosHoyTotal > 0)
+                <div class="fs-2 fw-bold text-@classPedidos">@Model.Alertas.PedidosSemanaTotal</div>
+                @if (Model.Alertas.PedidosSemanaTotal > 0)
                 {
                     <div class="text-muted small">
-                        @Model.Alertas.PedidosHoyPendientes pendiente(s) &middot; @Model.Alertas.PedidosHoyListos entregado(s)
+                        @Model.Alertas.PedidosSemanaPendientes pendiente(s) &middot; @Model.Alertas.PedidosSemanaEntregados entregado(s)
                     </div>
                 }
                 else
                 {
-                    <div class="text-muted small">Sin pedidos para hoy</div>
+                    <div class="text-muted small">Sin pedidos esta semana</div>
                 }
+                <div class="text-muted small">Del @rangoSemana</div>
                 <a asp-controller="Pedido" asp-action="Index" class="btn btn-mv-secondary btn-sm mt-3 w-100">
                     Ver pedidos
                 </a>

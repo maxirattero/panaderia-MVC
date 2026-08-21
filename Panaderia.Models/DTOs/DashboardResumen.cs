@@ -18,9 +18,10 @@ namespace Panaderia.Models.DTOs
 
     public class AlertasDiaResumen
     {
-        public int PedidosHoyTotal { get; set; }
-        public int PedidosHoyPendientes { get; set; }
-        public int PedidosHoyListos { get; set; }
+        // Pedidos de la semana en curso (lunes a domingo), por fecha de entrega.
+        public int PedidosSemanaTotal { get; set; }
+        public int PedidosSemanaPendientes { get; set; }
+        public int PedidosSemanaEntregados { get; set; }
         public decimal SaldoPendienteTotal { get; set; }
         public int PedidosSaldoPendienteCount { get; set; }
         public int InsumosBajoStockCount { get; set; }

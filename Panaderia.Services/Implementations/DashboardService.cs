@@ -34,12 +34,15 @@ namespace Panaderia.Services.Implementations
                 TotalEgresos  = movimientos.Where(r => r.Tipo == TipoMovimiento.Egreso).Sum(r => r.Monto)
             };
 
-            // --- Alertas del día ---
-            // Global query filter already excludes Anulado from Pedidos.
-            var manana = hoy.AddDays(1);
+            // --- Semana en curso (lunes a domingo) ---
+            int diasDesdeInicio = ((int)hoy.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7;
+            var lunesActual = hoy.AddDays(-diasDesdeInicio);
+            var finSemana   = lunesActual.AddDays(7);
 
-            var pedidosHoy = await _context.Pedidos
-                .Where(p => p.FechaEntrega >= hoy && p.FechaEntrega < manana)
+            // --- Alertas ---
+            // Global query filter already excludes Anulado from Pedidos.
+            var pedidosSemana = await _context.Pedidos
+                .Where(p => p.FechaEntrega >= lunesActual && p.FechaEntrega < finSemana)
                 .ToListAsync();
 
             var saldos = await _context.Pedidos
@@ -54,9 +57,9 @@ namespace Panaderia.Services.Implementations
 
             var alertas = new AlertasDiaResumen
             {
-                PedidosHoyTotal            = pedidosHoy.Count,
-                PedidosHoyPendientes       = pedidosHoy.Count(p => p.Estado == EstadoPedido.Pendiente),
-                PedidosHoyListos           = pedidosHoy.Count(p => p.Estado == EstadoPedido.Entregado),
+                PedidosSemanaTotal         = pedidosSemana.Count,
+                PedidosSemanaPendientes    = pedidosSemana.Count(p => p.Estado == EstadoPedido.Pendiente),
+                PedidosSemanaEntregados    = pedidosSemana.Count(p => p.Estado == EstadoPedido.Entregado),
                 SaldoPendienteTotal        = saldos.Sum(),
                 PedidosSaldoPendienteCount = saldos.Count,
                 InsumosBajoStockCount      = insumosBajos.Count,
@@ -64,10 +67,6 @@ namespace Panaderia.Services.Implementations
             };
 
             // --- Producción de la semana (Lunes a Domingo) ---
-            int diasDesdeInicio = ((int)hoy.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7;
-            var lunesActual = hoy.AddDays(-diasDesdeInicio);
-            var finSemana   = lunesActual.AddDays(7);
-
             // Global query filter already excludes Anulado from DetallesPedido.
             var detallesSemana = await _context.DetallesPedido
                 .Include(d => d.Producto)
