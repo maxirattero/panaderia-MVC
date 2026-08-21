@@ -206,9 +206,9 @@
                 const descuento = bruto * pct / 100;
                 const total = bruto - descuento;
 
-                resumenSubtotal.textContent = '$' + bruto.toFixed(2);
-                resumenDescuento.textContent = '-$' + descuento.toFixed(2);
-                resumenTotal.textContent = '$' + total.toFixed(2);
+                resumenSubtotal.textContent = '$' + bruto.toFixed(0);
+                resumenDescuento.textContent = '-$' + descuento.toFixed(0);
+                resumenTotal.textContent = '$' + total.toFixed(0);
                 resumenPct.textContent = pct.toString();
                 filaDescuento.hidden = pct <= 0;
             }
@@ -226,7 +226,7 @@
                         : parseFloat(opt.dataset.final);
                 }
                 const cant = parseInt(cantInput.value) || 0;
-                subtotalCell.textContent = '$' + (precio * cant).toFixed(2);
+                subtotalCell.textContent = '$' + (precio * cant).toFixed(0);
                 recalcularTotales();
             }
 

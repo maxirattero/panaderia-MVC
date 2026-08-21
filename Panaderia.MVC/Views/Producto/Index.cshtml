@@ -105,10 +105,10 @@
                                     </div>
                                 </td>
                                 <td class="text-end fw-bold">
-                                    $@producto.PrecioFinal.ToString("N2")
+                                    $@producto.PrecioFinal.ToString("N0", new System.Globalization.CultureInfo("es-AR"))
                                 </td>
                                 <td class="text-end fw-bold">
-                                    $@producto.PrecioReventa.ToString("N2")
+                                    $@producto.PrecioReventa.ToString("N0", new System.Globalization.CultureInfo("es-AR"))
                                 </td>
                                 <td class="text-center">
                                     @producto.Stock
@@ -223,11 +223,11 @@
                 <div class="d-flex justify-content-between align-items-center mb-2 pt-2 border-top">
                     <div>
                         <small class="text-muted d-block">Precio Final</small>
-                        <span class="fw-bold">$@producto.PrecioFinal.ToString("N2")</span>
+                        <span class="fw-bold">$@producto.PrecioFinal.ToString("N0", new System.Globalization.CultureInfo("es-AR"))</span>
                     </div>
                     <div>
                         <small class="text-muted d-block">Reventa</small>
-                        <span class="fw-bold">$@producto.PrecioReventa.ToString("N2")</span>
+                        <span class="fw-bold">$@producto.PrecioReventa.ToString("N0", new System.Globalization.CultureInfo("es-AR"))</span>
                     </div>
                     <div>
                         <small class="text-muted d-block">Stock</small>

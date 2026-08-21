@@ -46,7 +46,7 @@
         <div class="card-custom p-3">
             <div class="d-flex align-items-center gap-3">
                 <span class="small fw-bold text-muted">Vendido esta semana</span>
-                <span class="fs-4 fw-bold titulo-pagina">@(((decimal)ViewBag.TotalVendidoSemana).ToString("C", new System.Globalization.CultureInfo("es-AR")))</span>
+                <span class="fs-4 fw-bold titulo-pagina">@(((decimal)ViewBag.TotalVendidoSemana).ToString("C0", new System.Globalization.CultureInfo("es-AR")))</span>
             </div>
         </div>
     </div>
@@ -56,7 +56,7 @@
         <div class="card-custom p-3 position-relative overflow-hidden">
             <span class="small fw-bold text-muted d-block text-uppercase" style="letter-spacing:0.05em;font-size:0.7rem;">Vendido esta semana</span>
             <span class="fw-bold titulo-pagina d-block" style="font-size:2rem;line-height:1.1;margin-top:0.25rem;">
-                @(((decimal)ViewBag.TotalVendidoSemana).ToString("C", new System.Globalization.CultureInfo("es-AR")))
+                @(((decimal)ViewBag.TotalVendidoSemana).ToString("C0", new System.Globalization.CultureInfo("es-AR")))
             </span>
             <div style="position:absolute;right:-30px;bottom:-30px;width:100px;height:100px;background:rgba(133,83,48,0.06);border-radius:50%;filter:blur(20px);"></div>
         </div>
@@ -114,7 +114,7 @@
                             <td>@(p.FechaEntrega?.ToString("dd/MM/yyyy") ?? "-")</td>
                             <td>@p.Estado</td>
                             <td>
-                                $@p.MontoTotal
+                                $@(p.MontoTotal.ToString("N0", new System.Globalization.CultureInfo("es-AR")))
                                 @if (p.DescuentoPorcentaje > 0)
                                 {
                                     <span class="badge bg-secondary ms-1" title="Descuento aplicado">-@p.DescuentoPorcentaje.ToString("0.##")%</span>
@@ -150,7 +150,7 @@
                                                 data-bs-target="#cobrarModal"
                                                 data-id="@p.Id"
                                                 data-saldo="@p.SaldoPendiente.ToString(System.Globalization.CultureInfo.InvariantCulture)"
-                                                data-saldo-label="@p.SaldoPendiente.ToString("C", new System.Globalization.CultureInfo("es-AR"))"
+                                                data-saldo-label="@p.SaldoPendiente.ToString("C0", new System.Globalization.CultureInfo("es-AR"))"
                                                 data-cobrar-url="@Url.Action("RegistrarCobro", "Pedido")">
                                             <span class="material-symbols-outlined">payments</span>
                                         </button>
@@ -203,8 +203,8 @@
                                             <tr>
                                                 <td>@d.Producto.NombreVisible</td>
                                                 <td>@d.Cantidad</td>
-                                                <td>$@d.PrecioUnitario</td>
-                                                <td>$@(d.Cantidad * d.PrecioUnitario)</td>
+                                                <td>$@(d.PrecioUnitario.ToString("N0", new System.Globalization.CultureInfo("es-AR")))</td>
+                                                <td>$@((d.Cantidad * d.PrecioUnitario).ToString("N0", new System.Globalization.CultureInfo("es-AR")))</td>
                                             </tr>
                                         }
                                     </tbody>
@@ -255,7 +255,7 @@
                     @* Precio + expandir productos *@
                     <div class="pedido-card-price-row">
                         <span class="pedido-card-price">
-                            $@p.MontoTotal
+                            $@(p.MontoTotal.ToString("N0", new System.Globalization.CultureInfo("es-AR")))
                             @if (p.DescuentoPorcentaje > 0)
                             {
                                 <span class="badge bg-secondary" style="font-size:0.65rem;vertical-align:middle;">-@p.DescuentoPorcentaje.ToString("0.##")%</span>
@@ -284,7 +284,7 @@
                         {
                             <div class="pedido-card-detail-row">
                                 <span class="pedido-card-detail-name">@d.Cantidad× @d.Producto.NombreVisible</span>
-                                <span class="pedido-card-detail-price">$@(d.Cantidad * d.PrecioUnitario)</span>
+                                <span class="pedido-card-detail-price">$@((d.Cantidad * d.PrecioUnitario).ToString("N0", new System.Globalization.CultureInfo("es-AR")))</span>
                             </div>
                         }
                     </div>
@@ -302,7 +302,7 @@
                                 data-bs-target="#cobrarModal"
                                 data-id="@p.Id"
                                 data-saldo="@p.SaldoPendiente.ToString(System.Globalization.CultureInfo.InvariantCulture)"
-                                data-saldo-label="@p.SaldoPendiente.ToString("C", new System.Globalization.CultureInfo("es-AR"))"
+                                data-saldo-label="@p.SaldoPendiente.ToString("C0", new System.Globalization.CultureInfo("es-AR"))"
                                 data-cobrar-url="@Url.Action("RegistrarCobro", "Pedido")">
                             <span class="material-symbols-outlined">payments</span>
                         </button>

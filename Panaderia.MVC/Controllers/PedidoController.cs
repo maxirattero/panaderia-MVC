@@ -321,11 +321,13 @@ namespace Panaderia.MVC.Controllers
 
         // Total del pedido con el descuento porcentual ya aplicado.
         // MontoTotal se persiste neto: cobros, saldo, caja y dashboard siguen comparando contra este valor.
+        // Se redondea a pesos enteros: los precios de pedidos y productos se muestran sin decimales,
+        // así el total cobrado coincide siempre con lo que se ve en pantalla.
         private static decimal CalcularMontoTotal(IEnumerable<DetallePedido> detalles, decimal descuentoPorcentaje)
         {
             var bruto = detalles.Sum(d => d.Cantidad * d.PrecioUnitario);
             var pct = Math.Clamp(descuentoPorcentaje, 0m, 100m);
-            return Math.Round(bruto * (1m - pct / 100m), 2, MidpointRounding.AwayFromZero);
+            return Math.Round(bruto * (1m - pct / 100m), 0, MidpointRounding.AwayFromZero);
         }
 
         private async Task CargarDropdowns()

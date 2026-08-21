@@ -79,7 +79,7 @@
                 <label asp-for="PrecioFinal" class="form-label small fw-bold text-muted">Precio Final <span class="text-danger">*</span></label>
                 <div class="input-group">
                     <span class="input-group-text">$</span>
-                    <input asp-for="PrecioFinal" class="form-control" type="number" lang="en" step="0.01" min="0" placeholder="0.00" />
+                    <input asp-for="PrecioFinal" class="form-control" type="number" lang="en" step="1" min="0" placeholder="0" />
                 </div>
                 <span asp-validation-for="PrecioFinal" class="text-danger"></span>
             </div>
@@ -89,7 +89,7 @@
                 <label asp-for="PrecioReventa" class="form-label small fw-bold text-muted">Precio Reventa <span class="text-danger">*</span></label>
                 <div class="input-group">
                     <span class="input-group-text">$</span>
-                    <input asp-for="PrecioReventa" class="form-control" type="number" lang="en" step="0.01" min="0" placeholder="0.00" />
+                    <input asp-for="PrecioReventa" class="form-control" type="number" lang="en" step="1" min="0" placeholder="0" />
                 </div>
                 <span asp-validation-for="PrecioReventa" class="text-danger"></span>
             </div>
@@ -253,11 +253,11 @@
             markupEl.value = ((precio - costo) / costo * 100).toFixed(2);
         } else if (fuente === 'cmv' && cmv > 0) {
             const p        = costo / (cmv / 100);
-            precioEl.value = p.toFixed(2);
+            precioEl.value = Math.round(p);
             markupEl.value = ((p - costo) / costo * 100).toFixed(2);
         } else if (fuente === 'markup') {
             const p        = costo * (1 + markup / 100);
-            precioEl.value = p.toFixed(2);
+            precioEl.value = Math.round(p);
             cmvEl.value    = (costo / p * 100).toFixed(2);
         }
     }

@@ -45,7 +45,7 @@
                         <td>@p.Cliente.NombreCompleto</td>
                         <td>@p.Cliente.Direccion</td>
                         <td>@p.Notas</td>
-                        <td>@p.MontoTotal.ToString("C", new System.Globalization.CultureInfo("es-AR"))</td>
+                        <td>@p.MontoTotal.ToString("C0", new System.Globalization.CultureInfo("es-AR"))</td>
                     </tr>
                 }
             </tbody>
@@ -73,8 +73,8 @@
                             <tr>
                                 <td>@d.Producto.NombreVisible</td>
                                 <td>@d.Cantidad</td>
-                                <td>@d.PrecioUnitario.ToString("C", new System.Globalization.CultureInfo("es-AR"))</td>
-                                <td>@((d.Cantidad * d.PrecioUnitario).ToString("C", new System.Globalization.CultureInfo("es-AR")))</td>
+                                <td>@d.PrecioUnitario.ToString("C0", new System.Globalization.CultureInfo("es-AR"))</td>
+                                <td>@((d.Cantidad * d.PrecioUnitario).ToString("C0", new System.Globalization.CultureInfo("es-AR")))</td>
                             </tr>
                         }
                     </tbody>
@@ -84,17 +84,17 @@
                     {
                         var brutoPedido = p.Detalles.Sum(d => d.Cantidad * d.PrecioUnitario);
                         <div>
-                            Subtotal: @brutoPedido.ToString("C", new System.Globalization.CultureInfo("es-AR"))
-                            — Descuento @p.DescuentoPorcentaje.ToString("0.##")%: -@((brutoPedido - p.MontoTotal).ToString("C", new System.Globalization.CultureInfo("es-AR")))
+                            Subtotal: @brutoPedido.ToString("C0", new System.Globalization.CultureInfo("es-AR"))
+                            — Descuento @p.DescuentoPorcentaje.ToString("0.##")%: -@((brutoPedido - p.MontoTotal).ToString("C0", new System.Globalization.CultureInfo("es-AR")))
                         </div>
                     }
-                    <strong>Total: @p.MontoTotal.ToString("C", new System.Globalization.CultureInfo("es-AR"))</strong>
+                    <strong>Total: @p.MontoTotal.ToString("C0", new System.Globalization.CultureInfo("es-AR"))</strong>
                 </div>
             </div>
             <hr />
         }
         <div style="text-align: right;">
-            <strong>Total general: @Model.Sum(p => p.MontoTotal).ToString("C", new System.Globalization.CultureInfo("es-AR"))</strong>
+            <strong>Total general: @Model.Sum(p => p.MontoTotal).ToString("C0", new System.Globalization.CultureInfo("es-AR"))</strong>
         </div>
     }
 </body>

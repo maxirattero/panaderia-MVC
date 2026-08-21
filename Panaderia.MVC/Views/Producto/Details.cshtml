@@ -39,11 +39,11 @@
         </div>
         <div class="col-md-6">
             <p class="small fw-bold text-muted mb-1">Precio Final</p>
-            <p class="mb-0">$@Model.PrecioFinal.ToString("N2")</p>
+            <p class="mb-0">$@Model.PrecioFinal.ToString("N0", new System.Globalization.CultureInfo("es-AR"))</p>
         </div>
         <div class="col-md-6">
             <p class="small fw-bold text-muted mb-1">Precio Reventa</p>
-            <p class="mb-0">$@Model.PrecioReventa.ToString("N2")</p>
+            <p class="mb-0">$@Model.PrecioReventa.ToString("N0", new System.Globalization.CultureInfo("es-AR"))</p>
         </div>
         <div class="col-md-6">
             <p class="small fw-bold text-muted mb-1">Stock</p>
