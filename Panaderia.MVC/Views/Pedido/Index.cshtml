@@ -115,6 +115,10 @@
                             <td>@p.Estado</td>
                             <td>
                                 $@p.MontoTotal
+                                @if (p.DescuentoPorcentaje > 0)
+                                {
+                                    <span class="badge bg-secondary ms-1" title="Descuento aplicado">-@p.DescuentoPorcentaje.ToString("0.##")%</span>
+                                }
                                 @if (p.EstaPagado)
                                 {
                                     <div class="mt-1"><span class="status-badge status-active">Cobrado</span></div>
@@ -250,7 +254,13 @@
 
                     @* Precio + expandir productos *@
                     <div class="pedido-card-price-row">
-                        <span class="pedido-card-price">$@p.MontoTotal</span>
+                        <span class="pedido-card-price">
+                            $@p.MontoTotal
+                            @if (p.DescuentoPorcentaje > 0)
+                            {
+                                <span class="badge bg-secondary" style="font-size:0.65rem;vertical-align:middle;">-@p.DescuentoPorcentaje.ToString("0.##")%</span>
+                            }
+                        </span>
                         <button class="pedido-card-expand" type="button"
                                 data-bs-toggle="collapse" data-bs-target="#mobile-detalle-@p.Id">
                             Ver productos

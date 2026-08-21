@@ -80,6 +80,14 @@
                     </tbody>
                 </table>
                 <div style="text-align: right; margin-top: 4px;">
+                    @if (p.DescuentoPorcentaje > 0)
+                    {
+                        var brutoPedido = p.Detalles.Sum(d => d.Cantidad * d.PrecioUnitario);
+                        <div>
+                            Subtotal: @brutoPedido.ToString("C", new System.Globalization.CultureInfo("es-AR"))
+                            — Descuento @p.DescuentoPorcentaje.ToString("0.##")%: -@((brutoPedido - p.MontoTotal).ToString("C", new System.Globalization.CultureInfo("es-AR")))
+                        </div>
+                    }
                     <strong>Total: @p.MontoTotal.ToString("C", new System.Globalization.CultureInfo("es-AR"))</strong>
                 </div>
             </div>

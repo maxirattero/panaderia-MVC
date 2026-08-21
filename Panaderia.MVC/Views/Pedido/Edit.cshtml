@@ -32,9 +32,17 @@
                         }
                     </select>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-3">
                     <label asp-for="FechaEntrega" class="form-label small fw-bold text-muted">Fecha de entrega</label>
                     <input asp-for="FechaEntrega" type="date" class="form-control" />
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="DescuentoPorcentaje" class="form-label small fw-bold text-muted">Descuento (%)</label>
+                    <div class="input-group">
+                        <input asp-for="DescuentoPorcentaje" type="number" min="0" max="100" step="0.01" class="form-control" />
+                        <span class="input-group-text">%</span>
+                    </div>
+                    <span asp-validation-for="DescuentoPorcentaje" class="text-danger small"></span>
                 </div>
                 <div class="col-12">
                     <label asp-for="Notas" class="form-label small fw-bold text-muted">Notas</label>
@@ -58,6 +66,23 @@
             </table>
 
             <button type="button" class="btn btn-mv-primary mb-3" id="btnAgregar">+ Agregar producto</button>
+
+            <div class="d-flex justify-content-end">
+                <div class="p-3 rounded-3 bg-light" style="min-width: 280px;">
+                    <div class="d-flex justify-content-between">
+                        <span class="small text-muted">Subtotal</span>
+                        <span id="resumenSubtotal">$0.00</span>
+                    </div>
+                    <div class="d-flex justify-content-between mt-1" id="filaDescuento" hidden>
+                        <span class="small text-muted">Descuento (<span id="resumenPct">0</span>%)</span>
+                        <span id="resumenDescuento" class="text-danger">-$0.00</span>
+                    </div>
+                    <div class="d-flex justify-content-between fw-bold border-top mt-2 pt-2">
+                        <span>Total</span>
+                        <span id="resumenTotal">$0.00</span>
+                    </div>
+                </div>
+            </div>
 
             <div class="d-flex flex-column flex-md-row justify-content-end gap-3 mt-5 pt-4 border-top">
                 <button type="submit" class="btn btn-mv-primary d-flex align-items-center justify-content-center gap-2">
@@ -144,10 +169,45 @@
             const template = document.getElementById('filaTemplate');
             const btnAgregar = document.getElementById('btnAgregar');
             const clienteSelect = document.getElementById('IdCliente');
+            const descuentoInput = document.getElementById('DescuentoPorcentaje');
+            const resumenSubtotal = document.getElementById('resumenSubtotal');
+            const resumenDescuento = document.getElementById('resumenDescuento');
+            const resumenTotal = document.getElementById('resumenTotal');
+            const resumenPct = document.getElementById('resumenPct');
+            const filaDescuento = document.getElementById('filaDescuento');
 
             function clienteEsRevendedor() {
                 const opt = clienteSelect.options[clienteSelect.selectedIndex];
                 return opt && opt.dataset.revendedor === 'true';
+            }
+
+            function precioFila(tr) {
+                const prodSelect = tr.querySelector('.prod-select');
+                const opt = prodSelect.options[prodSelect.selectedIndex];
+                if (!opt || !opt.value) return 0;
+                const precio = clienteEsRevendedor()
+                    ? parseFloat(opt.dataset.reventa)
+                    : parseFloat(opt.dataset.final);
+                const cant = parseInt(tr.querySelector('.cant-input').value) || 0;
+                return (precio || 0) * cant;
+            }
+
+            function recalcularTotales() {
+                let bruto = 0;
+                tbody.querySelectorAll('tr').forEach(tr => { bruto += precioFila(tr); });
+
+                let pct = parseFloat(descuentoInput.value);
+                if (isNaN(pct) || pct < 0) pct = 0;
+                if (pct > 100) pct = 100;
+
+                const descuento = bruto * pct / 100;
+                const total = bruto - descuento;
+
+                resumenSubtotal.textContent = '$' + bruto.toFixed(2);
+                resumenDescuento.textContent = '-$' + descuento.toFixed(2);
+                resumenTotal.textContent = '$' + total.toFixed(2);
+                resumenPct.textContent = pct.toString();
+                filaDescuento.hidden = pct <= 0;
             }
 
             function recalcularFila(tr) {
@@ -164,6 +224,7 @@
                 }
                 const cant = parseInt(cantInput.value) || 0;
                 subtotalCell.textContent = '$' + (precio * cant).toFixed(2);
+                recalcularTotales();
             }
 
             function reindexar() {
@@ -196,6 +257,7 @@
                 tr.querySelector('.btnQuitar').addEventListener('click', () => {
                     tr.remove();
                     reindexar();
+                    recalcularTotales();
                 });
             }
 
@@ -203,14 +265,18 @@
 
             clienteSelect.addEventListener('change', () => {
                 tbody.querySelectorAll('tr').forEach(recalcularFila);
+                recalcularTotales();
             });
 
+            descuentoInput.addEventListener('input', recalcularTotales);
 
             if (initialDetalles.length > 0) {
                 initialDetalles.forEach(agregarFila);
             } else {
                 agregarFila(null);
             }
+
+            recalcularTotales();
         })();
     </script>
 }

@@ -301,6 +301,8 @@ namespace Panaderia.MVC.Controllers
                 Estado = pedido.Estado,
                 FechaEntrega = pedido.FechaEntrega,
                 Notas = pedido.Notas,
+                SubtotalBruto = pedido.Detalles.Sum(d => d.Cantidad * d.PrecioUnitario),
+                DescuentoPorcentaje = pedido.DescuentoPorcentaje,
                 MontoTotal = pedido.MontoTotal,
                 MontoCobrado = pedido.MontoCobrado,
                 SaldoPendiente = pedido.SaldoPendiente,
@@ -315,6 +317,15 @@ namespace Panaderia.MVC.Controllers
             };
 
             return View(vm);
+        }
+
+        // Total del pedido con el descuento porcentual ya aplicado.
+        // MontoTotal se persiste neto: cobros, saldo, caja y dashboard siguen comparando contra este valor.
+        private static decimal CalcularMontoTotal(IEnumerable<DetallePedido> detalles, decimal descuentoPorcentaje)
+        {
+            var bruto = detalles.Sum(d => d.Cantidad * d.PrecioUnitario);
+            var pct = Math.Clamp(descuentoPorcentaje, 0m, 100m);
+            return Math.Round(bruto * (1m - pct / 100m), 2, MidpointRounding.AwayFromZero);
         }
 
         private async Task CargarDropdowns()
@@ -367,6 +378,7 @@ namespace Panaderia.MVC.Controllers
                     ? DateTime.SpecifyKind(vm.FechaEntrega.Value, DateTimeKind.Utc)
                     : null,
                 Notas = vm.Notas,
+                DescuentoPorcentaje = Math.Clamp(vm.DescuentoPorcentaje, 0m, 100m),
                 FechaCreacion = DateTime.UtcNow,
                 Detalles = new List<DetallePedido>()
             };
@@ -388,7 +400,7 @@ namespace Panaderia.MVC.Controllers
                 });
             }
 
-            pedido.MontoTotal = pedido.Detalles.Sum(d => d.Cantidad * d.PrecioUnitario);
+            pedido.MontoTotal = CalcularMontoTotal(pedido.Detalles, pedido.DescuentoPorcentaje);
 
             await _pedidoService.CreateAsync(pedido);
             return RedirectToAction(nameof(Index));
@@ -408,6 +420,7 @@ namespace Panaderia.MVC.Controllers
                 FechaEntrega = pedido.FechaEntrega,
                 FechaCreacion = pedido.FechaCreacion,
                 Notas = pedido.Notas,
+                DescuentoPorcentaje = pedido.DescuentoPorcentaje,
                 Detalles = pedido.Detalles.Select(d => new DetallePedidoViewModel
                 {
                     IdProducto = d.IdProducto,
@@ -459,6 +472,8 @@ namespace Panaderia.MVC.Controllers
                 });
             }
 
+            var descuento = Math.Clamp(vm.DescuentoPorcentaje, 0m, 100m);
+
             var pedido = new Pedido
             {
                 Id = vm.Id,
@@ -468,9 +483,19 @@ namespace Panaderia.MVC.Controllers
                     ? DateTime.SpecifyKind(vm.FechaEntrega.Value, DateTimeKind.Utc)
                     : null,
                 Notas = vm.Notas,
-                MontoTotal = detalles.Sum(d => d.Cantidad * d.PrecioUnitario),
+                DescuentoPorcentaje = descuento,
+                MontoTotal = CalcularMontoTotal(detalles, descuento),
                 Detalles = detalles
             };
+
+            // Un descuento no puede dejar el total por debajo de lo ya cobrado.
+            var existente = await _pedidoService.GetByIdAsync(vm.Id);
+            if (existente != null && pedido.MontoTotal < existente.MontoCobrado)
+            {
+                ModelState.AddModelError("", $"El total con descuento ({pedido.MontoTotal.ToString("C", new CultureInfo("es-AR"))}) queda por debajo de lo ya cobrado ({existente.MontoCobrado.ToString("C", new CultureInfo("es-AR"))}).");
+                await CargarDropdowns();
+                return View(vm);
+            }
 
             await _pedidoService.UpdateAsync(pedido);
             return RedirectToAction(nameof(Index));

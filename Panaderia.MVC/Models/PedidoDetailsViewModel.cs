@@ -10,6 +10,9 @@ namespace Panaderia.MVC.Models
         public EstadoPedido Estado { get; set; }
         public DateTime? FechaEntrega { get; set; }
         public string? Notas { get; set; }
+        public decimal SubtotalBruto { get; set; }
+        public decimal DescuentoPorcentaje { get; set; }
+        public decimal MontoDescuento => SubtotalBruto - MontoTotal;
         public decimal MontoTotal { get; set; }
         public decimal MontoCobrado { get; set; }
         public decimal SaldoPendiente { get; set; }

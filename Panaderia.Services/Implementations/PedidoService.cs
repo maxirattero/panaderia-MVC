@@ -125,6 +125,7 @@ namespace Panaderia.Services.Implementations
             existing.IdCliente = pedido.IdCliente;
             existing.FechaEntrega = pedido.FechaEntrega;
             existing.Notas = pedido.Notas;
+            existing.DescuentoPorcentaje = pedido.DescuentoPorcentaje;
             existing.MontoTotal = pedido.MontoTotal;
             existing.FechaModificacion = DateTime.UtcNow;
 

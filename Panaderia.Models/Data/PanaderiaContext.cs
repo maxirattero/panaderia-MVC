@@ -59,6 +59,10 @@ namespace Panaderia.Models.Data
                 .HasOne(p => p.Cliente)
                 .WithMany()
                 .HasForeignKey(p => p.IdCliente);
+            // Descuento del pedido (0 a 100, dos decimales)
+            modelBuilder.Entity<Pedido>()
+                .Property(p => p.DescuentoPorcentaje)
+                .HasPrecision(5, 2);
             // DetallePedido -> Pedido
             modelBuilder.Entity<DetallePedido>()
                 .HasOne(d => d.Pedido)
