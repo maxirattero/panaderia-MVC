@@ -222,6 +222,15 @@ namespace Panaderia.MVC.Controllers
             return View(pedidos);
         }
 
+        // Recibo imprimible de un pedido puntual (lo piden sobre todo los revendedores).
+        // La fecha que sale impresa es la de entrega; la vista cae a la de hoy si el pedido no tiene.
+        public async Task<IActionResult> Recibo(int id)
+        {
+            var pedido = await _pedidoService.GetByIdAsync(id);
+            if (pedido == null) return NotFound();
+            return View(pedido);
+        }
+
         [HttpGet]
         public async Task<IActionResult> PlanificarAmasadas()
         {

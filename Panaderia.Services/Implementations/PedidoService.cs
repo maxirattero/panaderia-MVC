@@ -62,6 +62,10 @@ namespace Panaderia.Services.Implementations
                 .Include(p => p.Detalles)
                     .ThenInclude(d => d.Producto)
                         .ThenInclude(p => p.Formato)
+                // El empaque define si el renglón va en bolsa de papel o sellada:
+                // lo usa la impresión con detalles.
+                .Include(p => p.Detalles)
+                    .ThenInclude(d => d.Empaque)
                 .Where(p => p.Estado == estado)
                 .ToListAsync();
         }

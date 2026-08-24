@@ -384,7 +384,8 @@ h1, h2, h3, .font-literata {
 
 .pedido-card-actions {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    /* 5 columnas: cobrar · entregar · recibo · editar · eliminar */
+    grid-template-columns: repeat(5, 1fr);
     border-top: 1px solid var(--mv-outline);
 }
 
@@ -423,6 +424,10 @@ h1, h2, h3, .font-literata {
 
 .action-entregar .material-symbols-outlined {
     color: var(--mv-success);
+}
+
+.action-recibo .material-symbols-outlined {
+    color: #6b6b6b;
 }
 
 .action-editar .material-symbols-outlined {

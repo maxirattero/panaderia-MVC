@@ -167,6 +167,12 @@
                                             </button>
                                         </form>
                                     }
+                                    <a href="@Url.Action("Recibo", "Pedido", new { id = p.Id })"
+                                       target="_blank"
+                                       class="btn btn-sm btn-outline-secondary"
+                                       title="Imprimir recibo">
+                                        <span class="material-symbols-outlined">receipt_long</span>
+                                    </a>
                                     <a asp-action="Edit" asp-route-id="@p.Id"
                                        class="btn btn-sm btn-outline-success"
                                        title="Editar">
@@ -329,6 +335,14 @@
                     {
                         <span></span>
                     }
+
+                    @* Recibo *@
+                    <a href="@Url.Action("Recibo", "Pedido", new { id = p.Id })"
+                       target="_blank"
+                       class="pedido-card-action action-recibo"
+                       title="Imprimir recibo">
+                        <span class="material-symbols-outlined">receipt_long</span>
+                    </a>
 
                     @* Editar *@
                     <a asp-action="Edit" asp-route-id="@p.Id"

@@ -63,16 +63,22 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>Producto</th><th>Cant.</th>
+                            <th>Producto</th><th>Cant.</th><th>Bolsa</th>
                             <th>Precio unit.</th><th>Subtotal</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var d in p.Detalles)
                         {
+                            // El tipo de bolsa sale del empaque elegido en el renglón:
+                            // los insumos marcados como "Es bolsa de papel" van en Papel, el resto Sellado.
+                            var tipoBolsa = d.Empaque == null
+                                ? "—"
+                                : (d.Empaque.EsBolsaPapel ? "Papel" : "Sellado");
                             <tr>
                                 <td>@d.Producto.NombreVisible</td>
                                 <td>@d.Cantidad</td>
+                                <td>@tipoBolsa</td>
                                 <td>@d.PrecioUnitario.ToString("C0", new System.Globalization.CultureInfo("es-AR"))</td>
                                 <td>@((d.Cantidad * d.PrecioUnitario).ToString("C0", new System.Globalization.CultureInfo("es-AR")))</td>
                             </tr>

@@ -1,0 +1,217 @@
+@model Panaderia.Models.Entities.Pedido
+@using System.Globalization
+@{
+    Layout = null;
+    var ar = new CultureInfo("es-AR");
+
+    // Fecha del recibo = fecha de entrega del pedido. Si el pedido no tiene, se usa la de hoy.
+    var fechaRecibo = Model.FechaEntrega ?? DateTime.Today;
+
+    // El recuadro del detalle siempre baja hasta la misma altura, como la planilla de papel:
+    // si el pedido tiene menos renglones, se completan vacíos.
+    const int filasFijas = 16;
+    var filasVacias = Math.Max(0, filasFijas - Model.Detalles.Count);
+
+    // MontoTotal se guarda NETO (con el descuento ya aplicado). Si hay descuento hay que
+    // mostrar el desglose, o los subtotales de los renglones no cerrarían contra el TOTAL.
+    var subtotalBruto = Model.Detalles.Sum(d => d.Cantidad * d.PrecioUnitario);
+    var hayDescuento = Model.DescuentoPorcentaje > 0;
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Recibo — @Model.Cliente.NombreCompleto</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        @@page {
+            size: A4;
+            margin: 12mm;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            padding: 16px;
+            background: #f2f2f2;
+            font-family: 'Plus Jakarta Sans', Arial, Helvetica, sans-serif;
+            font-size: 13px;
+            color: #111;
+        }
+
+        .hoja {
+            background: #fff;
+            border: 1px solid #111;
+            max-width: 190mm;
+            margin: 0 auto;
+            padding: 12mm 10mm;
+        }
+
+        /* ── Cabecera: logo + fecha ── */
+        .cabecera {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 18px;
+        }
+
+        .logo { height: 105px; width: auto; }
+
+        .fecha { display: flex; align-items: baseline; gap: 10px; }
+        .fecha .valor {
+            border-bottom: 1px solid #111;
+            min-width: 130px;
+            text-align: center;
+            padding: 0 8px 2px;
+        }
+
+        .linea { border: 0; border-top: 1px solid #111; margin: 14px 0; }
+
+        /* ── Datos del cliente ── */
+        .datos p { margin: 0 0 4px; }
+        .etiqueta { font-weight: 700; }
+
+        /* ── Detalle ── */
+        table.detalle {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 4px;
+        }
+
+        table.detalle th,
+        table.detalle td {
+            border: 1px solid #111;
+            padding: 4px 8px;
+            height: 22px;
+        }
+
+        table.detalle th {
+            background: #ededed;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .col-cant { width: 9%; text-align: right; }
+        .col-prod { width: 55%; }
+        .col-precio { width: 17%; text-align: right; }
+        .col-total { width: 19%; text-align: right; }
+
+        /* ── Totales ── */
+        .totales {
+            margin-top: 14px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .totales table { border-collapse: collapse; min-width: 46%; }
+        .totales td { padding: 5px 10px; }
+        .totales .rotulo { text-align: left; }
+        .totales .importe { text-align: right; }
+
+        .totales tr.total td {
+            background: #ededed;
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        /* ── Pantalla ── */
+        .barra { max-width: 190mm; margin: 0 auto 12px; }
+        .barra button {
+            font: inherit;
+            padding: 6px 14px;
+            border: 1px solid #855330;
+            background: #855330;
+            color: #fff;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        @@media print {
+            body { background: #fff; padding: 0; }
+            .no-print { display: none !important; }
+            .hoja { border: 1px solid #111; max-width: none; margin: 0; padding: 8mm; }
+        }
+    </style>
+</head>
+<body onload="window.print()">
+    <div class="barra no-print">
+        <button type="button" onclick="window.print()">Imprimir</button>
+    </div>
+
+    <div class="hoja">
+        <div class="cabecera">
+            <img class="logo" src="~/img/logo-masaviva.png" alt="Masa Viva" />
+            <div class="fecha">
+                <span class="etiqueta">Fecha:</span>
+                <span class="valor">@fechaRecibo.ToString("dd/MM/yyyy")</span>
+            </div>
+        </div>
+
+        <hr class="linea" />
+
+        <div class="datos">
+            <p><span class="etiqueta">Cliente:</span> @Model.Cliente.NombreCompleto</p>
+            <p><span class="etiqueta">Dirección:</span> @Model.Cliente.Direccion</p>
+            <p><span class="etiqueta">Localidad:</span> @Model.Cliente.Localidad</p>
+        </div>
+
+        <hr class="linea" />
+
+        <table class="detalle">
+            <thead>
+                <tr>
+                    <th class="col-cant">Cant</th>
+                    <th class="col-prod">Producto</th>
+                    <th class="col-precio">P. Unitario</th>
+                    <th class="col-total">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var d in Model.Detalles)
+                {
+                    <tr>
+                        <td class="col-cant">@d.Cantidad</td>
+                        <td class="col-prod">@d.Producto.NombreVisible</td>
+                        <td class="col-precio">@d.PrecioUnitario.ToString("C0", ar)</td>
+                        <td class="col-total">@((d.Cantidad * d.PrecioUnitario).ToString("C0", ar))</td>
+                    </tr>
+                }
+                @for (var i = 0; i < filasVacias; i++)
+                {
+                    <tr>
+                        <td class="col-cant">&nbsp;</td>
+                        <td class="col-prod">&nbsp;</td>
+                        <td class="col-precio">&nbsp;</td>
+                        <td class="col-total">&nbsp;</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <div class="totales">
+            <table>
+                @if (hayDescuento)
+                {
+                    <tr>
+                        <td class="rotulo">Subtotal</td>
+                        <td class="importe">@subtotalBruto.ToString("C0", ar)</td>
+                    </tr>
+                    <tr>
+                        <td class="rotulo">Descuento @Model.DescuentoPorcentaje.ToString("0.##")%</td>
+                        <td class="importe">-@((subtotalBruto - Model.MontoTotal).ToString("C0", ar))</td>
+                    </tr>
+                }
+                <tr class="total">
+                    <td class="rotulo">TOTAL</td>
+                    <td class="importe">@Model.MontoTotal.ToString("C0", ar)</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
