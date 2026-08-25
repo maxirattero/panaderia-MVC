@@ -19,6 +19,33 @@
     // Con menos opciones que esto, el buscador estorba más de lo que ayuda
     const MINIMO_OPCIONES = 8;
 
+    // ¿El select está adentro de algo que recorta (overflow distinto de visible)?
+    // Pasa en las tablas de Receta / Sub-receta / Pedido: el <table> vive dentro de
+    // un .table-responsive (overflow auto) y de una .card con overflow-hidden, así
+    // que el desplegable queda cortado y hay que scrollear ADENTRO de la tabla para
+    // ver las opciones. En esos casos el desplegable se cuelga del <body>.
+    function tieneAncestroQueRecorta(select) {
+        let nodo = select.parentElement;
+        while (nodo && nodo !== document.body) {
+            const cs = getComputedStyle(nodo);
+            if (cs.overflowX !== 'visible' || cs.overflowY !== 'visible') return true;
+            nodo = nodo.parentElement;
+        }
+        return false;
+    }
+
+    // Ubica el desplegable pegado al campo; si no entra abajo, lo abre hacia arriba.
+    function ubicarDesplegable(ts) {
+        ts.positionDropdown();
+        const dd = ts.dropdown;
+        const rc = ts.control.getBoundingClientRect();
+        const alto = dd.offsetHeight;
+        const espacioAbajo = window.innerHeight - rc.bottom;
+        if (alto > espacioAbajo && rc.top > espacioAbajo) {
+            dd.style.top = (rc.top + window.scrollY - alto) + 'px';
+        }
+    }
+
     function esBuscable(select) {
         if (!(select instanceof HTMLSelectElement)) return false;
         if (select.tomselect) return false;                    // ya inicializado
@@ -38,7 +65,7 @@
 
         const sinElegir = select.value === '';
 
-        const ts = new TomSelect(select, {
+        const opciones = {
             create: false,
             allowEmptyOption: !!opcionVacia,                   // deja volver a vacío en campos opcionales
             maxOptions: null,                                  // sin tope: listamos todo el catálogo
@@ -49,7 +76,32 @@
                     return '<div class="no-results">Sin resultados para "' + escape(data.input) + '"</div>';
                 }
             }
-        });
+        };
+
+        // Adentro de tablas/cards que recortan, el desplegable se cuelga del <body>
+        // para que se vea entero sin tener que scrollear la sección.
+        if (tieneAncestroQueRecorta(select)) {
+            let reubicar = null;
+
+            opciones.dropdownParent = 'body';
+
+            opciones.onDropdownOpen = function () {
+                const ts = this;
+                ubicarDesplegable(ts);
+                reubicar = function () { ubicarDesplegable(ts); };
+                window.addEventListener('scroll', reubicar, true);
+                window.addEventListener('resize', reubicar);
+            };
+
+            opciones.onDropdownClose = function () {
+                if (!reubicar) return;
+                window.removeEventListener('scroll', reubicar, true);
+                window.removeEventListener('resize', reubicar);
+                reubicar = null;
+            };
+        }
+
+        const ts = new TomSelect(select, opciones);
 
         // Sin elegir todavía: mostramos solo el texto guía, no la opción vacía como si
         // fuera una selección (evita que el campo quede de dos renglones).
