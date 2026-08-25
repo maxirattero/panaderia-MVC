@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Panaderia.Models.Entities;
+using Panaderia.Models.Enums;
 using Panaderia.Services.Interfaces;
 
 namespace Panaderia.MVC.Controllers;
@@ -17,7 +18,11 @@ public class SubRecetaController : Controller
 
     private async Task CargarDropdowns()
     {
-        ViewBag.InsumosLista = (await _insumoService.GetAllAsync()).Where(i => i.Activo).ToList();
+        // Los consumibles (film, limpieza, guantes...) no entran en una sub-receta.
+        // Empaque y Etiqueta siguen listándose como hasta ahora para no cambiar sub-recetas ya cargadas.
+        ViewBag.InsumosLista = (await _insumoService.GetAllAsync())
+            .Where(i => i.Activo && i.TipoInsumo != TipoInsumo.Consumible)
+            .ToList();
     }
 
     public async Task<IActionResult> Index()

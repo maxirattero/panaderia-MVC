@@ -29,12 +29,21 @@
                     <input id="filtroTexto" class="form-control border-start-0 ps-0" placeholder="Buscar insumo..." type="text" />
                 </div>
             </div>
-            <div class="col-12 d-flex align-items-center gap-2 flex-wrap">
-                <button id="pilTodos"     class="pill-filtro activo" onclick="setPill('todos')">Todos</button>
-                <button id="pilActivos"   class="pill-filtro"        onclick="setPill('activos')">Activos</button>
-                <button id="pilInactivos" class="pill-filtro"        onclick="setPill('inactivos')">Inactivos</button>
-                <button id="pilBajoStock" class="pill-filtro"        onclick="setPill('bajostock')">Bajo stock</button>
+            <div class="col-12 d-flex align-items-center gap-2 flex-wrap" id="pillsEstado">
+                <button id="pilTodos"     class="pill-filtro activo" onclick="setPillEstado('todos')">Todos</button>
+                <button id="pilActivos"   class="pill-filtro"        onclick="setPillEstado('activos')">Activos</button>
+                <button id="pilInactivos" class="pill-filtro"        onclick="setPillEstado('inactivos')">Inactivos</button>
+                <button id="pilBajoStock" class="pill-filtro"        onclick="setPillEstado('bajostock')">Bajo stock</button>
                 <span id="contadorVisible" class="text-secondary small ms-2"></span>
+            </div>
+            @* Segundo filtro, independiente del anterior: se combinan (ej. Activos + Consumibles) *@
+            <div class="col-12 d-flex align-items-center gap-2 flex-wrap" id="pillsTipo">
+                <span class="text-secondary small me-1">Tipo:</span>
+                <button id="pilTipoTodos"       class="pill-filtro activo" onclick="setPillTipo('todos')">Todos</button>
+                <button id="pilTipoIngrediente" class="pill-filtro"        onclick="setPillTipo('Ingrediente')">Ingredientes</button>
+                <button id="pilTipoEmpaque"     class="pill-filtro"        onclick="setPillTipo('Empaque')">Empaques</button>
+                <button id="pilTipoEtiqueta"    class="pill-filtro"        onclick="setPillTipo('Etiqueta')">Etiquetas</button>
+                <button id="pilTipoConsumible"  class="pill-filtro"        onclick="setPillTipo('Consumible')">Consumibles</button>
             </div>
         </div>
     </div>
@@ -77,15 +86,17 @@
                             };
                             var tipoBadgeClass = insumo.TipoInsumo switch
                             {
-                                TipoInsumo.Empaque  => "bg-info text-dark",
-                                TipoInsumo.Etiqueta => "bg-warning text-dark",
-                                _                    => "bg-secondary"
+                                TipoInsumo.Empaque    => "bg-info text-dark",
+                                TipoInsumo.Etiqueta   => "bg-warning text-dark",
+                                TipoInsumo.Consumible => "bg-light text-dark border",
+                                _                     => "bg-secondary"
                             };
                             var tipoLabel = insumo.TipoInsumo switch
                             {
-                                TipoInsumo.Empaque  => "Empaque",
-                                TipoInsumo.Etiqueta => "Etiqueta",
-                                _                    => "Ingrediente"
+                                TipoInsumo.Empaque    => "Empaque",
+                                TipoInsumo.Etiqueta   => "Etiqueta",
+                                TipoInsumo.Consumible => "Consumible",
+                                _                     => "Ingrediente"
                             };
                             var stockStr = insumo.StockActual % 1 == 0
                                 ? insumo.StockActual.ToString("0")
@@ -96,6 +107,7 @@
                             <tr class="@(!insumo.Activo ? "opacity-75" : "")"
                                 data-busqueda="@($"{insumo.Nombre} {insumo.Proveedor?.Nombre}").ToLower()"
                                 data-activo="@insumo.Activo.ToString().ToLower()"
+                                data-tipo="@insumo.TipoInsumo"
                                 data-bajostock="@esBajoStock.ToString().ToLower()">
                                 <td class="d-md-none">
                                     <button class="btn btn-sm btn-outline-secondary" type="button"
@@ -191,6 +203,8 @@
             const inputTexto = document.getElementById('filtroTexto');
             const contador   = document.getElementById('contadorVisible');
             const filas      = document.querySelectorAll('table tbody > tr:not(.collapse)');
+            // Dos filtros independientes que se combinan entre sí y con el buscador
+            let filtroEstado = 'todos';
             let filtroTipo   = 'todos';
 
             function normalizar(str) {
@@ -208,14 +222,16 @@
                     const busqueda  = normalizar(tr.dataset.busqueda);
                     const activo    = tr.dataset.activo;
                     const bajostock = tr.dataset.bajostock;
+                    const tipo      = tr.dataset.tipo;
 
-                    const okTexto = texto === '' || busqueda.includes(texto);
-                    const okTipo  = filtroTipo === 'todos'
-                        || (filtroTipo === 'activos'    && activo    === 'true')
-                        || (filtroTipo === 'inactivos'  && activo    === 'false')
-                        || (filtroTipo === 'bajostock'  && bajostock === 'true');
+                    const okTexto  = texto === '' || busqueda.includes(texto);
+                    const okEstado = filtroEstado === 'todos'
+                        || (filtroEstado === 'activos'    && activo    === 'true')
+                        || (filtroEstado === 'inactivos'  && activo    === 'false')
+                        || (filtroEstado === 'bajostock'  && bajostock === 'true');
+                    const okTipo   = filtroTipo === 'todos' || tipo === filtroTipo;
 
-                    const visible = okTexto && okTipo;
+                    const visible = okTexto && okEstado && okTipo;
                     tr.style.display = visible ? '' : 'none';
 
                     const detalle = tr.nextElementSibling;
@@ -229,10 +245,24 @@
                 contador.textContent = visibles === 1 ? '1 insumo' : visibles + ' insumos';
             }
 
-            window.setPill = function (tipo) {
-                filtroTipo = tipo;
-                document.querySelectorAll('.pill-filtro').forEach(b => b.classList.remove('activo'));
+            window.setPillEstado = function (estado) {
+                filtroEstado = estado;
+                document.querySelectorAll('#pillsEstado .pill-filtro').forEach(b => b.classList.remove('activo'));
                 const map = { todos: 'pilTodos', activos: 'pilActivos', inactivos: 'pilInactivos', bajostock: 'pilBajoStock' };
+                document.getElementById(map[estado]).classList.add('activo');
+                filtrar();
+            };
+
+            window.setPillTipo = function (tipo) {
+                filtroTipo = tipo;
+                document.querySelectorAll('#pillsTipo .pill-filtro').forEach(b => b.classList.remove('activo'));
+                const map = {
+                    todos: 'pilTipoTodos',
+                    Ingrediente: 'pilTipoIngrediente',
+                    Empaque: 'pilTipoEmpaque',
+                    Etiqueta: 'pilTipoEtiqueta',
+                    Consumible: 'pilTipoConsumible'
+                };
                 document.getElementById(map[tipo]).classList.add('activo');
                 filtrar();
             };
