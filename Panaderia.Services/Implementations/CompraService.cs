@@ -43,15 +43,15 @@ public class CompraService : ICompraService
             var insumo = await _context.Insumos.FindAsync(detalle.IdInsumo);
             var unidad = await _context.UnidadesCompra.FindAsync(detalle.IdUnidadCompra);
 
+            if (insumo == null || unidad == null || unidad.IdInsumo != detalle.IdInsumo)
+                throw new InvalidOperationException("La unidad de compra seleccionada no corresponde al insumo.");
+
             detalle.Subtotal = detalle.Cantidad * detalle.PrecioUnitario + detalle.CostoEnvio;
 
-            if (insumo != null && unidad != null)
-            {
-                insumo.StockActual  += detalle.Cantidad * unidad.FactorConversion;
-                var costoEnvioPorUnidad    = detalle.Cantidad > 0 ? detalle.CostoEnvio / detalle.Cantidad : 0m;
-                insumo.PrecioCompra        = detalle.PrecioUnitario + costoEnvioPorUnidad;
-                insumo.CantidadRendimiento = unidad.FactorConversion;
-            }
+            insumo.StockActual += detalle.Cantidad * unidad.FactorConversion;
+            var costoEnvioPorUnidad = detalle.Cantidad > 0 ? detalle.CostoEnvio / detalle.Cantidad : 0m;
+            insumo.PrecioCompra = detalle.PrecioUnitario + costoEnvioPorUnidad;
+            insumo.CantidadRendimiento = unidad.FactorConversion;
         }
 
         compra.MontoTotal = compra.Detalles.Sum(d => d.Subtotal);

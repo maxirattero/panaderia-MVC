@@ -2,7 +2,8 @@
 {
     public enum EstadoPedido
     {
-        Pendiente,
-        Entregado
+        Pendiente = 0,
+        Entregado = 1,
+        EnProduccion = 2
     }
 }

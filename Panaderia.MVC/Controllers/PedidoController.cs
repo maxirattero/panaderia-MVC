@@ -86,46 +86,7 @@ namespace Panaderia.MVC.Controllers
                 TotalAgua = resumen.TotalAgua
             };
 
-            // Filas de pedidos pendientes
-            foreach (var item in resumenTodos.PorProducto)
-            {
-                var receta = await _recetaService.GetByProductoIdAsync(item.IdProducto);
-                if (receta != null)
-                {
-                    vm.ItemsSeleccionables.Add(new ItemProduccionSeleccionable
-                    {
-                        IdProducto = item.IdProducto,
-                        IdReceta = receta.Id,
-                        NombreProducto = item.NombreProducto,
-                        CantidadSugerida = item.CantidadTotal,
-                        CantidadAProducir = item.CantidadTotal,
-                        Seleccionado = !excluidos.Contains(item.IdProducto),
-                        EsStock = false,
-                        IdProduccionStock = 0
-                    });
-                }
-            }
-
-            // Filas de producción para stock (buffer persistido)
-            var buffer = await _pedidoService.GetProduccionStockAsync();
-            foreach (var b in buffer)
-            {
-                var receta = await _recetaService.GetByProductoIdAsync(b.IdProducto);
-                if (receta != null)
-                {
-                    vm.ItemsSeleccionables.Add(new ItemProduccionSeleccionable
-                    {
-                        IdProducto = b.IdProducto,
-                        IdReceta = receta.Id,
-                        NombreProducto = b.Producto.NombreVisible,
-                        CantidadSugerida = b.Cantidad,
-                        CantidadAProducir = b.Cantidad,
-                        Seleccionado = !excluidos.Contains(b.IdProducto),
-                        EsStock = true,
-                        IdProduccionStock = b.Id
-                    });
-                }
-            }
+            vm.ItemsSeleccionables = await CrearItemsProduccionAsync(resumenTodos.PorProducto, new HashSet<int>(excluidos));
 
             ViewBag.HayExcluidos = excluidos.Any();
             ViewBag.CantidadExcluidos = excluidos.Count;
@@ -210,7 +171,10 @@ namespace Panaderia.MVC.Controllers
             }
             var warnings = await _pedidoService.ConfirmarProduccionAsync(itemsSeleccionados);
             if (warnings.Any())
+            {
                 TempData["Warning"] = string.Join("|", warnings);
+                return RedirectToAction(nameof(Produccion));
+            }
             TempData["Success"] = "Producción confirmada. Stock actualizado.";
             return RedirectToAction(nameof(Produccion));
         }
@@ -245,6 +209,36 @@ namespace Panaderia.MVC.Controllers
             ViewBag.ProductosJson = JsonSerializer.Serialize(productos, jsonOptions);
             ViewBag.SubRecetasJson = JsonSerializer.Serialize(porSubReceta, jsonOptions);
             return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ConfirmarPlanificacion()
+        {
+            var excluidos = LeerProductosExcluidos();
+            if (excluidos.Any())
+            {
+                return Json(new
+                {
+                    success = false,
+                    error = "Para confirmar desde el planificador, incluí todos los productos. Si necesitás producir solo una parte, usá el Dashboard de Producción."
+                });
+            }
+
+            var (porProducto, _, _, _) = await _pedidoService.GetResumenProduccionAsync();
+            var items = await CrearItemsProduccionAsync(porProducto, new HashSet<int>());
+            if (!items.Any())
+            {
+                return Json(new { success = false, error = "No hay producción pendiente para confirmar." });
+            }
+
+            var warnings = await _pedidoService.ConfirmarProduccionAsync(items);
+            if (warnings.Any())
+            {
+                return Json(new { success = false, error = string.Join("\n", warnings) });
+            }
+
+            return Json(new { success = true });
         }
 
         public async Task<IActionResult> ImprimirProduccion(string? anteriores = null)
@@ -293,9 +287,56 @@ namespace Panaderia.MVC.Controllers
 
         public async Task<IActionResult> Index()
         {
-            var pedidos = await _pedidoService.GetByEstadoAsync(EstadoPedido.Pendiente);
+            var pendientes = await _pedidoService.GetByEstadoAsync(EstadoPedido.Pendiente);
+            var enProduccion = await _pedidoService.GetByEstadoAsync(EstadoPedido.EnProduccion);
+            var pedidos = pendientes.Concat(enProduccion)
+                .OrderBy(p => p.FechaEntrega)
+                .ToList();
             ViewBag.TotalVendidoSemana = await _pedidoService.GetTotalVendidoSemanaAsync();
             return View(pedidos);
+        }
+
+        private async Task<List<ItemProduccionSeleccionable>> CrearItemsProduccionAsync(
+            IEnumerable<ResumenProductoItem> porProducto,
+            ISet<int> excluidos)
+        {
+            var items = new List<ItemProduccionSeleccionable>();
+            foreach (var item in porProducto)
+            {
+                var receta = await _recetaService.GetByProductoIdAsync(item.IdProducto);
+                if (receta == null) continue;
+
+                items.Add(new ItemProduccionSeleccionable
+                {
+                    IdProducto = item.IdProducto,
+                    IdReceta = receta.Id,
+                    NombreProducto = item.NombreProducto,
+                    CantidadSugerida = item.CantidadTotal,
+                    CantidadAProducir = item.CantidadTotal,
+                    Seleccionado = !excluidos.Contains(item.IdProducto)
+                });
+            }
+
+            var buffer = await _pedidoService.GetProduccionStockAsync();
+            foreach (var b in buffer)
+            {
+                var receta = await _recetaService.GetByProductoIdAsync(b.IdProducto);
+                if (receta == null) continue;
+
+                items.Add(new ItemProduccionSeleccionable
+                {
+                    IdProducto = b.IdProducto,
+                    IdReceta = receta.Id,
+                    NombreProducto = b.Producto.NombreVisible,
+                    CantidadSugerida = b.Cantidad,
+                    CantidadAProducir = b.Cantidad,
+                    Seleccionado = !excluidos.Contains(b.IdProducto),
+                    EsStock = true,
+                    IdProduccionStock = b.Id
+                });
+            }
+
+            return items;
         }
 
         public async Task<IActionResult> Details(int id)
@@ -523,7 +564,14 @@ namespace Panaderia.MVC.Controllers
             var pedido = await _pedidoService.GetByIdAsync(vm.IdPedido);
             if (pedido == null) return NotFound();
 
-            await _pedidoService.RegistrarCobroAsync(vm.IdPedido, vm.Monto);
+            try
+            {
+                await _pedidoService.RegistrarCobroAsync(vm.IdPedido, vm.Monto);
+            }
+            catch (InvalidOperationException ex)
+            {
+                TempData["Error"] = ex.Message;
+            }
             return RedirectToAction(nameof(Index));
         }
 

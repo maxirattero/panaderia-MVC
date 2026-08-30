@@ -80,7 +80,16 @@ public class CompraController : Controller
             }).ToList()
         };
 
-        await _compraService.CreateAsync(compra);
+        try
+        {
+            await _compraService.CreateAsync(compra);
+        }
+        catch (InvalidOperationException ex)
+        {
+            ModelState.AddModelError(string.Empty, ex.Message);
+            await CargarDropdowns();
+            return View(vm);
+        }
         TempData["Success"] = "Compra registrada correctamente.";
         return RedirectToAction(nameof(Index));
     }

@@ -38,6 +38,10 @@
     <p class="text-muted">Cargando...</p>
 </div>
 
+<form id="confirmarPlanificacionForm" asp-action="ConfirmarPlanificacion" method="post">
+    @Html.AntiForgeryToken()
+</form>
+
 <!-- Hidden container for print layout -->
 <div id="print-area" style="display:none;"></div>
 
@@ -283,7 +287,24 @@
     }
 
     // ─── Print ──────────────────────────────────────────
-    function imprimir() {
+    async function imprimir() {
+        if (!confirm('¿Confirmar la producción y actualizar el stock antes de imprimir? Esta acción quitará estos pedidos de la próxima planificación.')) return;
+
+        const form = document.getElementById('confirmarPlanificacionForm');
+        const response = await fetch(form.action, {
+            method: 'POST',
+            body: new FormData(form)
+        });
+        const resultado = await response.json();
+        if (!resultado.success) {
+            alert(resultado.error || 'No se pudo confirmar la producción.');
+            return;
+        }
+
+        imprimirSinConfirmar();
+    }
+
+    function imprimirSinConfirmar() {
         const printArea = document.getElementById('print-area');
         const hoy = new Date().toLocaleDateString('es-AR');
 

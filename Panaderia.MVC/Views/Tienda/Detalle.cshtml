@@ -3,6 +3,7 @@
     Layout = "_TiendaLayout";
     ViewData["Title"] = Model.NombreVisible;
     var ar = new System.Globalization.CultureInfo("es-AR");
+    var precio = ViewBag.EsRevendedor is true ? Model.PrecioReventa : Model.PrecioFinal;
 }
 
 @if (TempData["TiendaMsg"] != null)
@@ -39,7 +40,7 @@
                 </div>
             }
 
-            <div class="td-price">$@Model.PrecioFinal.ToString("N0", ar)</div>
+            <div class="td-price">$@precio.ToString("N0", ar)</div>
 
             <div class="td-badges">
                 @foreach (var etiqueta in Model.Etiquetas)

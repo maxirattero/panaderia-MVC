@@ -28,6 +28,7 @@
                 var (badgeClass, badgeLabel) = Model.Estado switch
                 {
                     Panaderia.Models.Enums.EstadoPedido.Pendiente => ("status-badge status-pending", "Pendiente"),
+                    Panaderia.Models.Enums.EstadoPedido.EnProduccion => ("status-badge status-active", "En producción"),
                     Panaderia.Models.Enums.EstadoPedido.Entregado => ("status-badge status-active", "Entregado"),
                     _ => ("status-badge", Model.Estado.ToString())
                 };

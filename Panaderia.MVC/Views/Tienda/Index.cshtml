@@ -69,9 +69,12 @@
     <p class="tienda-empty">No encontramos productos con esa búsqueda.</p>
 }
 
+<form asp-controller="Tienda" asp-action="AgregarVarios" method="post" class="tienda-seleccion-form">
+    @Html.AntiForgeryToken()
 <div class="tienda-grid">
     @foreach (var p in Model.Productos)
     {
+        var precio = Model.EsRevendedor ? p.PrecioReventa : p.PrecioFinal;
         <div class="tienda-card @(p.SinStock ? "agotado" : "")">
             <a class="tc-link" asp-controller="Tienda" asp-action="Detalle" asp-route-id="@p.Id">
                 <div class="tc-img">
@@ -98,42 +101,57 @@
                     {
                         <div class="tc-meta">@p.Categoria.Nombre</div>
                     }
-                    <div class="tc-price">$@p.PrecioFinal.ToString("N0", ar)</div>
+                    <div class="tc-price">$@precio.ToString("N0", ar)</div>
                 </div>
             </a>
             @if (!p.SinStock)
             {
-                <form asp-controller="Tienda" asp-action="Agregar" method="post" class="tc-agregar">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" name="id" value="@p.Id" />
-                    <input type="hidden" name="origen" value="tienda" />
-                    <input type="hidden" name="categoria" value="@Model.CategoriaSeleccionada" />
-                    <input type="hidden" name="q" value="@Model.Busqueda" />
-                    <input type="hidden" name="etiqueta" value="@Model.EtiquetaSeleccionada" />
+                <div class="tc-agregar">
                     <div class="stepper-tienda sm">
                         <button type="button" aria-label="Restar" onclick="cambiarCantidadCard(this, -1)">
                             <span class="material-symbols-outlined">remove</span>
                         </button>
-                        <input type="text" name="cantidad" value="1" readonly />
+                        <input type="text" name="cantidades[@p.Id]" value="0" readonly />
                         <button type="button" aria-label="Sumar" onclick="cambiarCantidadCard(this, 1)">
                             <span class="material-symbols-outlined">add</span>
                         </button>
                     </div>
-                    <button type="submit" class="tc-add" title="Agregar al carrito">
-                        <span class="material-symbols-outlined">add_shopping_cart</span>
-                    </button>
-                </form>
+                </div>
             }
         </div>
     }
 </div>
+    <div id="finSeleccionTienda" aria-hidden="true"></div>
+    <div class="tienda-confirmar-seleccion">
+        <span id="seleccionResumen">0 productos seleccionados</span>
+        <button id="confirmarSeleccion" type="submit" disabled>
+            Ver pedido <span class="material-symbols-outlined">shopping_basket</span>
+        </button>
+    </div>
+</form>
 
 @section Scripts {
     <script>
         function cambiarCantidadCard(btn, delta) {
-            const input = btn.closest('.stepper-tienda').querySelector('input[name="cantidad"]');
-            let valor = parseInt(input.value, 10) || 1;
-            input.value = Math.min(50, Math.max(1, valor + delta));
+            const input = btn.closest('.stepper-tienda').querySelector('input');
+            const valor = parseInt(input.value, 10) || 0;
+            input.value = Math.min(50, Math.max(0, valor + delta));
+            actualizarSeleccion();
         }
+
+        function actualizarSeleccion() {
+            const cantidad = Array.from(document.querySelectorAll('.tienda-seleccion-form .stepper-tienda input'))
+                .reduce((total, input) => total + (parseInt(input.value, 10) || 0), 0);
+            const boton = document.getElementById('confirmarSeleccion');
+            document.getElementById('seleccionResumen').textContent =
+                `${cantidad} producto${cantidad === 1 ? '' : 's'} seleccionado${cantidad === 1 ? '' : 's'}`;
+            boton.disabled = cantidad === 0;
+        }
+
+        const barraSeleccion = document.querySelector('.tienda-confirmar-seleccion');
+        const finSeleccion = document.getElementById('finSeleccionTienda');
+        new IntersectionObserver(([entrada]) => {
+            barraSeleccion.classList.toggle('en-posicion-final', entrada.isIntersecting);
+        }).observe(finSeleccion);
     </script>
 }

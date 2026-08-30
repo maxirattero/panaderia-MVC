@@ -6,7 +6,8 @@ namespace Panaderia.MVC.Models
     {
         public Producto Producto { get; set; } = null!;
         public int Cantidad { get; set; }
-        public decimal Subtotal => Producto.PrecioFinal * Cantidad;
+        public decimal PrecioUnitario { get; set; }
+        public decimal Subtotal => PrecioUnitario * Cantidad;
     }
 
     public class CarritoViewModel

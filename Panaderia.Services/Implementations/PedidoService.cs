@@ -84,28 +84,27 @@ namespace Panaderia.Services.Implementations
         //registrar un cobro parcial o total de un pedido y el Reporte de Caja
         public async Task RegistrarCobroAsync(int idPedido, decimal monto)
         {
+            if (monto <= 0)
+                throw new InvalidOperationException("El cobro debe ser mayor a cero.");
+
             var pedido = await _context.Pedidos
                 .Include(p => p.Cliente)
                 .FirstOrDefaultAsync(p => p.Id == idPedido);
             if (pedido != null)
             {
-                pedido.MontoCobrado += monto;
-                _context.Pedidos.Update(pedido);
+                if (monto > pedido.SaldoPendiente)
+                    throw new InvalidOperationException("El cobro no puede superar el saldo pendiente.");
 
-                bool yaExiste = await _context.ReportesCaja
-                    .AnyAsync(r => r.IdPedido == pedido.Id && r.Categoria == CategoriaMovimiento.Venta);
-                if (!yaExiste)
+                pedido.MontoCobrado += monto;
+                _context.ReportesCaja.Add(new ReporteCaja
                 {
-                    _context.ReportesCaja.Add(new ReporteCaja
-                    {
-                        Fecha = DateTime.UtcNow,
-                        Tipo = TipoMovimiento.Ingreso,
-                        Categoria = CategoriaMovimiento.Venta,
-                        Monto = pedido.MontoCobrado,
-                        Descripcion = $"Venta - {pedido.Cliente.NombreCompleto}",
-                        IdPedido = pedido.Id
-                    });
-                }
+                    Fecha = DateTime.UtcNow,
+                    Tipo = TipoMovimiento.Ingreso,
+                    Categoria = CategoriaMovimiento.Venta,
+                    Monto = monto,
+                    Descripcion = $"Venta - {pedido.Cliente.NombreCompleto}",
+                    IdPedido = pedido.Id
+                });
                 await _context.SaveChangesAsync();
             }
         }
@@ -180,10 +179,10 @@ namespace Panaderia.Services.Implementations
 
             pedido.Anulado = true;
 
-            var repVenta = await _context.ReportesCaja
-                .FirstOrDefaultAsync(r => r.IdPedido == id && r.Categoria == CategoriaMovimiento.Venta);
-            if (repVenta != null)
-                _context.ReportesCaja.Remove(repVenta);
+            var reportesVenta = await _context.ReportesCaja
+                .Where(r => r.IdPedido == id && r.Categoria == CategoriaMovimiento.Venta)
+                .ToListAsync();
+            _context.ReportesCaja.RemoveRange(reportesVenta);
 
             await _context.SaveChangesAsync();
         }
@@ -291,6 +290,8 @@ namespace Panaderia.Services.Implementations
         {
             var warnings = new List<string>();
             var bufferIdsAEliminar = new List<int>();
+            var producciones = new List<(ItemProduccionSeleccionable Item, Receta Receta)>();
+            var necesidades = new Dictionary<int, decimal>();
 
             foreach (var item in items.Where(i => i.Seleccionado))
             {
@@ -298,7 +299,16 @@ namespace Panaderia.Services.Implementations
                     .Include(r => r.Detalles).ThenInclude(d => d.Insumo)
                     .FirstOrDefaultAsync(r => r.Id == item.IdReceta);
 
-                if (receta == null) continue;
+                if (receta == null)
+                {
+                    warnings.Add($"No se encontró la receta de {item.NombreProducto}.");
+                    continue;
+                }
+                if (receta.TamanioLote <= 0)
+                {
+                    warnings.Add($"La receta de {item.NombreProducto} no tiene un tamaño de lote válido.");
+                    continue;
+                }
 
                 decimal vecesReceta = item.CantidadAProducir / receta.TamanioLote;
 
@@ -316,15 +326,38 @@ namespace Panaderia.Services.Implementations
                         cantidadNecesaria = d.CantidadFija!.Value * receta.TamanioLote * vecesReceta;
                     }
 
-                    var insumo = await _context.Insumos.FindAsync(d.IdInsumo);
-                    if (insumo == null) continue;
-
-                    if (insumo.StockActual < cantidadNecesaria)
-                        warnings.Add($"Stock insuficiente: {insumo.Nombre} – necesitás {cantidadNecesaria:0.###} {insumo.UnidadBase}, tenés {insumo.StockActual:0.###}");
-
-                    insumo.StockActual -= cantidadNecesaria;
+                    if (!d.IdInsumo.HasValue || d.IdInsumo.Value <= 0) continue;
+                    necesidades.TryGetValue(d.IdInsumo.Value, out var acumulada);
+                    necesidades[d.IdInsumo.Value] = acumulada + cantidadNecesaria;
                 }
 
+                producciones.Add((item, receta));
+            }
+
+            var insumos = await _context.Insumos
+                .Where(i => necesidades.Keys.Contains(i.Id))
+                .ToDictionaryAsync(i => i.Id);
+
+            foreach (var (idInsumo, cantidadNecesaria) in necesidades)
+            {
+                if (!insumos.TryGetValue(idInsumo, out var insumo))
+                {
+                    warnings.Add("Un insumo de la receta ya no existe.");
+                    continue;
+                }
+
+                if (insumo.StockActual < cantidadNecesaria)
+                    warnings.Add($"Stock insuficiente: {insumo.Nombre} – necesitás {cantidadNecesaria:0.###} {insumo.UnidadBase}, tenés {insumo.StockActual:0.###}");
+            }
+
+            // Si falta algo, no persiste ningún descuento ni la producción parcial.
+            if (warnings.Any()) return warnings;
+
+            foreach (var (idInsumo, cantidadNecesaria) in necesidades)
+                insumos[idInsumo].StockActual -= cantidadNecesaria;
+
+            foreach (var (item, _) in producciones)
+            {
                 // Producción para stock: suma unidades al inventario del producto y marca el buffer para limpieza
                 if (item.EsStock)
                 {
@@ -335,6 +368,29 @@ namespace Panaderia.Services.Implementations
                     if (item.IdProduccionStock > 0)
                         bufferIdsAEliminar.Add(item.IdProduccionStock);
                 }
+            }
+
+            // Cuando se confirma el lote completo de pedidos pendientes, estos salen de
+            // la próxima planificación pero permanecen disponibles para la entrega.
+            var pendientesPorProducto = await _context.DetallesPedido
+                .Where(d => d.Pedido.Estado == EstadoPedido.Pendiente)
+                .GroupBy(d => d.IdProducto)
+                .Select(g => new { IdProducto = g.Key, Cantidad = g.Sum(d => d.Cantidad) })
+                .ToListAsync();
+            var confirmadosPorProducto = producciones
+                .Where(p => !p.Item.EsStock)
+                .GroupBy(p => p.Item.IdProducto)
+                .ToDictionary(g => g.Key, g => g.Sum(p => p.Item.CantidadAProducir));
+
+            if (pendientesPorProducto.Any()
+                && pendientesPorProducto.All(p => confirmadosPorProducto.TryGetValue(p.IdProducto, out var cantidad)
+                                             && cantidad >= p.Cantidad))
+            {
+                var pedidosPendientes = await _context.Pedidos
+                    .Where(p => p.Estado == EstadoPedido.Pendiente)
+                    .ToListAsync();
+                foreach (var pedidoPendiente in pedidosPendientes)
+                    pedidoPendiente.Estado = EstadoPedido.EnProduccion;
             }
 
             if (bufferIdsAEliminar.Any())
@@ -401,7 +457,7 @@ namespace Panaderia.Services.Implementations
             var detalles = await _context.DetallesPedido
                 .Include(d => d.Producto).ThenInclude(p => p.Categoria)
                 .Include(d => d.Producto).ThenInclude(p => p.Formato)
-                .Where(d => d.Pedido.Estado != EstadoPedido.Entregado)
+                .Where(d => d.Pedido.Estado == EstadoPedido.Pendiente)
                 .ToListAsync();
 
             var acumulado = new Dictionary<int, (Producto Producto, int Cantidad)>();
@@ -456,7 +512,7 @@ namespace Panaderia.Services.Implementations
                 .Include(d => d.Producto)
                     .ThenInclude(p => p.Formato)
                 .Include(d => d.Empaque)
-                .Where(d => d.Pedido.Estado != EstadoPedido.Entregado)
+                .Where(d => d.Pedido.Estado == EstadoPedido.Pendiente)
                 .ToListAsync())
                 .Where(d => !excluidos.Contains(d.IdProducto))
                 .ToList();

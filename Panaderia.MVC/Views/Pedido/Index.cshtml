@@ -155,7 +155,7 @@
                                             <span class="material-symbols-outlined">payments</span>
                                         </button>
                                     }
-                                    @if (p.Estado == Panaderia.Models.Enums.EstadoPedido.Pendiente)
+                                    @if (p.Estado != Panaderia.Models.Enums.EstadoPedido.Entregado)
                                     {
                                         <form asp-action="MarcarEntregado" method="post" class="d-inline">
                                             @Html.AntiForgeryToken()
@@ -319,7 +319,7 @@
                     }
 
                     @* Entregar *@
-                    @if (p.Estado == Panaderia.Models.Enums.EstadoPedido.Pendiente)
+                    @if (p.Estado != Panaderia.Models.Enums.EstadoPedido.Entregado)
                     {
                         <form asp-action="MarcarEntregado" method="post">
                             @Html.AntiForgeryToken()

@@ -12,5 +12,6 @@ namespace Panaderia.MVC.Models
         // Etiquetas presentes en el catálogo visible (Vegano, Sin gluten, ...)
         public List<Etiqueta> Etiquetas { get; set; } = new();
         public int? EtiquetaSeleccionada { get; set; }
+        public bool EsRevendedor { get; set; }
     }
 }

@@ -85,7 +85,8 @@ namespace Panaderia.MVC.Controllers
                 CategoriaSeleccionada = categoria,
                 Busqueda = q,
                 Etiquetas = etiquetas,
-                EtiquetaSeleccionada = etiqueta
+                EtiquetaSeleccionada = etiqueta,
+                EsRevendedor = EsRevendedor()
             };
 
             return View(vm);
@@ -97,6 +98,7 @@ namespace Panaderia.MVC.Controllers
             var producto = await _productoService.GetByIdAsync(id);
             if (producto == null || producto.OcultoEnTienda) return NotFound();
 
+            ViewBag.EsRevendedor = EsRevendedor();
             return View(producto);
         }
 
@@ -141,6 +143,49 @@ namespace Panaderia.MVC.Controllers
                 return Redirect(url + "#productos");
             }
 
+            return RedirectToAction(nameof(Carrito));
+        }
+
+        // POST: /Tienda/AgregarVarios — incorpora la selección completa del catálogo al carrito.
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AgregarVarios(Dictionary<int, int>? cantidades)
+        {
+            var seleccion = cantidades?
+                .Where(x => x.Key > 0 && x.Value > 0)
+                .ToList() ?? new List<KeyValuePair<int, int>>();
+
+            if (!seleccion.Any())
+            {
+                TempData["TiendaMsg"] = "Elegí al menos un producto para agregar al carrito.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var productos = (await _productoService.GetAllAsync())
+                .Where(p => !p.OcultoEnTienda && !p.SinStock)
+                .ToDictionary(p => p.Id);
+            var carrito = LeerCarrito();
+            var cantidadAgregada = 0;
+
+            foreach (var (idProducto, cantidad) in seleccion)
+            {
+                if (!productos.ContainsKey(idProducto)) continue;
+
+                var cantidadSegura = Math.Min(cantidad, 50);
+                carrito.TryGetValue(idProducto, out var actual);
+                var nuevaCantidad = Math.Min(actual + cantidadSegura, 50);
+                cantidadAgregada += nuevaCantidad - actual;
+                carrito[idProducto] = nuevaCantidad;
+            }
+
+            if (cantidadAgregada == 0)
+            {
+                TempData["TiendaMsg"] = "Los productos elegidos ya no están disponibles.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            GuardarCarrito(carrito);
+            TempData["TiendaMsg"] = $"Agregaste {cantidadAgregada} producto(s) al carrito.";
             return RedirectToAction(nameof(Carrito));
         }
 
@@ -291,7 +336,7 @@ namespace Panaderia.MVC.Controllers
                 {
                     IdProducto = i.Producto.Id,
                     Cantidad = i.Cantidad,
-                    PrecioUnitario = i.Producto.PrecioFinal
+                    PrecioUnitario = i.PrecioUnitario
                 }).ToList()
             };
 
@@ -375,6 +420,11 @@ namespace Panaderia.MVC.Controllers
         }
 
         // ---------- Helpers ----------
+
+        private bool EsRevendedor() => User.IsInRole("Revendedor") && !User.IsInRole("Admin");
+
+        private decimal ObtenerPrecio(Producto producto) =>
+            EsRevendedor() ? producto.PrecioReventa : producto.PrecioFinal;
 
         // La entrega es fija: sábados de 10:30 a 12:30. Si hoy es sábado, va al siguiente.
         private static DateTime ProximoSabado()
@@ -470,7 +520,12 @@ namespace Panaderia.MVC.Controllers
             {
                 if (productos.TryGetValue(idProducto, out var producto))
                 {
-                    vm.Items.Add(new CarritoItemViewModel { Producto = producto, Cantidad = cantidad });
+                    vm.Items.Add(new CarritoItemViewModel
+                    {
+                        Producto = producto,
+                        Cantidad = cantidad,
+                        PrecioUnitario = ObtenerPrecio(producto)
+                    });
                 }
                 else
                 {
