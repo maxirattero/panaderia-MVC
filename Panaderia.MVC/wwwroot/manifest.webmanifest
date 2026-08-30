@@ -1,0 +1,24 @@
+{
+  "id": "/",
+  "name": "Masa Viva",
+  "short_name": "Masa Viva",
+  "description": "Gestión y pedidos de Masa Viva.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#e7ddd6",
+  "theme_color": "#855330",
+  "icons": [
+    {
+      "src": "/img/logo-masaviva.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    { "name": "Tienda", "short_name": "Tienda", "url": "/Tienda" },
+    { "name": "Pedidos", "short_name": "Pedidos", "url": "/Pedido" },
+    { "name": "Producción", "short_name": "Producción", "url": "/Pedido/Produccion" }
+  ]
+}
