@@ -16,6 +16,9 @@ namespace Panaderia.Services.Interfaces
         //Actualizar Producto existente
         Task UpdateAsync(Producto producto);
 
+        // Crea una copia editable con etiquetas, imagen y receta incluidas.
+        Task<Producto?> DuplicarAsync(int id);
+
         //Eliminar Producto por Id
         Task DeleteAsync(int id);
 

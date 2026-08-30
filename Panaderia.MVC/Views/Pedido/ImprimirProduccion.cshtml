@@ -71,6 +71,12 @@
                         Producir: <strong>@item.CantidadUnidades u.</strong>
                         (@item.VecesReceta.ToString("0.##")× lote base de @item.Receta.TamanioLote u.)
                     </p>
+                    @if (!string.IsNullOrWhiteSpace(item.Receta.Producto.ObservacionesElaboracion))
+                    {
+                        <div style="margin:0 0 6px 0; padding:5px 6px; border-left:3px solid #855330; background:#f5efe9; font-size:11px; white-space:pre-line;">
+                            <strong>Notas de elaboración</strong><br />@item.Receta.Producto.ObservacionesElaboracion
+                        </div>
+                    }
                     <table style="width:100%; border-collapse:collapse; font-size:11px;">
                         <thead>
                             <tr>

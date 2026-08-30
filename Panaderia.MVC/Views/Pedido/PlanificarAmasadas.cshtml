@@ -79,6 +79,12 @@
     let amasadas = [];
     let nextId = 1;
 
+    function escaparHtml(texto) {
+        const div = document.createElement('div');
+        div.textContent = texto || '';
+        return div.innerHTML.replace(/\n/g, '<br>');
+    }
+
     // ─── Init ───────────────────────────────────────────
     function init() {
         nextId = 1;
@@ -258,6 +264,11 @@
                             <span>${Math.round(pesoTotal)} g</span>
                         </div>` : '<div class="mb-2"></div>'
                     }
+                    ${am.productos.filter(p => p.observacionesElaboracion).map(p => `
+                        <div class="small mb-2 p-2" style="border-left:3px solid #855330; background:#f5efe9;">
+                            <strong>${escaparHtml(p.nombreProducto)} — notas de elaboración</strong><br>
+                            ${escaparHtml(p.observacionesElaboracion)}
+                        </div>`).join('')}
 
                     <!-- Ingredient table -->
                     <table class="table table-sm align-middle mb-0">

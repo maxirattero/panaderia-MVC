@@ -144,6 +144,18 @@ namespace Panaderia.MVC.Controllers
         }
 
         //POST: Eliminar Producto
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Duplicar(int id)
+        {
+            var copia = await _productoService.DuplicarAsync(id);
+            if (copia == null) return NotFound();
+
+            TempData["Success"] = "Producto duplicado. Revisá sus datos antes de publicarlo en la tienda.";
+            return RedirectToAction(nameof(Edit), new { id = copia.Id });
+        }
+
+        //POST: Eliminar Producto
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)

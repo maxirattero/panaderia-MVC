@@ -39,6 +39,7 @@ namespace Panaderia.Models.DTOs
         public string MasaKey { get; set; } = string.Empty;
         public string NombreMasa { get; set; } = string.Empty;
         public string NombreCategoria { get; set; } = "";
+        public string? ObservacionesElaboracion { get; set; }
         public int CantidadUnidades { get; set; }
         public decimal PesoMasaTotal { get; set; }
         public List<ProduccionIngredienteDetalle> Ingredientes { get; set; } = new();

@@ -1,5 +1,6 @@
 ﻿using Panaderia.Models.Enums;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
@@ -44,6 +45,9 @@ namespace Panaderia.Models.Entities
         public bool OcultoEnTienda { get; set; }
         public bool SinStock { get; set; }
         public bool PorEncargo { get; set; }
+
+        [MaxLength(2000)]
+        public string? ObservacionesElaboracion { get; set; }
         public DateTime FechaCreacion { get; set; }
         public DateTime? FechaModificacion { get; set; }
         // Etiquetas de tienda asignadas (Masa madre, Vegano, ...).

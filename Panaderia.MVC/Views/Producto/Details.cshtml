@@ -53,6 +53,13 @@
             <p class="small fw-bold text-muted mb-1">Imagen URL</p>
             <p class="mb-0">@(Model.ImagenURL ?? "-")</p>
         </div>
+        @if (!string.IsNullOrWhiteSpace(Model.ObservacionesElaboracion))
+        {
+            <div class="col-12">
+                <p class="small fw-bold text-muted mb-1">Notas de elaboración</p>
+                <p class="mb-0" style="white-space: pre-line;">@Model.ObservacionesElaboracion</p>
+            </div>
+        }
         <div class="col-md-6">
             <p class="small fw-bold text-muted mb-1">Fecha de Creación</p>
             <p class="mb-0">@Model.FechaCreacion.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</p>
@@ -68,6 +75,12 @@
         <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-mv-primary d-flex align-items-center justify-content-center gap-2">
             <span class="material-symbols-outlined">edit</span>Editar
         </a>
+        <form asp-action="Duplicar" asp-route-id="@Model.Id" method="post" class="d-inline">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-mv-secondary d-flex align-items-center justify-content-center gap-2">
+                <span class="material-symbols-outlined">content_copy</span>Duplicar
+            </button>
+        </form>
         <button type="button"
                 class="btn btn-outline-danger d-flex align-items-center justify-content-center gap-2"
                 data-bs-toggle="modal"

@@ -66,10 +66,90 @@ namespace Panaderia.Services.Implementations
             existe.PrecioReventa = producto.PrecioReventa;
             existe.Stock = producto.Stock;
             existe.ImagenURL = producto.ImagenURL;
+            existe.ObservacionesElaboracion = producto.ObservacionesElaboracion;
             existe.FechaModificacion = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
 
+        }
+
+        public async Task<Producto?> DuplicarAsync(int id)
+        {
+            var origen = await _context.Productos
+                .Include(p => p.Categoria)
+                .Include(p => p.ProductoEtiquetas)
+                .FirstOrDefaultAsync(p => p.Id == id);
+            if (origen == null) return null;
+
+            var recetaOrigen = await _context.Recetas
+                .Include(r => r.Detalles)
+                .FirstOrDefaultAsync(r => r.IdProducto == id);
+            var imagenOrigen = await _context.ProductoImagenes
+                .AsNoTracking()
+                .FirstOrDefaultAsync(i => i.IdProducto == id);
+
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            var copia = new Producto
+            {
+                IdCategoria = origen.IdCategoria,
+                Masa = origen.Masa,
+                Variedad = origen.Variedad,
+                IdFormato = origen.IdFormato,
+                IdTamano = origen.IdTamano,
+                Nombre = $"{origen.NombreVisible} (copia)",
+                PrecioFinal = origen.PrecioFinal,
+                PrecioReventa = origen.PrecioReventa,
+                Stock = 0,
+                OcultoEnTienda = true,
+                SinStock = false,
+                PorEncargo = origen.PorEncargo,
+                ObservacionesElaboracion = origen.ObservacionesElaboracion,
+                FechaCreacion = DateTime.UtcNow
+            };
+
+            _context.Productos.Add(copia);
+            await _context.SaveChangesAsync();
+
+            foreach (var etiqueta in origen.ProductoEtiquetas)
+                _context.ProductoEtiquetas.Add(new ProductoEtiqueta
+                {
+                    IdProducto = copia.Id,
+                    IdEtiqueta = etiqueta.IdEtiqueta
+                });
+
+            if (recetaOrigen != null)
+            {
+                _context.Recetas.Add(new Receta
+                {
+                    IdProducto = copia.Id,
+                    TamanioLote = recetaOrigen.TamanioLote,
+                    PesoUnitario = recetaOrigen.PesoUnitario,
+                    FechaCreacion = DateTime.UtcNow,
+                    Detalles = recetaOrigen.Detalles.Select(d => new RecetaDetalle
+                    {
+                        IdInsumo = d.IdInsumo,
+                        IdSubReceta = d.IdSubReceta,
+                        PorcentajePanadero = d.PorcentajePanadero,
+                        CantidadFija = d.CantidadFija
+                    }).ToList()
+                });
+            }
+
+            if (imagenOrigen != null)
+            {
+                _context.ProductoImagenes.Add(new ProductoImagen
+                {
+                    IdProducto = copia.Id,
+                    Datos = imagenOrigen.Datos,
+                    ContentType = imagenOrigen.ContentType,
+                    FechaCreacion = DateTime.UtcNow
+                });
+                copia.ImagenURL = $"/Tienda/Imagen/{copia.Id}?v={DateTime.UtcNow.Ticks}";
+            }
+
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+            return copia;
         }
 
         //Eliminar Producto por Id

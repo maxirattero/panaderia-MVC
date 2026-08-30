@@ -99,6 +99,13 @@
                 <span asp-validation-for="Stock" class="text-danger"></span>
             </div>
 
+            <div class="col-12">
+                <label asp-for="ObservacionesElaboracion" class="form-label small fw-bold text-muted">Notas de elaboración</label>
+                <textarea asp-for="ObservacionesElaboracion" class="form-control" rows="5"
+                          placeholder="Pasos especiales, tiempos, decoraciones o indicaciones para productos estacionales."></textarea>
+                <span asp-validation-for="ObservacionesElaboracion" class="text-danger"></span>
+            </div>
+
             <!-- Imagen URL -->
             <div class="col-md-6">
                 <label class="form-label small fw-bold text-muted">Imagen del producto</label>

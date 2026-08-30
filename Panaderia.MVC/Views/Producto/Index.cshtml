@@ -146,10 +146,16 @@
                                         <a asp-action="Details" asp-route-id="@producto.Id" class="btn btn-sm btn-outline-primary" title="Ver Detalles">
                                             <span class="material-symbols-outlined">visibility</span>
                                         </a>
-                                        <a asp-action="Edit" asp-route-id="@producto.Id" class="btn btn-sm btn-outline-success" title="Editar">
-                                            <span class="material-symbols-outlined">edit</span>
-                                        </a>
-                                        <a asp-controller="Receta" asp-action="Editar"
+                                         <a asp-action="Edit" asp-route-id="@producto.Id" class="btn btn-sm btn-outline-success" title="Editar">
+                                             <span class="material-symbols-outlined">edit</span>
+                                         </a>
+                                         <form asp-action="Duplicar" asp-route-id="@producto.Id" method="post" class="d-inline">
+                                             @Html.AntiForgeryToken()
+                                             <button type="submit" class="btn btn-sm btn-outline-secondary" title="Duplicar producto y receta">
+                                                 <span class="material-symbols-outlined">content_copy</span>
+                                             </button>
+                                         </form>
+                                         <a asp-controller="Receta" asp-action="Editar"
                                            asp-route-idProducto="@producto.Id"
                                            class="btn btn-sm btn-outline-secondary"
                                            title="Receta">
@@ -276,6 +282,12 @@
                     <a asp-action="Edit" asp-route-id="@producto.Id" class="btn btn-sm btn-outline-success" title="Editar">
                         <span class="material-symbols-outlined">edit</span>
                     </a>
+                    <form asp-action="Duplicar" asp-route-id="@producto.Id" method="post" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-sm btn-outline-secondary" title="Duplicar producto y receta">
+                            <span class="material-symbols-outlined">content_copy</span>
+                        </button>
+                    </form>
                     <a asp-controller="Receta" asp-action="Editar"
                        asp-route-idProducto="@producto.Id"
                        class="btn btn-sm btn-outline-secondary"
