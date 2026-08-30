@@ -33,6 +33,7 @@ namespace Panaderia.Models.Data
         public DbSet<ProductoImagen> ProductoImagenes { get; set; }
         public DbSet<Etiqueta> Etiquetas { get; set; }
         public DbSet<ProductoEtiqueta> ProductoEtiquetas { get; set; }
+        public DbSet<SuscripcionPush> SuscripcionesPush { get; set; }
         public DbSet<DataProtectionKey> DataProtectionKeys { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -199,6 +200,15 @@ namespace Panaderia.Models.Data
                 .WithMany()
                 .HasForeignKey(pe => pe.IdEtiqueta)
                 .OnDelete(DeleteBehavior.Cascade);
+            // Suscripción de cada dispositivo administrador a notificaciones web push.
+            modelBuilder.Entity<SuscripcionPush>()
+                .HasIndex(s => s.Endpoint)
+                .IsUnique();
+            modelBuilder.Entity<SuscripcionPush>()
+                .HasOne(s => s.User)
+                .WithMany()
+                .HasForeignKey(s => s.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
             //filtro global consulta - soft delete
             modelBuilder.Entity<Pedido>().HasQueryFilter(p => !p.Anulado);
             modelBuilder.Entity<DetallePedido>().HasQueryFilter(d => !d.Pedido.Anulado);

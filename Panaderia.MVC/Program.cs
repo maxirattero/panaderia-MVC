@@ -17,6 +17,7 @@ builder.Services.AddControllersWithViews(options =>
         .Build();
     options.Filters.Add(new Microsoft.AspNetCore.Mvc.Authorization.AuthorizeFilter(policy));
 });
+builder.Services.AddAntiforgery(options => options.HeaderName = "X-CSRF-TOKEN");
 
 string? connectionString;
 var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
@@ -89,6 +90,13 @@ builder.Services.AddScoped<IRecetaService, RecetaService>();
 builder.Services.AddScoped<ICompraService, CompraService>();
 builder.Services.AddScoped<ISubRecetaService, SubRecetaService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
+builder.Services.AddSingleton(new PushNotificationOptions
+{
+    Subject = builder.Configuration["PushNotifications:Subject"] ?? string.Empty,
+    VapidPublicKey = builder.Configuration["PushNotifications:VapidPublicKey"] ?? string.Empty,
+    VapidPrivateKey = builder.Configuration["PushNotifications:VapidPrivateKey"] ?? string.Empty
+});
+builder.Services.AddScoped<IPushNotificationService, PushNotificationService>();
 builder.Services.AddDataProtection()
     .PersistKeysToDbContext<PanaderiaContext>()
     .SetApplicationName("MasaViva");

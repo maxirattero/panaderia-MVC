@@ -17,17 +17,20 @@ namespace Panaderia.MVC.Controllers
         private readonly IProductoService _productoService;
         private readonly IClienteService _clienteService;
         private readonly IPedidoService _pedidoService;
+        private readonly IPushNotificationService _pushNotificationService;
         private readonly IConfiguration _configuration;
 
         public TiendaController(
             IProductoService productoService,
             IClienteService clienteService,
             IPedidoService pedidoService,
+            IPushNotificationService pushNotificationService,
             IConfiguration configuration)
         {
             _productoService = productoService;
             _clienteService = clienteService;
             _pedidoService = pedidoService;
+            _pushNotificationService = pushNotificationService;
             _configuration = configuration;
         }
 
@@ -341,6 +344,8 @@ namespace Panaderia.MVC.Controllers
             };
 
             await _pedidoService.CreateAsync(pedido);
+            pedido.Cliente = cliente;
+            await _pushNotificationService.NotificarNuevoPedidoAsync(pedido, EsRevendedor());
 
             // Vaciar el carrito
             GuardarCarrito(new Dictionary<int, int>());

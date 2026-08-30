@@ -1,8 +1,9 @@
-const CACHE_NAME = "masaviva-static-v2";
+const CACHE_NAME = "masaviva-static-v3";
 const STATIC_ASSETS = [
     "/css/site.css",
     "/js/site.js",
     "/js/pwa.js",
+    "/js/push-notifications.js",
     "/img/pwa-icon-192.png",
     "/img/logo-masaviva.png",
     "/img/logo-masaviva-blanco.png",
@@ -16,6 +17,31 @@ self.addEventListener("install", event => {
         caches.open(CACHE_NAME)
             .then(cache => cache.addAll(STATIC_ASSETS))
             .then(() => self.skipWaiting())
+    );
+});
+
+self.addEventListener("push", event => {
+    const data = event.data ? event.data.json() : {};
+    const title = data.title || "Masa Viva";
+    const options = {
+        body: data.body || "Tenés una novedad para revisar.",
+        icon: "/img/logo-masaviva.png",
+        badge: "/img/pwa-icon-192.png",
+        data: { url: data.url || "/Pedido" }
+    };
+
+    event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener("notificationclick", event => {
+    event.notification.close();
+    const destination = new URL(event.notification.data.url, self.location.origin).href;
+
+    event.waitUntil(
+        clients.matchAll({ type: "window", includeUncontrolled: true }).then(clientList => {
+            const existing = clientList.find(client => client.url === destination);
+            return existing ? existing.focus() : clients.openWindow(destination);
+        })
     );
 });
 
