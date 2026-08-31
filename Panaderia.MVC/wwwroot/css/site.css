@@ -1549,11 +1549,13 @@ a.pill-filtro.activo {
 /* En móvil la barra fija necesita aire por encima de la última tarjeta y del área segura. */
 @media (max-width: 767.98px) {
     .tienda-seleccion-form {
-        padding-bottom: calc(112px + env(safe-area-inset-bottom));
+        padding-bottom: calc(128px + env(safe-area-inset-bottom));
     }
 
     .tienda-confirmar-seleccion {
         bottom: calc(16px + env(safe-area-inset-bottom));
+        /* Crea una separación visual aun mientras las tarjetas pasan detrás de la barra. */
+        box-shadow: 0 0 0 12px var(--mv-background), 0 8px 24px rgba(40, 23, 20, 0.28);
     }
 }
 

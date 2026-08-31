@@ -1,4 +1,4 @@
-const CACHE_NAME = "masaviva-static-v3";
+const CACHE_NAME = "masaviva-static-v4";
 const STATIC_ASSETS = [
     "/css/site.css",
     "/js/site.js",
@@ -73,17 +73,17 @@ self.addEventListener("fetch", event => {
 
     if (!STATIC_ASSETS.includes(url.pathname)) return;
 
+    // CSS y JS se solicitan primero a la red para respetar asp-append-version.
+    // La copia cacheada sólo se usa si el dispositivo quedó sin conexión.
     event.respondWith(
-        caches.match(url.pathname).then(cached => {
-            if (cached) return cached;
-
-            return fetch(request).then(response => {
+        fetch(request)
+            .then(response => {
                 if (response.ok) {
                     const copy = response.clone();
-                    caches.open(CACHE_NAME).then(cache => cache.put(url.pathname, copy));
+                    caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
                 }
                 return response;
-            });
-        })
+            })
+            .catch(() => caches.match(request).then(cached => cached || caches.match(url.pathname)))
     );
 });
