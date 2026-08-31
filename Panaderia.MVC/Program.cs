@@ -18,6 +18,8 @@ builder.Services.AddControllersWithViews(options =>
     options.Filters.Add(new Microsoft.AspNetCore.Mvc.Authorization.AuthorizeFilter(policy));
 });
 builder.Services.AddAntiforgery(options => options.HeaderName = "X-CSRF-TOKEN");
+builder.Services.AddMemoryCache();
+builder.Services.AddHttpClient();
 
 string? connectionString;
 var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");

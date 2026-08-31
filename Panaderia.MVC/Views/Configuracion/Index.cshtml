@@ -3,26 +3,6 @@
 
 @{
     ViewData["Title"] = "Configuración";
-
-    // Íconos de Material Symbols disponibles para las etiquetas de tienda
-    var iconosDisponibles = new Dictionary<string, string>
-    {
-        ["grain"]                 = "Espiga (masa madre)",
-        ["eco"]                   = "Hoja (natural / vegano)",
-        ["spa"]                   = "Flor (integral)",
-        ["nutrition"]             = "Nutrición",
-        ["block"]                 = "Sin... (sin gluten / sin azúcar)",
-        ["local_fire_department"] = "Horno",
-        ["schedule"]              = "Reloj (fermentación)",
-        ["favorite"]              = "Corazón (recomendado)",
-        ["star"]                  = "Estrella (destacado)",
-        ["water_drop"]            = "Gota",
-        ["egg_alt"]               = "Huevo",
-        ["cookie"]                = "Galleta",
-        ["set_meal"]              = "Plato",
-        ["ac_unit"]               = "Copo (congelado)",
-        ["verified"]              = "Verificado"
-    };
 }
     <!-- Header Section -->
     <div class="row align-items-end mb-5 gy-4">
@@ -217,16 +197,17 @@
                 <div class="p-3 border-top">
                     <form asp-action="CrearEtiqueta" asp-controller="Configuracion" method="post">
                         @Html.AntiForgeryToken()
-                        <select name="icono" class="form-select mb-2" id="selectIcono">
-                            @foreach (var ico in iconosDisponibles)
-                            {
-                                <option value="@ico.Key">@ico.Value</option>
-                            }
-                        </select>
                         <div class="input-group">
-                            <span class="input-group-text">
+                            <input type="hidden" name="icono" id="iconoEtiquetaSeleccionado" value="grain" />
+                            <button type="button"
+                                    class="btn btn-outline-secondary selector-icono-trigger"
+                                    id="abrirSelectorIcono"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#selectorIconoModal"
+                                    title="Elegir ícono">
                                 <span class="material-symbols-outlined" id="previewIcono">grain</span>
-                            </span>
+                                <span class="visually-hidden">Elegir ícono</span>
+                            </button>
                             <input type="text" name="nombre" class="form-control" placeholder="Nueva etiqueta..." maxlength="40" />
                             <button type="submit" class="btn btn-mv-primary d-flex align-items-center gap-1">
                                 <span class="material-symbols-outlined">add</span>
@@ -239,16 +220,122 @@
 
     </div>
 
+<div class="modal fade" id="selectorIconoModal" tabindex="-1" aria-labelledby="selectorIconoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title" id="selectorIconoModalLabel">Elegí un ícono</h5>
+                    <small class="text-secondary">Catálogo completo de Material Symbols</small>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex flex-column flex-sm-row gap-2 align-items-sm-center mb-3">
+                    <div class="input-group flex-grow-1">
+                        <span class="input-group-text"><span class="material-symbols-outlined">search</span></span>
+                        <input type="search" class="form-control" id="buscarIcono" placeholder="Buscar un ícono..." autocomplete="off" />
+                    </div>
+                    <a class="btn btn-mv-secondary btn-sm text-nowrap" href="https://fonts.google.com/icons" target="_blank" rel="noopener noreferrer">
+                        Catálogo de Google <span class="material-symbols-outlined">open_in_new</span>
+                    </a>
+                </div>
+                <p class="text-secondary small mb-3" id="estadoIconos">Abrí el selector para cargar los íconos.</p>
+                <div class="selector-iconos-grid" id="listaIconos" aria-live="polite"></div>
+                <div class="text-center mt-3 d-none" id="contenedorMasIconos">
+                    <button type="button" class="btn btn-mv-secondary" id="mostrarMasIconos">Mostrar más</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
-        // Vista previa del ícono elegido para la nueva etiqueta
         (function () {
-            const select = document.getElementById('selectIcono');
+            const modal = document.getElementById('selectorIconoModal');
+            const input = document.getElementById('iconoEtiquetaSeleccionado');
             const preview = document.getElementById('previewIcono');
-            if (!select || !preview) return;
+            const search = document.getElementById('buscarIcono');
+            const list = document.getElementById('listaIconos');
+            const status = document.getElementById('estadoIconos');
+            const moreContainer = document.getElementById('contenedorMasIconos');
+            const more = document.getElementById('mostrarMasIconos');
+            const pageSize = 120;
+            let icons = [];
+            let filteredIcons = [];
+            let visibleCount = pageSize;
+            let loaded = false;
 
-            select.addEventListener('change', function () {
-                preview.textContent = select.value;
+            if (!modal || !input || !preview || !search || !list || !status || !moreContainer || !more) return;
+
+            function normalizar(value) {
+                return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+            }
+
+            function renderIcons() {
+                const query = normalizar(search.value.trim());
+                filteredIcons = query
+                    ? icons.filter(icon => normalizar(`${icon.nombre} ${icon.categoria} ${icon.busqueda}`).includes(query))
+                    : icons;
+
+                const iconsToShow = filteredIcons.slice(0, visibleCount);
+                list.replaceChildren();
+
+                iconsToShow.forEach(icon => {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = `selector-icono-item${icon.nombre === input.value ? ' seleccionado' : ''}`;
+                    button.title = icon.nombre;
+                    button.setAttribute('aria-label', `Elegir ${icon.nombre}`);
+
+                    const symbol = document.createElement('span');
+                    symbol.className = 'material-symbols-outlined';
+                    symbol.textContent = icon.nombre;
+                    button.append(symbol);
+
+                    button.addEventListener('click', () => {
+                        input.value = icon.nombre;
+                        preview.textContent = icon.nombre;
+                        bootstrap.Modal.getOrCreateInstance(modal).hide();
+                    });
+                    list.append(button);
+                });
+
+                status.textContent = filteredIcons.length
+                    ? `${filteredIcons.length.toLocaleString('es-AR')} íconos disponibles. Mostrando ${iconsToShow.length.toLocaleString('es-AR')}.`
+                    : 'No encontramos íconos con esa búsqueda.';
+                moreContainer.classList.toggle('d-none', visibleCount >= filteredIcons.length);
+            }
+
+            async function loadIcons() {
+                if (loaded) {
+                    renderIcons();
+                    return;
+                }
+
+                status.textContent = 'Cargando el catálogo completo de íconos...';
+                try {
+                    const response = await fetch('@Url.Action("IconosMaterialSymbols", "Configuracion")');
+                    if (!response.ok) throw new Error('No se pudo cargar el catálogo.');
+
+                    icons = await response.json();
+                    loaded = true;
+                    visibleCount = pageSize;
+                    renderIcons();
+                } catch {
+                    status.textContent = 'No se pudo cargar el catálogo. Probá nuevamente en unos minutos.';
+                }
+            }
+
+            modal.addEventListener('shown.bs.modal', loadIcons);
+            search.addEventListener('input', () => {
+                visibleCount = pageSize;
+                renderIcons();
+            });
+            more.addEventListener('click', () => {
+                visibleCount += pageSize;
+                renderIcons();
             });
         })();
     </script>

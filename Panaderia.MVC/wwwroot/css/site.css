@@ -926,6 +926,49 @@ a.pill-filtro.activo {
     font-size: 16px;
 }
 
+/* Selector visual del catálogo de Material Symbols para etiquetas de tienda. */
+.selector-icono-trigger {
+    min-width: 52px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.selector-icono-trigger .material-symbols-outlined {
+    font-size: 23px;
+}
+
+.selector-iconos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(54px, 1fr));
+    gap: 8px;
+}
+
+.selector-icono-item {
+    aspect-ratio: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--mv-outline);
+    border-radius: 10px;
+    color: #281714;
+    background: var(--mv-surface);
+    transition: background-color 0.15s, border-color 0.15s, transform 0.15s;
+}
+
+.selector-icono-item:hover,
+.selector-icono-item:focus-visible,
+.selector-icono-item.seleccionado {
+    color: var(--mv-primary-dark);
+    border-color: var(--mv-primary-dark);
+    background: var(--mv-surface-variant);
+    transform: translateY(-1px);
+}
+
+.selector-icono-item .material-symbols-outlined {
+    font-size: 26px;
+}
+
 .td-cta {
     display: inline-flex;
     align-items: center;
