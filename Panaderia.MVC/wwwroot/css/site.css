@@ -1582,6 +1582,86 @@ a.pill-filtro.activo {
 }
 
 /* =============================================
+   PRODUCTOS: acciones compactas en móvil
+   ============================================= */
+.producto-estados {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.estado-producto {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 7px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+}
+
+.estado-producto .material-symbols-outlined {
+    font-size: 15px;
+}
+
+.estado-producto.ok { background: #e5f4ea; color: #276749; }
+.estado-producto.neutro { background: var(--mv-surface-variant); color: var(--mv-secondary); }
+.estado-producto.alerta { background: #fce8e4; color: #a23b27; }
+.estado-producto.encargo { background: #fff4d6; color: #8a5a00; }
+
+.offcanvas.acciones-producto-sheet {
+    --bs-offcanvas-height: min(560px, calc(100dvh - 16px));
+    border-radius: 20px 20px 0 0;
+    border-color: var(--mv-outline);
+}
+
+.acciones-producto-sheet .offcanvas-body {
+    overflow-y: auto;
+    padding: 0 20px calc(20px + env(safe-area-inset-bottom));
+}
+
+.accion-producto-sheet {
+    width: 100%;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 8px;
+    color: var(--mv-primary-dark);
+    background: transparent;
+    border: 0;
+    border-radius: 10px;
+    font: inherit;
+    font-weight: 600;
+    text-align: left;
+    text-decoration: none;
+}
+
+.accion-producto-sheet:hover,
+.accion-producto-sheet:focus-visible {
+    background: var(--mv-surface-variant);
+    color: var(--mv-primary-dark);
+}
+
+.accion-producto-sheet .material-symbols-outlined {
+    color: var(--mv-secondary);
+}
+
+.accion-producto-sheet.peligro { color: var(--mv-error); }
+.accion-producto-sheet.peligro .material-symbols-outlined { color: var(--mv-error); }
+
+.accion-producto-separador {
+    margin: 12px 0 4px;
+    padding-top: 14px;
+    border-top: 1px solid var(--mv-outline);
+    color: var(--mv-secondary);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+/* =============================================
    ETIQUETAS: filtros en tienda y selector en admin
    ============================================= */
 

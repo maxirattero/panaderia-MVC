@@ -241,70 +241,88 @@
                     </div>
                 </div>
 
-                <div class="d-flex justify-content-end gap-1 pt-2 border-top">
-                    <form asp-action="ToggleOculto" asp-route-id="@producto.Id" method="post" class="d-inline">
-                        @Html.AntiForgeryToken()
-                        <button type="submit"
-                                class="btn btn-sm @(producto.OcultoEnTienda ? "btn-outline-secondary" : "btn-outline-success")"
-                                title="@(producto.OcultoEnTienda ? "Oculto en la tienda" : "Visible en la tienda")">
-                            <span class="material-symbols-outlined">@(producto.OcultoEnTienda ? "visibility_off" : "storefront")</span>
-                        </button>
-                    </form>
-                    <form asp-action="ToggleSinStock" asp-route-id="@producto.Id" method="post" class="d-inline ms-1">
-                        @Html.AntiForgeryToken()
-                        <button type="submit"
-                                class="btn btn-sm @(producto.SinStock ? "btn-outline-danger" : "btn-outline-success")"
-                                title="@(producto.SinStock ? "Marcado sin stock" : "Con stock")">
-                            <span class="material-symbols-outlined">@(producto.SinStock ? "production_quantity_limits" : "check_circle")</span>
-                        </button>
-                    </form>
-                    <form asp-action="TogglePorEncargo" asp-route-id="@producto.Id" method="post" class="d-inline me-auto ms-1">
-                        @Html.AntiForgeryToken()
-                        <button type="submit"
-                                class="btn btn-sm @(producto.PorEncargo ? "btn-outline-warning" : "btn-outline-secondary")"
-                                title="@(producto.PorEncargo ? "Con cartel «Por encargo»" : "Sin cartel «Por encargo»")">
-                            <span class="material-symbols-outlined">schedule</span>
-                        </button>
-                    </form>
-                    <button type="button"
-                            class="btn btn-sm btn-outline-secondary"
-                            title="Cargar imagen"
-                            data-bs-toggle="modal"
-                            data-bs-target="#imagenModal"
-                            data-id="@producto.Id"
-                            data-nombre="@producto.NombreVisible"
-                            data-imagen="@producto.ImagenURL">
-                        <span class="material-symbols-outlined">add_a_photo</span>
+                <div class="producto-estados pt-2 border-top">
+                    <span class="@(producto.OcultoEnTienda ? "estado-producto neutro" : "estado-producto ok")">
+                        <span class="material-symbols-outlined">@(producto.OcultoEnTienda ? "visibility_off" : "storefront")</span>
+                        @(producto.OcultoEnTienda ? "Oculto" : "En tienda")
+                    </span>
+                    <span class="@(producto.SinStock ? "estado-producto alerta" : "estado-producto ok")">
+                        <span class="material-symbols-outlined">@(producto.SinStock ? "production_quantity_limits" : "check_circle")</span>
+                        @(producto.SinStock ? "Sin stock" : "Con stock")
+                    </span>
+                    @if (producto.PorEncargo)
+                    {
+                        <span class="estado-producto encargo"><span class="material-symbols-outlined">schedule</span> Por encargo</span>
+                    }
+                </div>
+                <div class="d-flex justify-content-between align-items-center pt-3">
+                    <a asp-action="Edit" asp-route-id="@producto.Id" class="btn btn-sm btn-mv-primary d-inline-flex align-items-center gap-1">
+                        <span class="material-symbols-outlined">edit</span> Editar
+                    </a>
+                    <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center"
+                            data-bs-toggle="offcanvas" data-bs-target="#accionesProducto_@producto.Id"
+                            aria-controls="accionesProducto_@producto.Id" aria-label="Más acciones para @producto.NombreVisible">
+                        <span class="material-symbols-outlined">more_vert</span>
                     </button>
-                    <a asp-action="Details" asp-route-id="@producto.Id" class="btn btn-sm btn-outline-primary" title="Ver Detalles">
-                        <span class="material-symbols-outlined">visibility</span>
-                    </a>
-                    <a asp-action="Edit" asp-route-id="@producto.Id" class="btn btn-sm btn-outline-success" title="Editar">
-                        <span class="material-symbols-outlined">edit</span>
-                    </a>
-                    <form asp-action="Duplicar" asp-route-id="@producto.Id" method="post" class="d-inline">
-                        @Html.AntiForgeryToken()
-                        <button type="submit" class="btn btn-sm btn-outline-secondary" title="Duplicar producto y receta">
-                            <span class="material-symbols-outlined">content_copy</span>
+                </div>
+
+                <div class="offcanvas offcanvas-bottom acciones-producto-sheet" tabindex="-1" id="accionesProducto_@producto.Id"
+                     aria-labelledby="accionesProductoTitulo_@producto.Id">
+                    <div class="offcanvas-header pb-2">
+                        <div>
+                            <small class="text-secondary">Acciones para</small>
+                            <h5 class="offcanvas-title font-literata mb-0" id="accionesProductoTitulo_@producto.Id">@producto.NombreVisible</h5>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
+                    </div>
+                    <div class="offcanvas-body pt-2">
+                        <a asp-action="Details" asp-route-id="@producto.Id" class="accion-producto-sheet">
+                            <span class="material-symbols-outlined">visibility</span> Ver detalle
+                        </a>
+                        <a asp-controller="Receta" asp-action="Editar" asp-route-idProducto="@producto.Id" class="accion-producto-sheet">
+                            <span class="material-symbols-outlined">menu_book</span> Ver receta
+                        </a>
+                        <button type="button" class="accion-producto-sheet" data-bs-dismiss="offcanvas"
+                                data-bs-toggle="modal" data-bs-target="#imagenModal"
+                                data-id="@producto.Id" data-nombre="@producto.NombreVisible" data-imagen="@producto.ImagenURL">
+                            <span class="material-symbols-outlined">add_a_photo</span> Cargar imagen
                         </button>
-                    </form>
-                    <a asp-controller="Receta" asp-action="Editar"
-                       asp-route-idProducto="@producto.Id"
-                       class="btn btn-sm btn-outline-secondary"
-                       title="Receta">
-                        <span class="material-symbols-outlined">menu_book</span>
-                    </a>
-                    <button type="button"
-                            class="btn btn-sm btn-outline-danger"
-                            title="Eliminar"
-                            data-bs-toggle="modal"
-                            data-bs-target="#deleteModal"
-                            data-id="@producto.Id"
-                            data-nombre="@producto.NombreVisible"
-                            data-delete-url="@Url.Action("Delete", "Producto", new { id = producto.Id })"
-                            data-token="@Antiforgery.GetAndStoreTokens(Context).RequestToken">
-                        <span class="material-symbols-outlined">delete</span>
-                    </button>
+                        <form asp-action="Duplicar" asp-route-id="@producto.Id" method="post">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="accion-producto-sheet w-100">
+                                <span class="material-symbols-outlined">content_copy</span> Duplicar producto y receta
+                            </button>
+                        </form>
+                        <div class="accion-producto-separador">Estado en la tienda</div>
+                        <form asp-action="ToggleOculto" asp-route-id="@producto.Id" method="post">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="accion-producto-sheet w-100">
+                                <span class="material-symbols-outlined">@(producto.OcultoEnTienda ? "visibility" : "visibility_off")</span>
+                                @(producto.OcultoEnTienda ? "Mostrar en la tienda" : "Ocultar de la tienda")
+                            </button>
+                        </form>
+                        <form asp-action="ToggleSinStock" asp-route-id="@producto.Id" method="post">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="accion-producto-sheet w-100">
+                                <span class="material-symbols-outlined">@(producto.SinStock ? "check_circle" : "production_quantity_limits")</span>
+                                @(producto.SinStock ? "Quitar marca sin stock" : "Marcar sin stock")
+                            </button>
+                        </form>
+                        <form asp-action="TogglePorEncargo" asp-route-id="@producto.Id" method="post">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="accion-producto-sheet w-100">
+                                <span class="material-symbols-outlined">schedule</span>
+                                @(producto.PorEncargo ? "Quitar cartel por encargo" : "Marcar por encargo")
+                            </button>
+                        </form>
+                        <button type="button" class="accion-producto-sheet peligro" data-bs-dismiss="offcanvas"
+                                data-bs-toggle="modal" data-bs-target="#deleteModal"
+                                data-nombre="@producto.NombreVisible"
+                                data-delete-url="@Url.Action("Delete", "Producto", new { id = producto.Id })"
+                                data-token="@Antiforgery.GetAndStoreTokens(Context).RequestToken">
+                            <span class="material-symbols-outlined">delete</span> Eliminar producto
+                        </button>
+                    </div>
                 </div>
             </div>
         }
