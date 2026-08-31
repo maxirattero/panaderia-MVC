@@ -30,28 +30,30 @@ namespace Panaderia.MVC.Controllers
             vm.Proveedores = new SelectList(proveedores, "Id", "Nombre");
         }
 
-        public async Task<IActionResult> Index(DateTime? fechaInicio, DateTime? fechaFin, TipoMovimiento? TipoFiltro)
+        public async Task<IActionResult> Index(DateTime? fechaInicio, DateTime? fechaFin, TipoMovimiento? TipoFiltro,
+                                                bool soloTotalesVendidos = false)
         {
             var todos = await _reporteCajaService.GetReporteCajaTotalAsync();
             var movimientos = todos.AsEnumerable();
-            DateTime? inicioVentas = null;
-            DateTime? finVentas = null;
 
             if (fechaInicio.HasValue)
             {
                 var inicioUtc = DateTime.SpecifyKind(fechaInicio.Value, DateTimeKind.Utc);
                 movimientos = movimientos.Where(r => r.Fecha >= inicioUtc);
-                inicioVentas = inicioUtc;
             }
             if (fechaFin.HasValue)
             {
                 var finUtc = DateTime.SpecifyKind(fechaFin.Value, DateTimeKind.Utc).AddDays(1);
                 movimientos = movimientos.Where(r => r.Fecha < finUtc);
-                finVentas = finUtc;
             }
             if (TipoFiltro.HasValue)
             {
                 movimientos = movimientos.Where(r => r.Tipo == TipoFiltro.Value);
+            }
+            if (soloTotalesVendidos)
+            {
+                movimientos = movimientos.Where(r => r.Categoria == CategoriaMovimiento.Recaudacion
+                                                   && r.TotalVendidoInformativo.HasValue);
             }
 
             var lista = movimientos.ToList();
@@ -62,10 +64,10 @@ namespace Panaderia.MVC.Controllers
                 Saldo = await _reporteCajaService.GetSaldoAsync(),
                 TotalIngresos = lista.Where(r => r.Tipo == TipoMovimiento.Ingreso).Sum(r => r.Monto),
                 TotalEgresos = lista.Where(r => r.Tipo == TipoMovimiento.Egreso).Sum(r => r.Monto),
-                TotalVendidoInformativo = await _pedidoService.GetTotalVendidoAsync(inicioVentas, finVentas),
                 FechaInicio = fechaInicio,
                 FechaFin = fechaFin,
-                TipoFiltro = TipoFiltro
+                TipoFiltro = TipoFiltro,
+                SoloTotalesVendidos = soloTotalesVendidos
             };
 
             return View(vm);
@@ -240,6 +242,7 @@ namespace Panaderia.MVC.Controllers
             }
 
             var periodoStr = $"{vm.InicioSemana:dd/MM} - {vm.InicioSemana.AddDays(6):dd/MM/yyyy}";
+            var totalVendido = await _pedidoService.GetTotalVendidoAsync(inicioUtc, finUtc);
             await _reporteCajaService.CreateAsync(new ReporteCaja
             {
                 Fecha                = DateTime.UtcNow,
@@ -249,7 +252,8 @@ namespace Panaderia.MVC.Controllers
                 Descripcion          = $"Recaudación semanal {periodoStr}" +
                                        (string.IsNullOrWhiteSpace(vm.Notas) ? "" : $" – {vm.Notas}"),
                 FechaInicioPeriodo   = inicioUtc,
-                FechaFinPeriodo      = finUtc
+                FechaFinPeriodo      = finUtc,
+                TotalVendidoInformativo = totalVendido
             });
 
             TempData["Success"] = $"Recaudación de {vm.MontoARetirar:C} registrada correctamente.";

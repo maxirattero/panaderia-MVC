@@ -16,5 +16,7 @@ namespace Panaderia.Models.Entities
         public Proveedor? Proveedor { get; set; }
         public DateTime? FechaInicioPeriodo { get; set; }
         public DateTime? FechaFinPeriodo { get; set; }
+        // Fotografía de ventas al registrar un cierre. No es un movimiento de caja.
+        public decimal? TotalVendidoInformativo { get; set; }
     }
 }

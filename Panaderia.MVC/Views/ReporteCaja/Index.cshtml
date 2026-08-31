@@ -51,7 +51,7 @@
     </div>
 
     <div class="card-custom p-3 mb-4">
-        <form method="get" asp-action="Index" class="row g-3 align-items-end">
+        <form method="get" asp-action="Index" id="filtroCaja" class="row g-3 align-items-end">
             <div class="col-6 col-md-3">
                 <label class="form-label small fw-bold text-muted">Desde</label>
                 <input type="date" name="fechaInicio" class="form-control"
@@ -66,7 +66,7 @@
                 <label class="form-label small fw-bold text-muted d-block">Tipo</label>
                 <div class="d-flex gap-2 flex-wrap">
                     <button type="button" id="pilTipoTodos"
-                            class="pill-filtro @(Model.TipoFiltro == null ? "activo" : "")"
+                            class="pill-filtro @(Model.TipoFiltro == null && !Model.SoloTotalesVendidos ? "activo" : "")"
                             onclick="seleccionarTipo('')">Todos</button>
                     <button type="button" id="pilTipoIngreso"
                             class="pill-filtro @(Model.TipoFiltro == TipoMovimiento.Ingreso ? "activo" : "")"
@@ -74,8 +74,13 @@
                     <button type="button" id="pilTipoEgreso"
                             class="pill-filtro @(Model.TipoFiltro == TipoMovimiento.Egreso ? "activo" : "")"
                             onclick="seleccionarTipo('Egreso')">Egreso</button>
+                    <button type="button" id="pilTotalesVendidos"
+                            class="pill-filtro @(Model.SoloTotalesVendidos ? "activo" : "")"
+                            onclick="seleccionarTotalesVendidos()">Totales vendidos</button>
                 </div>
                 <input type="hidden" name="TipoFiltro" id="tipoFiltroHidden" value="@Model.TipoFiltro" />
+                <input type="hidden" name="soloTotalesVendidos" id="soloTotalesVendidosHidden"
+                       value="@Model.SoloTotalesVendidos.ToString().ToLowerInvariant()" />
             </div>
             <div class="col-12 col-md-3 d-flex gap-2">
                 <button type="submit" class="btn btn-mv-primary flex-fill">Filtrar</button>
@@ -108,6 +113,8 @@
                     {
                         @foreach (var r in Model.Movimientos)
                         {
+                            @if (!Model.SoloTotalesVendidos)
+                            {
                             <tr>
                                 <td class="d-md-none">
                                     <button class="btn btn-sm btn-outline-secondary" type="button"
@@ -157,6 +164,25 @@
                                     </div>
                                 </td>
                             </tr>
+                            }
+                            @if (r.TotalVendidoInformativo.HasValue)
+                            {
+                                <tr class="table-light">
+                                    <td class="d-md-none">
+                                        <span class="material-symbols-outlined text-secondary">info</span>
+                                    </td>
+                                    <td>
+                                        @r.Fecha.ToString("dd/MM/yyyy")
+                                        <small class="d-md-none d-block text-secondary">Total vendido de la semana</small>
+                                    </td>
+                                    <td><span class="status-badge">Informativo</span></td>
+                                    <td class="d-none d-md-table-cell">Total vendido</td>
+                                    <td class="d-none d-md-table-cell">
+                                        Semana @r.FechaInicioPeriodo?.ToString("dd/MM") - @r.FechaFinPeriodo?.AddDays(-1).ToString("dd/MM/yyyy")
+                                    </td>
+                                    <td class="fw-bold titulo-pagina">@r.TotalVendidoInformativo.Value.ToString("C", cultura)</td>
+                                </tr>
+                            }
                         }
                     }
                 </tbody>
@@ -164,11 +190,9 @@
         </div>
     </div>
 
+    @if (!Model.SoloTotalesVendidos)
+    {
     <div class="d-flex justify-content-end align-items-center gap-4 flex-wrap">
-        <span class="small fw-bold text-muted">
-            Total vendido <span class="fw-normal">(informativo)</span>:
-            <span class="titulo-pagina">@Model.TotalVendidoInformativo.ToString("C", cultura)</span>
-        </span>
         <span class="small fw-bold text-muted">
             Ingresos del período: <span class="text-success">@Model.TotalIngresos.ToString("C", cultura)</span>
         </span>
@@ -176,12 +200,20 @@
             Egresos del período: <span class="text-danger">@Model.TotalEgresos.ToString("C", cultura)</span>
         </span>
     </div>
+    }
 
 @section Scripts {
     <script>
         function seleccionarTipo(valor) {
             document.getElementById('tipoFiltroHidden').value = valor;
-            document.getElementById(valor === '' ? 'pilTipoTodos' : (valor === 'Ingreso' ? 'pilTipoIngreso' : 'pilTipoEgreso')).closest('form').submit();
+            document.getElementById('soloTotalesVendidosHidden').value = 'false';
+            document.getElementById('filtroCaja').submit();
+        }
+
+        function seleccionarTotalesVendidos() {
+            document.getElementById('tipoFiltroHidden').value = '';
+            document.getElementById('soloTotalesVendidosHidden').value = 'true';
+            document.getElementById('filtroCaja').submit();
         }
     </script>
 }

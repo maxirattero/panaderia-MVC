@@ -9,10 +9,9 @@ namespace Panaderia.MVC.Models
         public decimal Saldo { get; set; }
         public decimal TotalIngresos { get; set; }
         public decimal TotalEgresos { get; set; }
-        // Métrica de pedidos; no participa del saldo ni de los totales de caja.
-        public decimal TotalVendidoInformativo { get; set; }
         public DateTime? FechaInicio { get; set; }
         public DateTime? FechaFin { get; set; }
         public TipoMovimiento? TipoFiltro { get; set; }
+        public bool SoloTotalesVendidos { get; set; }
     }
 }
