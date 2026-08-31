@@ -164,7 +164,11 @@
         </div>
     </div>
 
-    <div class="d-flex justify-content-end gap-4">
+    <div class="d-flex justify-content-end align-items-center gap-4 flex-wrap">
+        <span class="small fw-bold text-muted">
+            Total vendido <span class="fw-normal">(informativo)</span>:
+            <span class="titulo-pagina">@Model.TotalVendidoInformativo.ToString("C", cultura)</span>
+        </span>
         <span class="small fw-bold text-muted">
             Ingresos del período: <span class="text-success">@Model.TotalIngresos.ToString("C", cultura)</span>
         </span>

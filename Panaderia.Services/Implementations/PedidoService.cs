@@ -210,6 +210,18 @@ namespace Panaderia.Services.Implementations
                 .SumAsync(p => (decimal?)p.MontoTotal) ?? 0m;
         }
 
+        public async Task<decimal> GetTotalVendidoAsync(DateTime? fechaInicio, DateTime? fechaFin)
+        {
+            var pedidos = _context.Pedidos.AsQueryable();
+
+            if (fechaInicio.HasValue)
+                pedidos = pedidos.Where(p => p.FechaEntrega >= fechaInicio.Value);
+            if (fechaFin.HasValue)
+                pedidos = pedidos.Where(p => p.FechaEntrega < fechaFin.Value);
+
+            return await pedidos.SumAsync(p => (decimal?)p.MontoTotal) ?? 0m;
+        }
+
         public async Task<bool> ExisteCierreSemanalAsync(DateTime inicioSemana, DateTime finSemana)
         {
             return await _context.ReportesCaja
@@ -219,12 +231,6 @@ namespace Panaderia.Services.Implementations
         public async Task<ResumenCierreSemanal> GetResumenCierreSemanalAsync(DateTime inicioSemana)
         {
             var finSemana = inicioSemana.AddDays(7);
-
-            // Facturación de los pedidos con entrega durante el período. No se usa como
-            // movimiento de caja: los cobros se registran individualmente en ReportesCaja.
-            var totalVendido = await _context.Pedidos
-                .Where(p => p.FechaEntrega >= inicioSemana && p.FechaEntrega < finSemana)
-                .SumAsync(p => (decimal?)p.MontoTotal) ?? 0m;
 
             // Movimientos de caja de la semana, excluyendo cierres registrados
             var movimientos = await _context.ReportesCaja
@@ -283,7 +289,6 @@ namespace Panaderia.Services.Implementations
 
             return new ResumenCierreSemanal
             {
-                TotalVendido = totalVendido,
                 TotalIngresos = totalIngresos,
                 TotalEgresos = totalEgresos,
                 CostoInsumos = costoTotal,

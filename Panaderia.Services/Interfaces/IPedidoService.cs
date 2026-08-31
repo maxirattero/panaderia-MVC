@@ -47,6 +47,8 @@ namespace Panaderia.Services.Interfaces
         Task MarcarEntregadoAsync(int id);
         // Total vendido en la semana actual (domingo a sábado)
         Task<decimal> GetTotalVendidoSemanaAsync();
+        // Total vendido por fecha de entrega. Es un dato de pedidos, independiente de caja.
+        Task<decimal> GetTotalVendidoAsync(DateTime? fechaInicio, DateTime? fechaFin);
         // Resumen para cierre semanal: cobrado, costo de insumos y desglose por producto
         Task<ResumenCierreSemanal> GetResumenCierreSemanalAsync(DateTime inicioSemana);
         // Verificar si ya existe un cierre registrado para el rango dado

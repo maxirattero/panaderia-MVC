@@ -34,16 +34,20 @@ namespace Panaderia.MVC.Controllers
         {
             var todos = await _reporteCajaService.GetReporteCajaTotalAsync();
             var movimientos = todos.AsEnumerable();
+            DateTime? inicioVentas = null;
+            DateTime? finVentas = null;
 
             if (fechaInicio.HasValue)
             {
                 var inicioUtc = DateTime.SpecifyKind(fechaInicio.Value, DateTimeKind.Utc);
                 movimientos = movimientos.Where(r => r.Fecha >= inicioUtc);
+                inicioVentas = inicioUtc;
             }
             if (fechaFin.HasValue)
             {
                 var finUtc = DateTime.SpecifyKind(fechaFin.Value, DateTimeKind.Utc).AddDays(1);
                 movimientos = movimientos.Where(r => r.Fecha < finUtc);
+                finVentas = finUtc;
             }
             if (TipoFiltro.HasValue)
             {
@@ -58,6 +62,7 @@ namespace Panaderia.MVC.Controllers
                 Saldo = await _reporteCajaService.GetSaldoAsync(),
                 TotalIngresos = lista.Where(r => r.Tipo == TipoMovimiento.Ingreso).Sum(r => r.Monto),
                 TotalEgresos = lista.Where(r => r.Tipo == TipoMovimiento.Egreso).Sum(r => r.Monto),
+                TotalVendidoInformativo = await _pedidoService.GetTotalVendidoAsync(inicioVentas, finVentas),
                 FechaInicio = fechaInicio,
                 FechaFin = fechaFin,
                 TipoFiltro = TipoFiltro
@@ -203,7 +208,6 @@ namespace Panaderia.MVC.Controllers
             {
                 InicioSemana  = inicio,
                 FinSemana     = inicio.AddDays(6),
-                TotalVendido  = resumen.TotalVendido,
                 TotalIngresos = resumen.TotalIngresos,
                 TotalEgresos  = resumen.TotalEgresos,
                 CostoInsumos  = resumen.CostoInsumos,
