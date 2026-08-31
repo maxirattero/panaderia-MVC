@@ -41,7 +41,7 @@
             </span>
         </a>
         <a class="tt-cart" asp-controller="Tienda" asp-action="Carrito" title="Mi pedido">
-            <span class="material-symbols-outlined">shopping_basket</span>
+            <span class="material-symbols-outlined">shopping_cart</span>
             @if (carritoCantidad > 0)
             {
                 <span class="tt-cart-badge">@carritoCantidad</span>
@@ -49,16 +49,14 @@
         </a>
         @if (User.Identity?.IsAuthenticated == true)
         {
-            <a class="tt-login" asp-controller="Home" asp-action="Index">
+            <a class="tt-login" asp-controller="Home" asp-action="Index" title="Ir al panel" aria-label="Ir al panel">
                 <span class="material-symbols-outlined">space_dashboard</span>
-                <span class="d-none d-sm-inline">Panel</span>
             </a>
         }
         else
         {
-            <a class="tt-login" asp-controller="Account" asp-action="Login">
+            <a class="tt-login" asp-controller="Account" asp-action="Login" title="Ingresar" aria-label="Ingresar">
                 <span class="material-symbols-outlined">person</span>
-                <span class="d-none d-sm-inline">Ingresar</span>
             </a>
         }
     </header>
