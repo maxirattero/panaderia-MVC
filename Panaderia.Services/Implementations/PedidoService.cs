@@ -220,6 +220,12 @@ namespace Panaderia.Services.Implementations
         {
             var finSemana = inicioSemana.AddDays(7);
 
+            // Facturación de los pedidos con entrega durante el período. No se usa como
+            // movimiento de caja: los cobros se registran individualmente en ReportesCaja.
+            var totalVendido = await _context.Pedidos
+                .Where(p => p.FechaEntrega >= inicioSemana && p.FechaEntrega < finSemana)
+                .SumAsync(p => (decimal?)p.MontoTotal) ?? 0m;
+
             // Movimientos de caja de la semana, excluyendo cierres registrados
             var movimientos = await _context.ReportesCaja
                 .Where(r => r.Fecha >= inicioSemana
@@ -277,6 +283,7 @@ namespace Panaderia.Services.Implementations
 
             return new ResumenCierreSemanal
             {
+                TotalVendido = totalVendido,
                 TotalIngresos = totalIngresos,
                 TotalEgresos = totalEgresos,
                 CostoInsumos = costoTotal,

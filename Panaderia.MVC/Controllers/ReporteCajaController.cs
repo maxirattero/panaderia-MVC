@@ -203,6 +203,7 @@ namespace Panaderia.MVC.Controllers
             {
                 InicioSemana  = inicio,
                 FinSemana     = inicio.AddDays(6),
+                TotalVendido  = resumen.TotalVendido,
                 TotalIngresos = resumen.TotalIngresos,
                 TotalEgresos  = resumen.TotalEgresos,
                 CostoInsumos  = resumen.CostoInsumos,

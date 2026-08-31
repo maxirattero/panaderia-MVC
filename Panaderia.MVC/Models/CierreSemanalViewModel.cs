@@ -6,6 +6,8 @@ public class CierreSemanalViewModel
 {
     public DateTime InicioSemana { get; set; }
     public DateTime FinSemana { get; set; }
+    // Se muestra por separado: los cobros ya componen TotalIngresos.
+    public decimal TotalVendido { get; set; }
     public decimal TotalIngresos { get; set; }
     public decimal TotalEgresos { get; set; }
     public decimal NetoSemana => TotalIngresos - TotalEgresos;
