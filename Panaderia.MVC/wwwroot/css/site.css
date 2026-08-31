@@ -1022,28 +1022,40 @@ a.pill-filtro.activo {
     margin-right: auto;
 }
 
-.tt-cart {
+.tt-cart,
+.admin-topbar-action {
     position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
     width: 42px;
     height: 42px;
-    margin-right: 10px;
     border-radius: 50%;
     border: 1px solid var(--mv-outline);
     background-color: var(--mv-surface);
     color: var(--mv-primary-dark);
     text-decoration: none;
+    padding: 0;
 }
 
-.tt-cart:hover {
+.tt-cart {
+    margin-right: 10px;
+}
+
+.tt-cart:hover,
+.admin-topbar-action:hover {
     background-color: var(--mv-surface-low);
     color: var(--mv-primary-dark);
 }
 
-.tt-cart .material-symbols-outlined {
+.tt-cart .material-symbols-outlined,
+.admin-topbar-action .material-symbols-outlined {
     font-size: 22px;
+}
+
+.admin-topbar-action.notificaciones-activas {
+    border-color: var(--mv-success);
+    color: var(--mv-success);
 }
 
 .tt-cart-badge {

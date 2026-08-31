@@ -18,7 +18,7 @@
         const activa = Notification.permission === "granted" && subscription;
         button.title = activa ? "Notificaciones activadas" : "Activar notificaciones";
         button.setAttribute("aria-label", button.title);
-        button.classList.toggle("text-success", Boolean(activa));
+        button.classList.toggle("notificaciones-activas", Boolean(activa));
     };
 
     const base64UrlToUint8Array = value => {
