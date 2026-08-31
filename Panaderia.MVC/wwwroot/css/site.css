@@ -1546,6 +1546,17 @@ a.pill-filtro.activo {
     padding-bottom: 80px;
 }
 
+/* En móvil la barra fija necesita aire por encima de la última tarjeta y del área segura. */
+@media (max-width: 767.98px) {
+    .tienda-seleccion-form {
+        padding-bottom: calc(112px + env(safe-area-inset-bottom));
+    }
+
+    .tienda-confirmar-seleccion {
+        bottom: calc(16px + env(safe-area-inset-bottom));
+    }
+}
+
 .tienda-confirmar-seleccion.en-posicion-final {
     position: absolute;
     bottom: 0;
