@@ -17,7 +17,9 @@
             data-vapid-public-key="@vapidPublicKey" data-antiforgery-token="@csrfToken">
         <span class="material-symbols-outlined">notifications</span>
     </button>
-    <button class="btn p-1 text-secondary">
-        <span class="material-symbols-outlined">settings</span>
-    </button>
+    <a class="btn btn-sm btn-mv-secondary d-flex align-items-center gap-1" asp-controller="Tienda" asp-action="Index"
+       title="Ir a la tienda" aria-label="Ir a la tienda">
+        <span class="material-symbols-outlined">storefront</span>
+        <span class="d-none d-sm-inline">Tienda</span>
+    </a>
 </div>
