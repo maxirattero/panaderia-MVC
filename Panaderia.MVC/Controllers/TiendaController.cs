@@ -343,7 +343,17 @@ namespace Panaderia.MVC.Controllers
                 }).ToList()
             };
 
-            await _pedidoService.CreateAsync(pedido);
+            try
+            {
+                await _pedidoService.CreateAsync(pedido);
+            }
+            catch (InvalidOperationException ex)
+            {
+                ModelState.AddModelError("", ex.Message);
+                model.Carrito = carrito;
+                model.FechaEntrega = ProximoSabado();
+                return View("Checkout", model);
+            }
             pedido.Cliente = cliente;
             await _pushNotificationService.NotificarNuevoPedidoAsync(pedido, EsRevendedor());
 

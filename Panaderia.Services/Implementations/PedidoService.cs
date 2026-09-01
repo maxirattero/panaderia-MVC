@@ -112,9 +112,12 @@ namespace Panaderia.Services.Implementations
         //crear un nuevo pedido
         public async Task CreateAsync(Pedido pedido)
         {
+            await using var transaction = await _context.Database.BeginTransactionAsync();
             await AplicarCostoEmpaqueAsync(pedido.Detalles);
+            await ReservarStockAsync(pedido.Detalles);
             await _context.Pedidos.AddAsync(pedido);
             await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
         }
 
         //actualizar un pedido existente
@@ -125,6 +128,8 @@ namespace Panaderia.Services.Implementations
                 .FirstOrDefaultAsync(p => p.Id == pedido.Id);
             if (existing == null) return;
 
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+
             existing.IdCliente = pedido.IdCliente;
             existing.FechaEntrega = pedido.FechaEntrega;
             existing.Notas = pedido.Notas;
@@ -132,7 +137,11 @@ namespace Panaderia.Services.Implementations
             existing.MontoTotal = pedido.MontoTotal;
             existing.FechaModificacion = DateTime.UtcNow;
 
+            // Libera la reserva anterior dentro de la misma transacción: si la nueva
+            // selección no alcanza, todo se revierte y el pedido queda intacto.
+            await RestituirStockReservadoAsync(existing.Detalles);
             await AplicarCostoEmpaqueAsync(pedido.Detalles);
+            await ReservarStockAsync(pedido.Detalles);
 
             _context.DetallesPedido.RemoveRange(existing.Detalles);
             existing.Detalles.Clear();
@@ -142,6 +151,7 @@ namespace Panaderia.Services.Implementations
                 {
                     IdProducto = d.IdProducto,
                     Cantidad = d.Cantidad,
+                    ReservaStock = d.ReservaStock,
                     PrecioUnitario = d.PrecioUnitario,
                     IdEmpaque = d.IdEmpaque,
                     LlevaEtiqueta = d.LlevaEtiqueta,
@@ -150,6 +160,7 @@ namespace Panaderia.Services.Implementations
             }
 
             await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
         }
 
         //eliminar un pedido por su ID        
@@ -160,8 +171,11 @@ namespace Panaderia.Services.Implementations
                 .FirstOrDefaultAsync(p => p.Id == id);
             if (pedido == null) return;
 
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            await RestituirStockReservadoAsync(pedido.Detalles);
             _context.Pedidos.Remove(pedido);
             await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
         }
 
         // Verificar si un pedido existe por su ID
@@ -174,9 +188,13 @@ namespace Panaderia.Services.Implementations
         // Anular pedido
         public async Task AnularAsync(int id)
         {
-            var pedido = await _context.Pedidos.FindAsync(id);
+            var pedido = await _context.Pedidos
+                .Include(p => p.Detalles)
+                .FirstOrDefaultAsync(p => p.Id == id);
             if (pedido == null) return;
 
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            await RestituirStockReservadoAsync(pedido.Detalles);
             pedido.Anulado = true;
 
             var reportesVenta = await _context.ReportesCaja
@@ -185,6 +203,7 @@ namespace Panaderia.Services.Implementations
             _context.ReportesCaja.RemoveRange(reportesVenta);
 
             await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
         }
 
         // Marcar pedido como entregado
@@ -662,6 +681,67 @@ namespace Panaderia.Services.Implementations
             }
 
             return (porProducto, porBolsa, porSubReceta, totalAgua);
+        }
+
+        // Reserva unidades al registrar el pedido. ExecuteUpdate hace que la condición
+        // Stock >= cantidad se aplique en la base, evitando sobreventas simultáneas.
+        private async Task ReservarStockAsync(IEnumerable<DetallePedido> detalles)
+        {
+            var detallesLista = detalles.Where(d => d.Cantidad > 0).ToList();
+            foreach (var detalle in detallesLista)
+                detalle.ReservaStock = false;
+
+            var cantidadesPorProducto = detallesLista
+                .GroupBy(d => d.IdProducto)
+                .ToDictionary(g => g.Key, g => g.Sum(d => d.Cantidad));
+            if (!cantidadesPorProducto.Any()) return;
+
+            var productos = await _context.Productos
+                .Where(p => cantidadesPorProducto.Keys.Contains(p.Id))
+                .Select(p => new { p.Id, p.Nombre, p.PorEncargo })
+                .ToDictionaryAsync(p => p.Id);
+
+            foreach (var (idProducto, cantidad) in cantidadesPorProducto)
+            {
+                if (!productos.TryGetValue(idProducto, out var producto))
+                    throw new InvalidOperationException("Uno de los productos del pedido ya no existe.");
+
+                // Panes, crackers y cualquier producto por encargo no consumen stock.
+                if (producto.PorEncargo) continue;
+
+                var filasActualizadas = await _context.Productos
+                    .Where(p => p.Id == idProducto && !p.PorEncargo && p.Stock >= cantidad)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(p => p.Stock, p => p.Stock - cantidad)
+                        .SetProperty(p => p.SinStock, p => p.Stock - cantidad <= 0));
+
+                if (filasActualizadas == 0)
+                {
+                    var nombre = string.IsNullOrWhiteSpace(producto.Nombre) ? "el producto seleccionado" : producto.Nombre;
+                    throw new InvalidOperationException($"No hay stock suficiente de {nombre}. Volvé al carrito para ajustar el pedido.");
+                }
+
+                foreach (var detalle in detallesLista.Where(d => d.IdProducto == idProducto))
+                    detalle.ReservaStock = true;
+            }
+        }
+
+        // Devuelve únicamente las unidades que esta app había reservado al crear o editar el pedido.
+        private async Task RestituirStockReservadoAsync(IEnumerable<DetallePedido> detalles)
+        {
+            var cantidadesPorProducto = detalles
+                .Where(d => d.ReservaStock && d.Cantidad > 0)
+                .GroupBy(d => d.IdProducto)
+                .ToDictionary(g => g.Key, g => g.Sum(d => d.Cantidad));
+
+            foreach (var (idProducto, cantidad) in cantidadesPorProducto)
+            {
+                await _context.Productos
+                    .Where(p => p.Id == idProducto)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(p => p.Stock, p => p.Stock + cantidad)
+                        .SetProperty(p => p.SinStock, p => !p.PorEncargo && p.Stock + cantidad <= 0));
+            }
         }
 
         private async Task AplicarCostoEmpaqueAsync(IEnumerable<DetallePedido> detalles)

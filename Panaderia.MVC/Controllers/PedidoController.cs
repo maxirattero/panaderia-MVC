@@ -454,7 +454,16 @@ namespace Panaderia.MVC.Controllers
 
             pedido.MontoTotal = CalcularMontoTotal(pedido.Detalles, pedido.DescuentoPorcentaje);
 
-            await _pedidoService.CreateAsync(pedido);
+            try
+            {
+                await _pedidoService.CreateAsync(pedido);
+            }
+            catch (InvalidOperationException ex)
+            {
+                ModelState.AddModelError("", ex.Message);
+                await CargarDropdowns();
+                return View(vm);
+            }
             return RedirectToAction(nameof(Index));
         }
 
@@ -550,7 +559,16 @@ namespace Panaderia.MVC.Controllers
                 return View(vm);
             }
 
-            await _pedidoService.UpdateAsync(pedido);
+            try
+            {
+                await _pedidoService.UpdateAsync(pedido);
+            }
+            catch (InvalidOperationException ex)
+            {
+                ModelState.AddModelError("", ex.Message);
+                await CargarDropdowns();
+                return View(vm);
+            }
             return RedirectToAction(nameof(Index));
         }
 
