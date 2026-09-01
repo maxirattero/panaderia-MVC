@@ -1568,6 +1568,25 @@ a.pill-filtro.activo {
     opacity: 1;
 }
 
+.tienda-aviso-pedidos {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 16px;
+    padding: 13px 16px;
+    border: 1px solid rgba(128, 43, 13, 0.28);
+    border-radius: 1rem;
+    background: var(--mv-surface-low);
+    color: var(--mv-tertiary);
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.tienda-aviso-pedidos .material-symbols-outlined {
+    flex: 0 0 auto;
+    font-size: 22px;
+}
+
 @media (max-width: 480px) {
     .tienda-hero.con-foto h1,
     .tienda-hero.con-foto p {
