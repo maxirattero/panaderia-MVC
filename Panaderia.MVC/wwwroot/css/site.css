@@ -1556,6 +1556,12 @@ a.pill-filtro.activo {
     line-height: 1.5;
 }
 
+.tienda-hero.con-foto .tienda-hero-destacado {
+    font-size: 1.1rem;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
 .tienda-hero.con-foto .tienda-hero-entrega {
     margin-bottom: 0;
     font-weight: 700;
