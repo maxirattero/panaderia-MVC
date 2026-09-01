@@ -28,9 +28,6 @@ namespace Panaderia.Services.Interfaces
         //Mostrar/ocultar Producto en la tienda pública
         Task ToggleOcultoEnTiendaAsync(int id);
 
-        //Marcar/desmarcar Producto como sin stock en la tienda
-        Task ToggleSinStockAsync(int id);
-
         //Marcar/desmarcar Producto como "por encargo" en la tienda
         Task TogglePorEncargoAsync(int id);
 

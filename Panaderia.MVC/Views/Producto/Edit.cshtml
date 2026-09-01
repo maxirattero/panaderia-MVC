@@ -101,6 +101,14 @@
                 <span asp-validation-for="Stock" class="text-danger"></span>
             </div>
 
+            <div class="col-md-6 d-flex align-items-end">
+                <div class="form-check form-switch mb-2">
+                    <input asp-for="PorEncargo" class="form-check-input" />
+                    <label asp-for="PorEncargo" class="form-check-label fw-semibold">Producto por encargo</label>
+                    <div class="form-text">No se bloquea en la tienda aunque el stock sea 0.</div>
+                </div>
+            </div>
+
             <div class="col-12">
                 <label asp-for="ObservacionesElaboracion" class="form-label small fw-bold text-muted">Notas de elaboración</label>
                 <textarea asp-for="ObservacionesElaboracion" class="form-control" rows="5"

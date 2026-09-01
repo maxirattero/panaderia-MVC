@@ -46,6 +46,7 @@ namespace Panaderia.Services.Implementations
         //Crear nuevo Producto
         public async Task CreateAsync(Producto producto)
         {
+            AplicarEstadoStock(producto);
             await _context.Productos.AddAsync(producto);
             await _context.SaveChangesAsync();
         }
@@ -65,8 +66,10 @@ namespace Panaderia.Services.Implementations
             existe.PrecioFinal = producto.PrecioFinal;
             existe.PrecioReventa = producto.PrecioReventa;
             existe.Stock = producto.Stock;
+            existe.PorEncargo = producto.PorEncargo;
             existe.ImagenURL = producto.ImagenURL;
             existe.ObservacionesElaboracion = producto.ObservacionesElaboracion;
+            AplicarEstadoStock(existe);
             existe.FechaModificacion = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
@@ -101,11 +104,11 @@ namespace Panaderia.Services.Implementations
                 PrecioReventa = origen.PrecioReventa,
                 Stock = 0,
                 OcultoEnTienda = true,
-                SinStock = false,
                 PorEncargo = origen.PorEncargo,
                 ObservacionesElaboracion = origen.ObservacionesElaboracion,
                 FechaCreacion = DateTime.UtcNow
             };
+            AplicarEstadoStock(copia);
 
             _context.Productos.Add(copia);
             await _context.SaveChangesAsync();
@@ -176,18 +179,6 @@ namespace Panaderia.Services.Implementations
             await _context.SaveChangesAsync();
         }
 
-        //Marcar/desmarcar Producto como sin stock en la tienda
-        public async Task ToggleSinStockAsync(int id)
-        {
-            var producto = await _context.Productos.FindAsync(id);
-            if (producto == null) return;
-
-            producto.SinStock = !producto.SinStock;
-            producto.FechaModificacion = DateTime.UtcNow;
-
-            await _context.SaveChangesAsync();
-        }
-
         //Marcar/desmarcar Producto como "por encargo" en la tienda
         public async Task TogglePorEncargoAsync(int id)
         {
@@ -195,9 +186,15 @@ namespace Panaderia.Services.Implementations
             if (producto == null) return;
 
             producto.PorEncargo = !producto.PorEncargo;
+            AplicarEstadoStock(producto);
             producto.FechaModificacion = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
+        }
+
+        private static void AplicarEstadoStock(Producto producto)
+        {
+            producto.SinStock = !producto.PorEncargo && producto.Stock <= 0;
         }
 
         //Guardar (crear o reemplazar) la imagen del Producto

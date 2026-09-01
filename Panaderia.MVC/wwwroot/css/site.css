@@ -1014,6 +1014,11 @@ a.pill-filtro.activo {
     color: var(--mv-error);
 }
 
+.tc-tag.disponible {
+    background-color: rgba(46, 125, 50, 0.12);
+    color: var(--mv-success);
+}
+
 .tienda-card.agotado .tc-img img {
     filter: grayscale(0.85);
     opacity: 0.75;

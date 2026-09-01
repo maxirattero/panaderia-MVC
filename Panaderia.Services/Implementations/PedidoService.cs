@@ -375,7 +375,10 @@ namespace Panaderia.Services.Implementations
                 {
                     var producto = await _context.Productos.FindAsync(item.IdProducto);
                     if (producto != null)
+                    {
                         producto.Stock += (int)item.CantidadAProducir;
+                        producto.SinStock = !producto.PorEncargo && producto.Stock <= 0;
+                    }
 
                     if (item.IdProduccionStock > 0)
                         bufferIdsAEliminar.Add(item.IdProduccionStock);

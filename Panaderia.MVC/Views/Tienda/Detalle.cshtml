@@ -49,7 +49,7 @@
                         <span class="material-symbols-outlined">@etiqueta.Icono</span> @etiqueta.Nombre
                     </a>
                 }
-                @if (Model.SinStock)
+                @if (Model.EstaSinStockEnTienda)
                 {
                     <span class="badge-tienda agotado"><span class="material-symbols-outlined">block</span> Sin stock</span>
                 }
@@ -59,11 +59,11 @@
                 }
                 else
                 {
-                    <span class="badge-tienda ok"><span class="material-symbols-outlined">check_circle</span> Disponible</span>
+                    <span class="badge-tienda ok"><span class="material-symbols-outlined">check_circle</span> En stock</span>
                 }
             </div>
 
-            @if (Model.SinStock)
+            @if (Model.EstaSinStockEnTienda)
             {
                 <p class="td-nota">Este producto está temporalmente sin stock. Volvé a mirar en unos días o consultanos cuándo vuelve.</p>
             }

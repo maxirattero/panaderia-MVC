@@ -124,7 +124,7 @@ namespace Panaderia.MVC.Controllers
             var producto = await _productoService.GetByIdAsync(id);
             if (producto == null || producto.OcultoEnTienda) return NotFound();
 
-            if (producto.SinStock)
+            if (producto.EstaSinStockEnTienda)
             {
                 TempData["TiendaMsg"] = $"{producto.NombreVisible} está sin stock por el momento.";
                 return RedirectToAction(nameof(Detalle), new { id });
@@ -165,7 +165,7 @@ namespace Panaderia.MVC.Controllers
             }
 
             var productos = (await _productoService.GetAllAsync())
-                .Where(p => !p.OcultoEnTienda && !p.SinStock)
+                .Where(p => !p.OcultoEnTienda && !p.EstaSinStockEnTienda)
                 .ToDictionary(p => p.Id);
             var carrito = LeerCarrito();
             var cantidadAgregada = 0;
@@ -517,7 +517,7 @@ namespace Panaderia.MVC.Controllers
             if (!carrito.Any()) return vm;
 
             var productos = (await _productoService.GetAllAsync())
-                .Where(p => !p.OcultoEnTienda && !p.SinStock)
+                .Where(p => !p.OcultoEnTienda && !p.EstaSinStockEnTienda)
                 .ToDictionary(p => p.Id);
 
             var huboCambios = false;

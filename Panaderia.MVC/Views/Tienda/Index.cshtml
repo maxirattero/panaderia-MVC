@@ -80,7 +80,7 @@
     @foreach (var p in Model.Productos)
     {
         var precio = Model.EsRevendedor ? p.PrecioReventa : p.PrecioFinal;
-        <div class="tienda-card @(p.SinStock ? "agotado" : "")">
+        <div class="tienda-card @(p.EstaSinStockEnTienda ? "agotado" : "")">
             <a class="tc-link" asp-controller="Tienda" asp-action="Detalle" asp-route-id="@p.Id">
                 <div class="tc-img">
                     @if (!string.IsNullOrEmpty(p.ImagenURL))
@@ -91,13 +91,17 @@
                     {
                         <span class="material-symbols-outlined tc-placeholder">bakery_dining</span>
                     }
-                    @if (p.SinStock)
+                    @if (p.EstaSinStockEnTienda)
                     {
                         <span class="tc-tag agotado">Sin stock</span>
                     }
                     else if (p.PorEncargo)
                     {
                         <span class="tc-tag">Por encargo</span>
+                    }
+                    else
+                    {
+                        <span class="tc-tag disponible">En stock</span>
                     }
                     <span class="tc-ver-detalle">
                         <span class="material-symbols-outlined">visibility</span> Ver detalles
@@ -112,7 +116,7 @@
                     <div class="tc-price">$@precio.ToString("N0", ar)</div>
                 </div>
             </a>
-            @if (!p.SinStock)
+            @if (!p.EstaSinStockEnTienda)
             {
                 <div class="tc-agregar">
                     <div class="stepper-tienda sm">

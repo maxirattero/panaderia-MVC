@@ -173,15 +173,6 @@ namespace Panaderia.MVC.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        //POST: Marcar/desmarcar producto como sin stock en la tienda
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ToggleSinStock(int id)
-        {
-            await _productoService.ToggleSinStockAsync(id);
-            return RedirectToAction(nameof(Index));
-        }
-
         //POST: Marcar/desmarcar producto como "por encargo" en la tienda
         [HttpPost]
         [ValidateAntiForgeryToken]
