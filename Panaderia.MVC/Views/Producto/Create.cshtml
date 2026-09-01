@@ -108,6 +108,20 @@
             </div>
 
             <div class="col-12">
+                <label asp-for="DescripcionTienda" class="form-label small fw-bold text-muted">Descripción para la tienda</label>
+                <textarea asp-for="DescripcionTienda" class="form-control" rows="4"
+                          placeholder="Peso, características del producto, apto veganos, etc."></textarea>
+                <span asp-validation-for="DescripcionTienda" class="text-danger"></span>
+            </div>
+
+            <div class="col-12">
+                <label asp-for="Ingredientes" class="form-label small fw-bold text-muted">Ingredientes</label>
+                <textarea asp-for="Ingredientes" class="form-control" rows="3"
+                          placeholder="Ej.: harina integral de trigo, agua, aceite de oliva y sal."></textarea>
+                <span asp-validation-for="Ingredientes" class="text-danger"></span>
+            </div>
+
+            <div class="col-12">
                 <label asp-for="ObservacionesElaboracion" class="form-label small fw-bold text-muted">Notas de elaboración</label>
                 <textarea asp-for="ObservacionesElaboracion" class="form-control" rows="5"
                           placeholder="Pasos especiales, tiempos, decoraciones o indicaciones para productos estacionales."></textarea>

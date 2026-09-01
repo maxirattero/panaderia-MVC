@@ -63,6 +63,22 @@
                 }
             </div>
 
+            @if (!string.IsNullOrWhiteSpace(Model.DescripcionTienda))
+            {
+                <section class="td-contenido">
+                    <h2>Sobre este producto</h2>
+                    <p>@Model.DescripcionTienda</p>
+                </section>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(Model.Ingredientes))
+            {
+                <section class="td-contenido td-ingredientes">
+                    <h2>Ingredientes</h2>
+                    <p>@Model.Ingredientes</p>
+                </section>
+            }
+
             @if (Model.EstaSinStockEnTienda)
             {
                 <p class="td-nota">Este producto está temporalmente sin stock. Volvé a mirar en unos días o consultanos cuándo vuelve.</p>

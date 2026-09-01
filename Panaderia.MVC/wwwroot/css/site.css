@@ -905,6 +905,33 @@ a.pill-filtro.activo {
     margin-bottom: 18px;
 }
 
+.td-contenido {
+    margin: 0 0 16px;
+    max-width: 500px;
+}
+
+.td-contenido h2 {
+    margin: 0 0 6px;
+    color: #281714;
+    font-family: 'Literata', serif;
+    font-size: 1.03rem;
+    font-weight: 700;
+}
+
+.td-contenido p {
+    margin: 0;
+    color: var(--mv-secondary);
+    font-size: 0.92rem;
+    line-height: 1.55;
+    white-space: pre-line;
+}
+
+.td-ingredientes {
+    padding: 12px 14px;
+    border-radius: 0.75rem;
+    background-color: #f5f0eb;
+}
+
 .badge-tienda {
     display: inline-flex;
     align-items: center;

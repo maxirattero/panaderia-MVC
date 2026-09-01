@@ -46,6 +46,12 @@ namespace Panaderia.Models.Entities
         public bool SinStock { get; set; }
         public bool PorEncargo { get; set; }
 
+        [MaxLength(1000)]
+        public string? DescripcionTienda { get; set; }
+
+        [MaxLength(2000)]
+        public string? Ingredientes { get; set; }
+
         // Los productos por encargo siempre se pueden pedir. Para el resto, la
         // disponibilidad de tienda depende de las unidades reales en stock.
         [NotMapped]

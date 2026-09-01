@@ -67,6 +67,8 @@ namespace Panaderia.Services.Implementations
             existe.PrecioReventa = producto.PrecioReventa;
             existe.Stock = producto.Stock;
             existe.PorEncargo = producto.PorEncargo;
+            existe.DescripcionTienda = producto.DescripcionTienda;
+            existe.Ingredientes = producto.Ingredientes;
             existe.ImagenURL = producto.ImagenURL;
             existe.ObservacionesElaboracion = producto.ObservacionesElaboracion;
             AplicarEstadoStock(existe);
@@ -105,6 +107,8 @@ namespace Panaderia.Services.Implementations
                 Stock = 0,
                 OcultoEnTienda = true,
                 PorEncargo = origen.PorEncargo,
+                DescripcionTienda = origen.DescripcionTienda,
+                Ingredientes = origen.Ingredientes,
                 ObservacionesElaboracion = origen.ObservacionesElaboracion,
                 FechaCreacion = DateTime.UtcNow
             };
