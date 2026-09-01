@@ -1015,8 +1015,8 @@ a.pill-filtro.activo {
 }
 
 .tc-tag.disponible {
-    background-color: rgba(46, 125, 50, 0.12);
-    color: var(--mv-success);
+    background-color: #2e7d32;
+    color: #fff;
 }
 
 .tienda-card.agotado .tc-img img {
