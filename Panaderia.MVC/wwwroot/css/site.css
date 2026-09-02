@@ -1037,8 +1037,8 @@ a.pill-filtro.activo {
    ============================================= */
 
 .tc-tag.agotado {
-    background-color: rgba(186, 26, 26, 0.1);
-    color: var(--mv-error);
+    background-color: #ba1a1a;
+    color: #fff;
 }
 
 .tc-tag.disponible {
