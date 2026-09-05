@@ -1,9 +1,10 @@
-const CACHE_NAME = "masaviva-static-v4";
+const CACHE_NAME = "masaviva-static-v5";
 const STATIC_ASSETS = [
     "/css/site.css",
     "/js/site.js",
     "/js/pwa.js",
     "/js/push-notifications.js",
+    "/js/order-notifications.js",
     "/img/pwa-icon-192.png",
     "/img/logo-masaviva.png",
     "/img/logo-masaviva-blanco.png",

@@ -68,7 +68,7 @@
     button.addEventListener("click", async () => {
         if (Notification.permission === "denied") {
             actualizarEstado();
-            alert("Chrome bloqueó las notificaciones de este sitio. Abrí el icono junto a la dirección → Configuración del sitio → Notificaciones → Permitir. Después recargá y tocá la campanita.");
+            alert("Chrome bloqueó las notificaciones de este sitio. Abrí el icono junto a la dirección → Configuración del sitio → Notificaciones → Permitir. Después recargá y volvé a probar los avisos del dispositivo desde el menú de la campanita.");
             return;
         }
 
@@ -78,7 +78,7 @@
                 ? "granted" : await Notification.requestPermission();
             if (permission !== "granted") {
                 actualizarEstado();
-                alert("No se activaron las notificaciones. Permitilas en la configuración de este sitio y volvé a tocar la campanita.");
+                alert("No se activaron las notificaciones. Permitilas en la configuración de este sitio y volvé a probar los avisos del dispositivo desde el menú de la campanita.");
                 return;
             }
 

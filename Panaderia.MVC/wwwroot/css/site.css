@@ -1113,6 +1113,34 @@ a.pill-filtro.activo {
     color: var(--mv-success);
 }
 
+.pedidos-notificaciones {
+    width: min(370px, calc(100vw - 24px));
+    padding: 0;
+    border-radius: 14px;
+    box-shadow: 0 8px 28px #0002;
+    overflow: hidden;
+}
+
+#contadorPedidosNuevos[hidden] { display: none; }
+
+.pedidos-notificaciones-lista {
+    max-height: min(380px, 50vh);
+    overflow-y: auto;
+}
+
+.pedido-notificacion {
+    display: block;
+    padding: 12px 16px;
+    color: var(--mv-primary-dark);
+    text-decoration: none;
+    border-bottom: 1px solid var(--mv-outline);
+    overflow-wrap: anywhere;
+}
+
+.pedido-notificacion.nuevo { background: var(--mv-surface-low); }
+.pedido-notificacion:hover, .pedido-notificacion:focus-visible { background: var(--mv-surface); }
+.pedido-notificacion small { display: block; margin-top: 4px; }
+
 .tt-cart-badge {
     position: absolute;
     top: -5px;
