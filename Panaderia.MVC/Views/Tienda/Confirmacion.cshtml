@@ -9,7 +9,7 @@
     var linkWhatsApp = ViewBag.LinkWhatsApp as string;
 }
 
-<div class="tienda-confirmacion">
+<div class="tienda-confirmacion" data-whatsapp-url="@linkWhatsApp">
     <div class="conf-icono">
         <span class="material-symbols-outlined">check_circle</span>
     </div>
@@ -48,9 +48,6 @@
             <b>Tocá enviar</b> para que nos llegue.
         </p>
 
-        <a id="btnWhatsApp" class="btn-whatsapp carrito-cta" href="@linkWhatsApp" target="_blank" rel="noopener">
-            <span class="material-symbols-outlined">chat</span> Enviar pedido por WhatsApp
-        </a>
         <a class="btn-mv-secondary carrito-cta" asp-controller="Tienda" asp-action="Index">Volver a la tienda</a>
     }
     else
@@ -62,10 +59,10 @@
 
 @section Scripts {
     <script>
-        // Abrimos WhatsApp solo. Si el navegador bloquea el popup, queda el botón visible.
+        // Abrir en la misma pestaña para no depender de ventanas emergentes.
         (function () {
-            const link = document.getElementById('btnWhatsApp');
-            if (!link) return;
+            const url = document.querySelector('.tienda-confirmacion').dataset.whatsappUrl;
+            if (!url) return;
 
             // Una sola vez por pedido: si el cliente recarga, no se vuelve a abrir
             const clave = 'mv_wa_@ViewBag.PedidoId';
@@ -74,9 +71,19 @@
                 sessionStorage.setItem(clave, '1');
             } catch (e) { /* modo privado: seguimos igual */ }
 
-            setTimeout(function () {
-                window.open(link.href, '_blank');
-            }, 900);
+            const esMovil = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+                || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+            if (esMovil) {
+                // El esquema de la app evita la página intermedia de wa.me.
+                // El sistema puede pedir permiso antes de abrir WhatsApp.
+                const enlace = new URL(url);
+                const telefono = enlace.pathname.replace(/\//g, '');
+                window.location.assign('whatsapp://send?phone=' + encodeURIComponent(telefono)
+                    + '&text=' + encodeURIComponent(enlace.searchParams.get('text') || ''));
+            } else {
+                window.location.assign(url);
+            }
         })();
     </script>
 }
