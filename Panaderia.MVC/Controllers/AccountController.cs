@@ -3,10 +3,12 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Panaderia.Models.Entities;
 using Panaderia.MVC.Models;
+using Panaderia.MVC.Filters;
 
 namespace Panaderia.MVC.Controllers;
 
 [AllowAnonymous]
+[ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 public class AccountController : Controller
 {
     private readonly SignInManager<ApplicationUser> _signInManager;
@@ -21,16 +23,22 @@ public class AccountController : Controller
     }
 
     [HttpGet]
-    public IActionResult Login(string? returnUrl = null)
+    public IActionResult Login(string? returnUrl = null, bool formularioVencido = false)
     {
         if (User.Identity?.IsAuthenticated == true)
-            return RedirectToAction("Index", "Pedido");
+        {
+            if (Url.IsLocalUrl(returnUrl)) return LocalRedirect(returnUrl!);
+            return RedirectToAction("Index", User.IsInRole("Admin") || User.IsInRole("Revendedor") ? "Home" : "Tienda");
+        }
+        if (formularioVencido)
+            ModelState.AddModelError(string.Empty, "El formulario quedó desactualizado. Volvé a ingresar tus datos para iniciar sesión.");
         ViewData["ReturnUrl"] = returnUrl;
         return View();
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RecoverLoginAntiforgery]
     public async Task<IActionResult> Login(LoginViewModel model, string? returnUrl = null)
     {
         ViewData["ReturnUrl"] = returnUrl;
@@ -41,8 +49,8 @@ public class AccountController : Controller
 
         if (result.Succeeded)
         {
-            if (!string.IsNullOrEmpty(returnUrl))
-                return LocalRedirect(returnUrl);
+            if (Url.IsLocalUrl(returnUrl))
+                return LocalRedirect(returnUrl!);
 
             // Admin y Revendedor van a la parte administrativa; el resto, a la tienda.
             var user = await _userManager.FindByEmailAsync(model.Email);
