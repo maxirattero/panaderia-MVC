@@ -183,7 +183,7 @@
                     const disponible = Math.max(0, stockActual - reservadoEnOtrasFilas);
                     input.max = disponible;
                     if ((parseInt(input.value, 10) || 0) > disponible) input.value = disponible;
-                    texto.textContent = `Stock actual: ${stockActual} · disponible: ${disponible}`;
+                    texto.textContent = `Stock actual: ${stockActual}`;
                 });
             }
 
