@@ -58,9 +58,9 @@
                 <thead>
                     <tr>
                         <th>Producto</th>
-                        <th style="width: 80px;">Cant.</th>
+                        <th style="width: 130px;">Cant.</th>
                         <th style="width: 160px;">Empaque</th>
-                        <th style="width: 80px;" class="text-center">Etiqueta</th>
+                        <th style="width: 90px;" class="text-center">Etiqueta</th>
                         <th style="width: 100px;">Subtotal</th>
                         <th style="width: 50px;"></th>
                     </tr>
@@ -142,7 +142,7 @@
                 }
             </select>
         </td>
-        <td data-label="Cantidad">
+        <td data-label="Cantidad" class="cantidad-pedido">
             <small class="stock-disponible text-muted d-block mb-1">Elegí un producto</small>
             <input name="__CANT__" type="number" min="1" placeholder="Cant." class="form-control cant-input" required />
         </td>
@@ -155,8 +155,8 @@
                 }
             </select>
         </td>
-        <td data-label="Etiqueta" class="text-center align-middle">
-            <input name="__ETIQUETA__" type="checkbox" class="form-check-input etiqueta-check" value="true" />
+        <td data-label="Etiqueta" class="text-center etiqueta-pedido">
+            <input name="__ETIQUETA__" type="checkbox" class="pedido-etiqueta-check" value="true" />
         </td>
         <td data-label="Subtotal" class="subtotal">$0</td>
         <td>
@@ -275,7 +275,7 @@
                     tr.querySelector('.prod-select').name    = `Detalles[${i}].IdProducto`;
                     tr.querySelector('.cant-input').name     = `Detalles[${i}].Cantidad`;
                     tr.querySelector('.empaque-select').name = `Detalles[${i}].IdEmpaque`;
-                    tr.querySelector('.etiqueta-check').name = `Detalles[${i}].LlevaEtiqueta`;
+                    tr.querySelector('.pedido-etiqueta-check').name = `Detalles[${i}].LlevaEtiqueta`;
                 });
             }
 
@@ -289,7 +289,7 @@
                     if (data.idEmpaque) {
                         tr.querySelector('.empaque-select').value = data.idEmpaque;
                     }
-                    tr.querySelector('.etiqueta-check').checked = !!data.llevaEtiqueta;
+                    tr.querySelector('.pedido-etiqueta-check').checked = !!data.llevaEtiqueta;
                 }
 
                 reindexar();

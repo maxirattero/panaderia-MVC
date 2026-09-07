@@ -1916,6 +1916,58 @@ a.badge-tienda:hover {
     color: var(--mv-primary-dark);
 }
 
+/* Fila de productos en Crear/Editar pedido: el stock se informa sobre la
+   cantidad sin deformar el control ni el checkbox de etiqueta. */
+@media (min-width: 768px) {
+    #tablaDetalles .cantidad-pedido {
+        width: 130px;
+        vertical-align: top;
+    }
+
+    #tablaDetalles .stock-disponible {
+        min-height: 1.25rem;
+        white-space: nowrap;
+    }
+
+    #tablaDetalles .etiqueta-pedido {
+        vertical-align: top;
+        padding-top: 2rem;
+    }
+}
+
+#tablaDetalles .pedido-etiqueta-check {
+    appearance: none;
+    display: inline-grid;
+    place-content: center;
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    border: 2px solid #9a6840;
+    border-radius: 50%;
+    background: #fff;
+    cursor: pointer;
+    vertical-align: middle;
+}
+
+#tablaDetalles .pedido-etiqueta-check:checked {
+    border-color: var(--mv-primary-dark);
+    background: var(--mv-primary-dark);
+}
+
+#tablaDetalles .pedido-etiqueta-check:checked::after {
+    content: "✓";
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+@media (max-width: 767.98px) {
+    #tablaDetalles .etiqueta-pedido {
+        padding-top: 0;
+    }
+}
+
 /* =============================================
    LOGO, SUBIDA DE IMAGEN Y BOTÓN WHATSAPP
    ============================================= */
