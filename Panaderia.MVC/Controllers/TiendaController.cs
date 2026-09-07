@@ -89,7 +89,8 @@ namespace Panaderia.MVC.Controllers
                 Busqueda = q,
                 Etiquetas = etiquetas,
                 EtiquetaSeleccionada = etiqueta,
-                EsRevendedor = EsRevendedor()
+                EsRevendedor = EsRevendedor(),
+                CantidadesEnCarrito = LeerCarrito()
             };
 
             return View(vm);
@@ -102,6 +103,11 @@ namespace Panaderia.MVC.Controllers
             if (producto == null || producto.OcultoEnTienda) return NotFound();
 
             ViewBag.EsRevendedor = EsRevendedor();
+            var carrito = LeerCarrito();
+            carrito.TryGetValue(id, out var cantidadEnCarrito);
+            ViewBag.MaxCantidadAgregar = producto.PorEncargo
+                ? 50
+                : Math.Max(0, producto.Stock - cantidadEnCarrito);
             return View(producto);
         }
 
@@ -135,7 +141,15 @@ namespace Panaderia.MVC.Controllers
 
             var carrito = LeerCarrito();
             carrito.TryGetValue(id, out var actual);
-            carrito[id] = Math.Min(actual + cantidad, 50);
+            var maximo = producto.PorEncargo ? 50 : producto.Stock;
+            var nuevaCantidad = Math.Min(actual + cantidad, maximo);
+            if (nuevaCantidad <= actual)
+            {
+                TempData["TiendaMsg"] = $"Ya agregaste el máximo disponible de {producto.NombreVisible}.";
+                return RedirectToAction(nameof(Carrito));
+            }
+
+            carrito[id] = nuevaCantidad;
             GuardarCarrito(carrito);
 
             TempData["TiendaMsg"] = $"{producto.NombreVisible} agregado al carrito.";
@@ -174,9 +188,11 @@ namespace Panaderia.MVC.Controllers
             {
                 if (!productos.ContainsKey(idProducto)) continue;
 
-                var cantidadSegura = Math.Min(cantidad, 50);
+                var producto = productos[idProducto];
+                var cantidadSegura = Math.Min(cantidad, producto.PorEncargo ? 50 : producto.Stock);
                 carrito.TryGetValue(idProducto, out var actual);
-                var nuevaCantidad = Math.Min(actual + cantidadSegura, 50);
+                var maximo = producto.PorEncargo ? 50 : producto.Stock;
+                var nuevaCantidad = Math.Min(actual + cantidadSegura, maximo);
                 cantidadAgregada += nuevaCantidad - actual;
                 carrito[idProducto] = nuevaCantidad;
             }
@@ -202,14 +218,25 @@ namespace Panaderia.MVC.Controllers
         // POST: /Tienda/Actualizar — cambia la cantidad de un producto (0 = quitar)
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Actualizar(int id, int cantidad)
+        public async Task<IActionResult> Actualizar(int id, int cantidad)
         {
             var carrito = LeerCarrito();
 
             if (cantidad <= 0)
                 carrito.Remove(id);
             else
-                carrito[id] = Math.Min(cantidad, 50);
+            {
+                var producto = await _productoService.GetByIdAsync(id);
+                if (producto == null || producto.OcultoEnTienda || producto.EstaSinStockEnTienda)
+                {
+                    carrito.Remove(id);
+                }
+                else
+                {
+                    var maximo = producto.PorEncargo ? 50 : producto.Stock;
+                    carrito[id] = Math.Min(cantidad, maximo);
+                }
+            }
 
             GuardarCarrito(carrito);
             return RedirectToAction(nameof(Carrito));
@@ -535,10 +562,25 @@ namespace Panaderia.MVC.Controllers
             {
                 if (productos.TryGetValue(idProducto, out var producto))
                 {
+                    var cantidadMaxima = producto.PorEncargo ? 50 : producto.Stock;
+                    var cantidadSegura = Math.Min(cantidad, cantidadMaxima);
+                    if (cantidadSegura <= 0)
+                    {
+                        carrito.Remove(idProducto);
+                        huboCambios = true;
+                        continue;
+                    }
+
+                    if (cantidadSegura != cantidad)
+                    {
+                        carrito[idProducto] = cantidadSegura;
+                        huboCambios = true;
+                    }
+
                     vm.Items.Add(new CarritoItemViewModel
                     {
                         Producto = producto,
-                        Cantidad = cantidad,
+                        Cantidad = cantidadSegura,
                         PrecioUnitario = ObtenerPrecio(producto)
                     });
                 }

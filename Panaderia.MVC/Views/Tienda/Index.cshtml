@@ -80,6 +80,8 @@
     @foreach (var p in Model.Productos)
     {
         var precio = Model.EsRevendedor ? p.PrecioReventa : p.PrecioFinal;
+        Model.CantidadesEnCarrito.TryGetValue(p.Id, out var cantidadEnCarrito);
+        var maximoSeleccion = p.PorEncargo ? 50 : Math.Max(0, p.Stock - cantidadEnCarrito);
         <div class="tienda-card @(p.EstaSinStockEnTienda ? "agotado" : "")">
             <a class="tc-link" asp-controller="Tienda" asp-action="Detalle" asp-route-id="@p.Id">
                 <div class="tc-img">
@@ -116,10 +118,10 @@
                     <div class="tc-price">$@precio.ToString("N0", ar)</div>
                 </div>
             </a>
-            @if (!p.EstaSinStockEnTienda)
+            @if (!p.EstaSinStockEnTienda && maximoSeleccion > 0)
             {
                 <div class="tc-agregar">
-                    <div class="stepper-tienda sm">
+                    <div class="stepper-tienda sm" data-max="@maximoSeleccion">
                         <button type="button" aria-label="Restar" onclick="cambiarCantidadCard(this, -1)">
                             <span class="material-symbols-outlined">remove</span>
                         </button>
@@ -147,7 +149,8 @@
         function cambiarCantidadCard(btn, delta) {
             const input = btn.closest('.stepper-tienda').querySelector('input');
             const valor = parseInt(input.value, 10) || 0;
-            input.value = Math.min(50, Math.max(0, valor + delta));
+            const maximo = parseInt(btn.closest('.stepper-tienda').dataset.max, 10) || 50;
+            input.value = Math.min(maximo, Math.max(0, valor + delta));
             actualizarSeleccion();
         }
 

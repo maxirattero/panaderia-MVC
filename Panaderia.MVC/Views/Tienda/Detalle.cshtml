@@ -85,25 +85,30 @@
             }
             else
             {
+                var maximoAgregar = (int)(ViewBag.MaxCantidadAgregar ?? 50);
                 <form asp-controller="Tienda" asp-action="Agregar" method="post" class="td-agregar">
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="id" value="@Model.Id" />
                     <div class="td-cantidad">
                         <span class="td-cantidad-label">Cantidad</span>
-                        <div class="stepper-tienda">
+                        <div class="stepper-tienda" data-max="@maximoAgregar">
                             <button type="button" aria-label="Restar" onclick="cambiarCantidad(-1)">
                                 <span class="material-symbols-outlined">remove</span>
                             </button>
-                            <input type="text" name="cantidad" id="cantidadInput" value="1" readonly />
+                            <input type="text" name="cantidad" id="cantidadInput" value="@(maximoAgregar > 0 ? 1 : 0)" readonly />
                             <button type="button" aria-label="Sumar" onclick="cambiarCantidad(1)">
                                 <span class="material-symbols-outlined">add</span>
                             </button>
                         </div>
                     </div>
-                    <button type="submit" class="btn-mv-primary td-cta">
+                    <button type="submit" class="btn-mv-primary td-cta" disabled="@(maximoAgregar == 0)">
                         <span class="material-symbols-outlined">add_shopping_cart</span> Agregar al carrito
                     </button>
                 </form>
+                @if (maximoAgregar == 0)
+                {
+                    <p class="td-nota">Ya agregaste todas las unidades disponibles de este producto.</p>
+                }
                 <p class="td-nota">Entrega los sábados de 10:30 a 12:30 hs — delivery sin cargo o retiro en el punto de entrega.</p>
             }
         </div>
@@ -115,7 +120,8 @@
         function cambiarCantidad(delta) {
             const input = document.getElementById('cantidadInput');
             let valor = parseInt(input.value, 10) || 1;
-            valor = Math.min(50, Math.max(1, valor + delta));
+            const maximo = parseInt(input.closest('.stepper-tienda').dataset.max, 10) || 50;
+            valor = Math.min(maximo, Math.max(1, valor + delta));
             input.value = valor;
         }
     </script>

@@ -105,13 +105,16 @@
                 {
                     <option value="@p.Id"
                             data-final="@p.PrecioFinal.ToString(System.Globalization.CultureInfo.InvariantCulture)"
-                            data-reventa="@p.PrecioReventa.ToString(System.Globalization.CultureInfo.InvariantCulture)">
+                            data-reventa="@p.PrecioReventa.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                            data-stock="@p.Stock"
+                            data-por-encargo="@p.PorEncargo.ToString().ToLowerInvariant()">
                         @p.NombreVisible
                     </option>
                 }
             </select>
         </td>
         <td data-label="Cantidad">
+            <small class="stock-disponible text-muted d-block mb-1">Elegí un producto</small>
             <input name="__CANT__" type="number" min="1" placeholder="Cant." class="form-control cant-input" required />
         </td>
         <td data-label="Empaque">
@@ -146,10 +149,42 @@
             const resumenTotal = document.getElementById('resumenTotal');
             const resumenPct = document.getElementById('resumenPct');
             const filaDescuento = document.getElementById('filaDescuento');
+            const reservasIniciales = {};
 
             function clienteEsRevendedor() {
                 const opt = clienteSelect.options[clienteSelect.selectedIndex];
                 return opt && opt.dataset.revendedor === 'true';
+            }
+
+            function actualizarLimitesStock() {
+                const filas = Array.from(tbody.querySelectorAll('tr'));
+                filas.forEach(tr => {
+                    const select = tr.querySelector('.prod-select');
+                    const input = tr.querySelector('.cant-input');
+                    const texto = tr.querySelector('.stock-disponible');
+                    const opcion = select.options[select.selectedIndex];
+
+                    if (!opcion || !opcion.value) {
+                        input.removeAttribute('max');
+                        texto.textContent = 'Elegí un producto';
+                        return;
+                    }
+
+                    if (opcion.dataset.porEncargo === 'true') {
+                        input.removeAttribute('max');
+                        texto.textContent = 'Producto por encargo';
+                        return;
+                    }
+
+                    const stockActual = parseInt(opcion.dataset.stock, 10) || 0;
+                    const reservadoEnOtrasFilas = filas
+                        .filter(otra => otra !== tr && otra.querySelector('.prod-select').value === select.value)
+                        .reduce((total, otra) => total + (parseInt(otra.querySelector('.cant-input').value, 10) || 0), 0);
+                    const disponible = Math.max(0, stockActual - reservadoEnOtrasFilas);
+                    input.max = disponible;
+                    if ((parseInt(input.value, 10) || 0) > disponible) input.value = disponible;
+                    texto.textContent = `Stock actual: ${stockActual} · disponible: ${disponible}`;
+                });
             }
 
             function precioFila(tr) {
@@ -182,6 +217,7 @@
             }
 
             function recalcularFila(tr) {
+                actualizarLimitesStock();
                 const prodSelect = tr.querySelector('.prod-select');
                 const cantInput = tr.querySelector('.cant-input');
                 const subtotalCell = tr.querySelector('.subtotal');
@@ -217,6 +253,7 @@
                 tr.querySelector('.btnQuitar').addEventListener('click', () => {
                     tr.remove();
                     reindexar();
+                    actualizarLimitesStock();
                     recalcularTotales();
                 });
             }

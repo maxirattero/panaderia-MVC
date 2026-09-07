@@ -64,7 +64,8 @@
                                 @Html.AntiForgeryToken()
                                 <input type="hidden" name="id" value="@item.Producto.Id" />
                                 <input type="hidden" name="cantidad" value="@(item.Cantidad + 1)" />
-                                <button type="submit" aria-label="Sumar" title="Sumar uno">
+                                <button type="submit" aria-label="Sumar" title="Sumar uno"
+                                        disabled="@(!item.Producto.PorEncargo && item.Cantidad >= item.Producto.Stock)">
                                     <span class="material-symbols-outlined">add</span>
                                 </button>
                             </form>
