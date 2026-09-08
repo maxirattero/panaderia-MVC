@@ -26,6 +26,8 @@ namespace Panaderia.Services.Interfaces
 
         //Crear un nuevo pedido
         Task CreateAsync(Pedido pedido);
+        // Devuelve el pedido abierto actualizado, o el nuevo si no había uno compatible.
+        Task<Pedido> CrearOAmpliarDesdeTiendaAsync(Pedido pedido);
 
         //actualizar un pedido existente
         Task UpdateAsync(Pedido pedido);

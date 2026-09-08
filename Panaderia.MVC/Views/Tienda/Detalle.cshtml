@@ -43,6 +43,10 @@
             <div class="td-price">$@precio.ToString("N0", ar)</div>
 
             <div class="td-badges">
+                @if (Model.AvisoUltimasUnidades is string aviso)
+                {
+                    <span class="badge-tienda ultimas-unidades">@aviso</span>
+                }
                 @foreach (var etiqueta in Model.Etiquetas)
                 {
                     <a class="badge-tienda" asp-controller="Tienda" asp-action="Index" asp-route-etiqueta="@etiqueta.Id">

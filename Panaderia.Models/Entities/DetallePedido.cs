@@ -9,6 +9,8 @@ namespace Panaderia.Models.Entities
         public int IdPedido { get; set; }
         public int IdProducto { get; set; }
         public int Cantidad { get; set; }
+        // Unidades cuya elaboración ya fue confirmada antes de una ampliación.
+        public int CantidadProducida { get; set; }
         // Indica que estas unidades ya fueron descontadas al crear el pedido.
         // Permite restituirlas exactamente una vez si se anula o elimina.
         public bool ReservaStock { get; set; }

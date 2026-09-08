@@ -105,6 +105,10 @@
                     {
                         <span class="tc-tag disponible">En stock</span>
                     }
+                    @if (p.AvisoUltimasUnidades is string aviso)
+                    {
+                        <span class="tc-ultimas-unidades">@aviso</span>
+                    }
                     <span class="tc-ver-detalle">
                         <span class="material-symbols-outlined">visibility</span> Ver detalles
                     </span>

@@ -60,6 +60,10 @@ namespace Panaderia.Models.Entities
         [NotMapped]
         public bool EstaEnStockEnTienda => !PorEncargo && Stock > 0;
 
+        [NotMapped]
+        public string? AvisoUltimasUnidades => !PorEncargo && Stock is >= 1 and <= 5
+            ? (Stock == 1 ? "Última unidad" : $"Últimas {Stock} unidades") : null;
+
         [MaxLength(2000)]
         public string? ObservacionesElaboracion { get; set; }
         public DateTime FechaCreacion { get; set; }

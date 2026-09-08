@@ -130,7 +130,7 @@
         </div>
 
         <span class="checkout-label">Nota para la panadería (opcional)</span>
-        <textarea asp-for="Notas" class="checkout-input" rows="2" placeholder="Ej.: pan cortado en rodajas, tocar timbre..."></textarea>
+        <textarea asp-for="Notas" class="checkout-input" rows="2" placeholder="Ej.: casa de rejas, puerta azul, sin timbre…"></textarea>
 
         <partial name="_MinimoPedido" model="Model.Carrito" />
         <button type="submit" class="btn-mv-primary carrito-cta" disabled="@(Model.Carrito.FaltaParaMinimo > 0)">

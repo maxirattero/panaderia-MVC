@@ -404,9 +404,10 @@ namespace Panaderia.MVC.Controllers
                 }).ToList()
             };
 
+            var solicitud = pedido;
             try
             {
-                await _pedidoService.CreateAsync(pedido);
+                pedido = await _pedidoService.CrearOAmpliarDesdeTiendaAsync(solicitud);
             }
             catch (InvalidOperationException ex)
             {
@@ -416,6 +417,7 @@ namespace Panaderia.MVC.Controllers
                 return View("Checkout", model);
             }
             pedido.Cliente = cliente;
+            var ampliado = !ReferenceEquals(pedido, solicitud);
             await _pushNotificationService.NotificarNuevoPedidoAsync(pedido, EsRevendedor());
 
             // Vaciar el carrito
@@ -433,10 +435,14 @@ namespace Panaderia.MVC.Controllers
             });
 
             TempData["PedidoId"] = pedido.Id;
+            TempData["PedidoAmpliado"] = ampliado;
+            TempData["PedidoConfirmacionClave"] = Guid.NewGuid().ToString("N");
             TempData["PedidoFechaEntrega"] = pedido.FechaEntrega?.ToString("O");
             TempData["PedidoEntrega"] = model.Entrega;
             TempData["PedidoMedioPago"] = model.MedioPago;
             TempData["PedidoWhatsApp"] = ArmarMensajeWhatsApp(pedido, cliente, carrito, entregaTexto, pagoTexto, model.Notas);
+            if (ampliado)
+                TempData["PedidoWhatsApp"] = $"Ampliación del pedido para el mismo sábado. Los artículos siguientes se suman a los anteriores.\n\n{TempData["PedidoWhatsApp"]}\n\nTotal acumulado: ${pedido.MontoTotal.ToString("N2", new CultureInfo("es-AR"))}. Saldo pendiente: ${pedido.SaldoPendiente.ToString("N2", new CultureInfo("es-AR"))}.";
             return RedirectToAction(nameof(Confirmacion));
         }
 
@@ -446,6 +452,8 @@ namespace Panaderia.MVC.Controllers
             if (TempData["PedidoId"] == null) return RedirectToAction(nameof(Index));
 
             ViewBag.PedidoId = TempData["PedidoId"];
+            ViewBag.PedidoAmpliado = TempData["PedidoAmpliado"];
+            ViewBag.PedidoConfirmacionClave = TempData["PedidoConfirmacionClave"];
             ViewBag.FechaEntrega = TempData["PedidoFechaEntrega"] is string fecha
                 ? DateTime.Parse(fecha, null, DateTimeStyles.RoundtripKind)
                 : (DateTime?)null;

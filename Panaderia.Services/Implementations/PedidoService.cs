@@ -16,6 +16,22 @@ namespace Panaderia.Services.Implementations
             _context = context;
         }
 
+        // Serializa las escrituras de pedidos/producción para no perder ampliaciones.
+        private async Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction> IniciarMutacionAsync()
+        {
+            var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                await _context.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(71001, 0)");
+                return transaction;
+            }
+            catch
+            {
+                await transaction.DisposeAsync();
+                throw;
+            }
+        }
+
         //listado de pedidos
         public async Task<IEnumerable<Pedido>> GetAllAsync()
         {
@@ -112,7 +128,7 @@ namespace Panaderia.Services.Implementations
         //crear un nuevo pedido
         public async Task CreateAsync(Pedido pedido)
         {
-            await using var transaction = await _context.Database.BeginTransactionAsync();
+            await using var transaction = await IniciarMutacionAsync();
             await AplicarCostoEmpaqueAsync(pedido.Detalles);
             await ReservarStockAsync(pedido.Detalles);
             await _context.Pedidos.AddAsync(pedido);
@@ -120,15 +136,39 @@ namespace Panaderia.Services.Implementations
             await transaction.CommitAsync();
         }
 
+        public async Task<Pedido> CrearOAmpliarDesdeTiendaAsync(Pedido pedido)
+        {
+            if (pedido.Detalles.Count == 0 || pedido.Detalles.Any(d => d.Cantidad <= 0))
+                throw new InvalidOperationException("Agregá productos al pedido.");
+            await using var transaction = await IniciarMutacionAsync();
+            Pedido? existente = null;
+            if (pedido.FechaEntrega is DateTime entrega && entrega.DayOfWeek == DayOfWeek.Saturday)
+            {
+                var inicio = DateTime.SpecifyKind(entrega.Date, DateTimeKind.Utc);
+                var fin = inicio.AddDays(1);
+                // Bloquear también la fila: un cobro o una entrega concurrentes no se pisan.
+                var candidatos = await _context.Pedidos.FromSqlInterpolated($"SELECT * FROM \"Pedidos\" WHERE \"IdCliente\" = {pedido.IdCliente} AND NOT \"Anulado\" AND \"Estado\" IN (0, 2) AND \"FechaEntrega\" >= {inicio} AND \"FechaEntrega\" < {fin} ORDER BY \"Id\" LIMIT 1 FOR UPDATE")
+                    .IgnoreQueryFilters().ToListAsync();
+                existente = candidatos.FirstOrDefault();
+                if (existente != null) await _context.Entry(existente).Collection(p => p.Detalles).LoadAsync();
+            }
+            await AplicarCostoEmpaqueAsync(pedido.Detalles);
+            await ReservarStockAsync(pedido.Detalles);
+            if (existente == null) _context.Pedidos.Add(pedido);
+            else UnificacionPedido.Agregar(existente, pedido);
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+            return existente ?? pedido;
+        }
+
         //actualizar un pedido existente
         public async Task UpdateAsync(Pedido pedido)
         {
+            await using var transaction = await IniciarMutacionAsync();
             var existing = await _context.Pedidos
                 .Include(p => p.Detalles)
                 .FirstOrDefaultAsync(p => p.Id == pedido.Id);
             if (existing == null) return;
-
-            await using var transaction = await _context.Database.BeginTransactionAsync();
 
             existing.IdCliente = pedido.IdCliente;
             existing.FechaEntrega = pedido.FechaEntrega;
@@ -143,14 +183,19 @@ namespace Panaderia.Services.Implementations
             await AplicarCostoEmpaqueAsync(pedido.Detalles);
             await ReservarStockAsync(pedido.Detalles);
 
+            var producidas = existing.Detalles.GroupBy(d => d.IdProducto)
+                .ToDictionary(g => g.Key, g => g.Sum(d => d.CantidadProducida));
             _context.DetallesPedido.RemoveRange(existing.Detalles);
             existing.Detalles.Clear();
             foreach (var d in pedido.Detalles)
             {
+                var yaProducidas = Math.Min(d.Cantidad, producidas.GetValueOrDefault(d.IdProducto));
+                producidas[d.IdProducto] = producidas.GetValueOrDefault(d.IdProducto) - yaProducidas;
                 existing.Detalles.Add(new DetallePedido
                 {
                     IdProducto = d.IdProducto,
                     Cantidad = d.Cantidad,
+                    CantidadProducida = yaProducidas,
                     ReservaStock = d.ReservaStock,
                     PrecioUnitario = d.PrecioUnitario,
                     IdEmpaque = d.IdEmpaque,
@@ -159,6 +204,9 @@ namespace Panaderia.Services.Implementations
                 });
             }
 
+            if (existing.Estado == EstadoPedido.EnProduccion && existing.Detalles.Any(d => d.Cantidad > d.CantidadProducida))
+                existing.Estado = EstadoPedido.Pendiente;
+
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
         }
@@ -166,12 +214,12 @@ namespace Panaderia.Services.Implementations
         //eliminar un pedido por su ID        
         public async Task DeleteAsync(int id)
         {
+            await using var transaction = await IniciarMutacionAsync();
             var pedido = await _context.Pedidos
                 .Include(p => p.Detalles)
                 .FirstOrDefaultAsync(p => p.Id == id);
             if (pedido == null) return;
 
-            await using var transaction = await _context.Database.BeginTransactionAsync();
             await RestituirStockReservadoAsync(pedido.Detalles);
             _context.Pedidos.Remove(pedido);
             await _context.SaveChangesAsync();
@@ -188,12 +236,12 @@ namespace Panaderia.Services.Implementations
         // Anular pedido
         public async Task AnularAsync(int id)
         {
+            await using var transaction = await IniciarMutacionAsync();
             var pedido = await _context.Pedidos
                 .Include(p => p.Detalles)
                 .FirstOrDefaultAsync(p => p.Id == id);
             if (pedido == null) return;
 
-            await using var transaction = await _context.Database.BeginTransactionAsync();
             await RestituirStockReservadoAsync(pedido.Detalles);
             pedido.Anulado = true;
 
@@ -209,12 +257,14 @@ namespace Panaderia.Services.Implementations
         // Marcar pedido como entregado
         public async Task MarcarEntregadoAsync(int id)
         {
+            await using var transaction = await IniciarMutacionAsync();
             var pedido = await _context.Pedidos.FindAsync(id);
             if (pedido == null) return;
 
             pedido.Estado = EstadoPedido.Entregado;
             pedido.FechaModificacion = DateTime.UtcNow;
             await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
         }
 
         public async Task<decimal> GetTotalVendidoSemanaAsync()
@@ -319,6 +369,7 @@ namespace Panaderia.Services.Implementations
         // Los items marcados como stock (EsStock) suman Producto.Stock y limpian su fila del buffer.
         public async Task<List<string>> ConfirmarProduccionAsync(List<ItemProduccionSeleccionable> items)
         {
+            await using var transaction = await IniciarMutacionAsync();
             var warnings = new List<string>();
             var bufferIdsAEliminar = new List<int>();
             var producciones = new List<(ItemProduccionSeleccionable Item, Receta Receta)>();
@@ -407,9 +458,9 @@ namespace Panaderia.Services.Implementations
             // Cuando se confirma el lote completo de pedidos pendientes, estos salen de
             // la próxima planificación pero permanecen disponibles para la entrega.
             var pendientesPorProducto = await _context.DetallesPedido
-                .Where(d => d.Pedido.Estado == EstadoPedido.Pendiente)
+                .Where(d => d.Pedido.Estado == EstadoPedido.Pendiente && d.Cantidad > d.CantidadProducida)
                 .GroupBy(d => d.IdProducto)
-                .Select(g => new { IdProducto = g.Key, Cantidad = g.Sum(d => d.Cantidad) })
+                .Select(g => new { IdProducto = g.Key, Cantidad = g.Sum(d => d.Cantidad - d.CantidadProducida) })
                 .ToListAsync();
             var confirmadosPorProducto = producciones
                 .Where(p => !p.Item.EsStock)
@@ -421,10 +472,14 @@ namespace Panaderia.Services.Implementations
                                              && cantidad >= p.Cantidad))
             {
                 var pedidosPendientes = await _context.Pedidos
+                    .Include(p => p.Detalles)
                     .Where(p => p.Estado == EstadoPedido.Pendiente)
                     .ToListAsync();
                 foreach (var pedidoPendiente in pedidosPendientes)
+                {
+                    foreach (var detalle in pedidoPendiente.Detalles) detalle.CantidadProducida = detalle.Cantidad;
                     pedidoPendiente.Estado = EstadoPedido.EnProduccion;
+                }
             }
 
             if (bufferIdsAEliminar.Any())
@@ -436,6 +491,7 @@ namespace Panaderia.Services.Implementations
             }
 
             await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
             return warnings;
         }
 
@@ -491,7 +547,7 @@ namespace Panaderia.Services.Implementations
             var detalles = await _context.DetallesPedido
                 .Include(d => d.Producto).ThenInclude(p => p.Categoria)
                 .Include(d => d.Producto).ThenInclude(p => p.Formato)
-                .Where(d => d.Pedido.Estado == EstadoPedido.Pendiente)
+                .Where(d => d.Pedido.Estado == EstadoPedido.Pendiente && d.Cantidad > d.CantidadProducida)
                 .ToListAsync();
 
             var acumulado = new Dictionary<int, (Producto Producto, int Cantidad)>();
@@ -499,9 +555,9 @@ namespace Panaderia.Services.Implementations
             foreach (var d in detalles)
             {
                 if (acumulado.TryGetValue(d.IdProducto, out var actual))
-                    acumulado[d.IdProducto] = (actual.Producto, actual.Cantidad + d.Cantidad);
+                    acumulado[d.IdProducto] = (actual.Producto, actual.Cantidad + d.Cantidad - d.CantidadProducida);
                 else
-                    acumulado[d.IdProducto] = (d.Producto, d.Cantidad);
+                    acumulado[d.IdProducto] = (d.Producto, d.Cantidad - d.CantidadProducida);
             }
 
             var stock = await _context.ProduccionStock
@@ -546,7 +602,7 @@ namespace Panaderia.Services.Implementations
                 .Include(d => d.Producto)
                     .ThenInclude(p => p.Formato)
                 .Include(d => d.Empaque)
-                .Where(d => d.Pedido.Estado == EstadoPedido.Pendiente)
+                .Where(d => d.Pedido.Estado == EstadoPedido.Pendiente && d.Cantidad > d.CantidadProducida)
                 .ToListAsync())
                 .Where(d => !excluidos.Contains(d.IdProducto))
                 .ToList();
@@ -557,7 +613,7 @@ namespace Panaderia.Services.Implementations
                 {
                     IdProducto = g.Key,
                     Producto = g.First().Producto,
-                    Cantidad = g.Sum(d => d.Cantidad)
+                    Cantidad = g.Sum(d => d.Cantidad - d.CantidadProducida)
                 })
                 .OrderBy(x => x.Producto.Categoria?.Nombre)
                 .ThenBy(x => x.Producto.Masa)
@@ -570,7 +626,7 @@ namespace Panaderia.Services.Implementations
                 .Where(d => d.Empaque != null)
                 .GroupBy(d => d.Empaque!.EsBolsaPapel ? TipoBolsa.Papel : TipoBolsa.Sellado)
                 .OrderBy(g => g.Key)
-                .Select(g => new ResumenBolsaItem(g.Key, g.Sum(d => d.Cantidad)))
+                .Select(g => new ResumenBolsaItem(g.Key, g.Sum(d => d.Cantidad - d.CantidadProducida)))
                 .ToList();
 
             // Produccion completa (pedidos + stock) para sub-recetas y agua

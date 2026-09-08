@@ -14,6 +14,10 @@
         <span class="material-symbols-outlined">check_circle</span>
     </div>
     <h1 class="font-literata">¡Pedido confirmado!</h1>
+    @if (ViewBag.PedidoAmpliado is true)
+    {
+        <p class="conf-texto">Sumamos estos artículos a tu pedido anterior para el mismo sábado.</p>
+    }
 
     @if (esRetiro)
     {
@@ -65,7 +69,7 @@
             if (!url) return;
 
             // Una sola vez por pedido: si el cliente recarga, no se vuelve a abrir
-            const clave = 'mv_wa_@ViewBag.PedidoId';
+            const clave = 'mv_wa_@ViewBag.PedidoConfirmacionClave';
             try {
                 if (sessionStorage.getItem(clave)) return;
                 sessionStorage.setItem(clave, '1');

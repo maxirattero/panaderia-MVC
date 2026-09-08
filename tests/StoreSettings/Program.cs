@@ -43,7 +43,7 @@ var products = Stub.Make<IProductoService>((m, _) => m == "GetAllAsync"
     ? Task.FromResult<IEnumerable<Producto>>([product]) : throw new Exception(m));
 var clients = Stub.Make<IClienteService>((m, _) => m == "GetByTelefonoAsync"
     ? Task.FromResult<Cliente?>(new Cliente { Id = 1, Nombre = "Prueba", Telefono = "123456", Direccion = "Calle 123" }) : throw new Exception("Unexpected client write"));
-var orders = Stub.Make<IPedidoService>((m, arguments) => { if (m != "CreateAsync") throw new Exception(m); lastOrder = (Pedido)arguments![0]!; writes++; return Task.CompletedTask; });
+var orders = Stub.Make<IPedidoService>((m, arguments) => { if (m != "CrearOAmpliarDesdeTiendaAsync") throw new Exception(m); lastOrder = (Pedido)arguments![0]!; writes++; return Task.FromResult(lastOrder); });
 var push = Stub.Make<IPushNotificationService>((m, _) => { notifications++; return Task.CompletedTask; });
 
 TiendaController Controller(bool reseller = false, string? remembered = null)
@@ -181,6 +181,7 @@ linkedOrder.Telefono = "999999";
 Check(await linkedStore.Confirmar(linkedOrder) is RedirectToActionResult && lastOrder?.IdCliente == 9 && lastOrder.MontoTotal == 80m,
     "Reseller order uses linked customer and reseller price even with a changed contact phone");
 Console.WriteLine($"{checks} final checks passed.");
+OrderMergeChecks.Run();
 
 public class Stub : DispatchProxy
 {

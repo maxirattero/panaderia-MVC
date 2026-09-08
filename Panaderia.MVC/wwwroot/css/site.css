@@ -2076,6 +2076,24 @@ a.badge-tienda:hover {
     cursor: not-allowed;
 }
 
+.tc-ultimas-unidades,
+.badge-tienda.ultimas-unidades {
+    background: #ffe1a6;
+    color: #573600;
+    border: 1px solid #bd8930;
+    font-weight: 700;
+}
+.tc-ultimas-unidades {
+    position: absolute;
+    left: 10px;
+    bottom: 10px;
+    z-index: 2;
+    border-radius: 999px;
+    padding: 5px 10px;
+    font-size: 0.75rem;
+    pointer-events: none;
+}
+
 /* =============================================
    CHECKOUT: datos recordados del cliente
    ============================================= */
