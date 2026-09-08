@@ -1,0 +1,50 @@
+@using Panaderia.Models.Entities
+
+<template id="filaTemplate">
+    <div class="pedido-item">
+        <div class="pedido-item-fields">
+            <div class="pedido-field pedido-field-producto">
+                <label class="pedido-field-heading"><span>Producto</span></label>
+                <select name="__PROD__" class="form-select prod-select" required>
+                    <option value="">-- Producto --</option>
+                    @foreach (var p in (IEnumerable<Producto>)ViewBag.Productos)
+                    {
+                        <option value="@p.Id"
+                                data-final="@p.PrecioFinal.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                data-reventa="@p.PrecioReventa.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                data-stock="@p.Stock"
+                                data-por-encargo="@p.PorEncargo.ToString().ToLowerInvariant()">
+                            @p.NombreVisible
+                        </option>
+                    }
+                </select>
+            </div>
+            <div class="pedido-field pedido-field-cantidad">
+                <label class="pedido-field-heading"><span>Cantidad</span>
+                    <small class="stock-disponible">Elegí un producto</small>
+                </label>
+                <input name="__CANT__" type="number" min="1" placeholder="0" class="form-control cant-input" required />
+            </div>
+            <div class="pedido-field pedido-field-empaque">
+                <label class="pedido-field-heading"><span>Empaque</span></label>
+                <select name="__EMPAQUE__" class="form-select empaque-select">
+                    <option value="">-- Sin empaque --</option>
+                    @foreach (var e in (IEnumerable<Insumo>)ViewBag.Empaques)
+                    {
+                        <option value="@e.Id">@e.Nombre</option>
+                    }
+                </select>
+            </div>
+        </div>
+        <div class="pedido-item-footer">
+            <label class="pedido-etiqueta">
+                <input name="__ETIQUETA__" type="checkbox" class="pedido-etiqueta-check" value="true" />
+                <span>Incluir etiqueta</span>
+            </label>
+            <div class="pedido-item-subtotal"><span>Subtotal</span><strong class="subtotal">$0</strong></div>
+            <button type="button" class="pedido-quitar btnQuitar" aria-label="Quitar producto" title="Quitar producto">
+                <span aria-hidden="true">×</span>
+            </button>
+        </div>
+    </div>
+</template>

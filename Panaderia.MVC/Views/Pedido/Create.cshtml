@@ -52,25 +52,12 @@
         </div>
 
         <h4 class="font-literata fw-bold mt-4 mb-3">Productos</h4>
-        <table class="table" id="tablaDetalles">
-            <thead>
-                <tr>
-                    <th>Producto</th>
-                    <th style="width: 130px;">Cant.</th>
-                    <th style="width: 160px;">Empaque</th>
-                    <th style="width: 90px;" class="text-center">Etiqueta</th>
-                    <th style="width: 100px;">Subtotal</th>
-                    <th style="width: 50px;"></th>
-                </tr>
-            </thead>
-            <tbody id="detallesBody">
-            </tbody>
-        </table>
+        <div id="detallesBody" class="pedido-productos"></div>
 
-        <button type="button" class="btn btn-mv-primary mb-3" id="btnAgregar">+ Agregar producto</button>
+        <button type="button" class="btn btn-mv-secondary mb-3" id="btnAgregar">+ Agregar producto</button>
 
         <div class="d-flex justify-content-end">
-            <div class="p-3 rounded-3 bg-light" style="min-width: 280px;">
+            <div class="p-3 rounded-3 bg-light" style="width: 280px; max-width: 100%;">
                 <div class="d-flex justify-content-between">
                     <span class="small text-muted">Subtotal</span>
                     <span id="resumenSubtotal">$0.00</span>
@@ -96,51 +83,14 @@
 </div>
 </div>
 
-<template id="filaTemplate">
-    <tr>
-        <td data-label="Producto">
-            <select name="__PROD__" class="form-select prod-select" required>
-                <option value="">-- Producto --</option>
-                @foreach (var p in (IEnumerable<Producto>)ViewBag.Productos)
-                {
-                    <option value="@p.Id"
-                            data-final="@p.PrecioFinal.ToString(System.Globalization.CultureInfo.InvariantCulture)"
-                            data-reventa="@p.PrecioReventa.ToString(System.Globalization.CultureInfo.InvariantCulture)"
-                            data-stock="@p.Stock"
-                            data-por-encargo="@p.PorEncargo.ToString().ToLowerInvariant()">
-                        @p.NombreVisible
-                    </option>
-                }
-            </select>
-        </td>
-        <td data-label="Cantidad" class="cantidad-pedido">
-            <small class="stock-disponible text-muted d-block mb-1">Elegí un producto</small>
-            <input name="__CANT__" type="number" min="1" placeholder="Cant." class="form-control cant-input" required />
-        </td>
-        <td data-label="Empaque">
-            <select name="__EMPAQUE__" class="form-select empaque-select">
-                <option value="">-- Sin empaque --</option>
-                @foreach (var e in (IEnumerable<Insumo>)ViewBag.Empaques)
-                {
-                    <option value="@e.Id">@e.Nombre</option>
-                }
-            </select>
-        </td>
-        <td data-label="Etiqueta" class="text-center etiqueta-pedido">
-            <input name="__ETIQUETA__" type="checkbox" class="pedido-etiqueta-check" value="true" />
-        </td>
-        <td data-label="Subtotal" class="subtotal">$0</td>
-        <td>
-            <button type="button" class="btn btn-sm btn-danger btnQuitar">&#x2715;</button>
-        </td>
-    </tr>
-</template>
+<partial name="_ProductoPedidoTemplate" />
 
 @section Scripts {
     <script>
         (function () {
             const tbody = document.getElementById('detallesBody');
             const template = document.getElementById('filaTemplate');
+            let siguienteCampoId = 0;
             const btnAgregar = document.getElementById('btnAgregar');
             const clienteSelect = document.getElementById('IdCliente');
             const descuentoInput = document.getElementById('DescuentoPorcentaje');
@@ -157,7 +107,7 @@
             }
 
             function actualizarLimitesStock() {
-                const filas = Array.from(tbody.querySelectorAll('tr'));
+                const filas = Array.from(tbody.querySelectorAll('.pedido-item'));
                 filas.forEach(tr => {
                     const select = tr.querySelector('.prod-select');
                     const input = tr.querySelector('.cant-input');
@@ -200,7 +150,7 @@
 
             function recalcularTotales() {
                 let bruto = 0;
-                tbody.querySelectorAll('tr').forEach(tr => { bruto += precioFila(tr); });
+                tbody.querySelectorAll('.pedido-item').forEach(tr => { bruto += precioFila(tr); });
 
                 let pct = parseFloat(descuentoInput.value);
                 if (isNaN(pct) || pct < 0) pct = 0;
@@ -235,16 +185,26 @@
             }
 
             function reindexar() {
-                tbody.querySelectorAll('tr').forEach((tr, i) => {
+                tbody.querySelectorAll('.pedido-item').forEach((tr, i) => {
                     tr.querySelector('.prod-select').name    = `Detalles[${i}].IdProducto`;
                     tr.querySelector('.cant-input').name     = `Detalles[${i}].Cantidad`;
+                    tr.querySelectorAll('.pedido-field').forEach(field => {
+                        const control = field.querySelector('select, input');
+                        // Mantener los IDs al quitar filas: Tom Select también los usa.
+                        if (!control.id) {
+                            control.id = `pedido-campo-${siguienteCampoId++}`;
+                            field.querySelector('label').htmlFor = control.id;
+                        }
+                    });
+                    tr.querySelector('.stock-disponible').id = `stock-pedido-${i}`;
+                    tr.querySelector('.cant-input').setAttribute('aria-describedby', `stock-pedido-${i}`);
                     tr.querySelector('.empaque-select').name = `Detalles[${i}].IdEmpaque`;
                     tr.querySelector('.pedido-etiqueta-check').name = `Detalles[${i}].LlevaEtiqueta`;
                 });
             }
 
             function agregarFila() {
-                const tr = template.content.cloneNode(true).querySelector('tr');
+                const tr = template.content.cloneNode(true).querySelector('.pedido-item');
                 tbody.appendChild(tr);
                 reindexar();
 
@@ -269,7 +229,7 @@
 
             clienteSelect.addEventListener('change', () => {
                 aplicarDescuentoDelCliente();
-                tbody.querySelectorAll('tr').forEach(recalcularFila);
+                tbody.querySelectorAll('.pedido-item').forEach(recalcularFila);
                 recalcularTotales();
             });
 

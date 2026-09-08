@@ -460,61 +460,6 @@ h1, h2, h3, .font-literata {
     padding: 14px 16px;
 }
 
-@media (max-width: 767.98px) {
-    #tablaDetalles {
-        display: block !important;
-        border: none;
-    }
-    #tablaDetalles thead {
-        display: none !important;
-    }
-    #tablaDetalles tbody {
-        display: block !important;
-    }
-    #tablaDetalles tbody tr {
-        display: grid !important;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px 12px;
-        padding: 14px;
-        margin-bottom: 12px;
-        border: 1px solid #cebaac;
-        border-radius: 10px;
-        background: #fff;
-    }
-    #tablaDetalles tbody td {
-        display: block !important;
-        border: none !important;
-        padding: 0 !important;
-        background: transparent !important;
-        box-shadow: none !important;
-        width: 100% !important;
-    }
-    #tablaDetalles tbody td::before {
-        content: attr(data-label);
-        display: block;
-        font-size: 0.7rem;
-        font-weight: 600;
-        color: #888;
-        margin-bottom: 2px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-    #tablaDetalles tbody td:nth-child(1) {
-        grid-column: 1 / -1;
-    }
-    #tablaDetalles tbody td:last-child {
-        display: flex !important;
-        align-items: flex-end;
-        justify-content: flex-end;
-    }
-    #tablaDetalles tbody td:last-child::before {
-        display: none;
-    }
-    #tablaDetalles tbody td select.form-select,
-    #tablaDetalles tbody td input.form-control {
-        width: 100% !important;
-    }
-}
 
 @media (max-width: 991.98px) {
     .sidebar {
@@ -1916,56 +1861,138 @@ a.badge-tienda:hover {
     color: var(--mv-primary-dark);
 }
 
-/* Fila de productos en Crear/Editar pedido: el stock se informa sobre la
-   cantidad sin deformar el control ni el checkbox de etiqueta. */
-@media (min-width: 768px) {
-    #tablaDetalles .cantidad-pedido {
-        width: 130px;
-        vertical-align: top;
-    }
-
-    #tablaDetalles .stock-disponible {
-        min-height: 1.25rem;
-        white-space: nowrap;
-    }
-
-    #tablaDetalles .etiqueta-pedido {
-        vertical-align: top;
-        padding-top: 2rem;
-    }
+/* Crear/Editar pedido: tarjetas compartidas, adaptadas al ancho real del formulario. */
+.pedido-productos {
+    container-type: inline-size;
+    display: grid;
+    gap: 1rem;
+    margin-bottom: 1rem;
 }
-
-#tablaDetalles .pedido-etiqueta-check {
-    appearance: none;
-    display: inline-grid;
-    place-content: center;
+.pedido-item {
+    min-width: 0;
+    border: 1px solid var(--mv-outline);
+    border-radius: 1rem;
+    background: #fff;
+}
+.pedido-item-fields {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 150px minmax(190px, 0.55fr);
+    align-items: end;
+    gap: 1rem;
+    padding: 1rem;
+}
+.pedido-field {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    margin: 0;
+}
+.pedido-field-heading {
+    display: flex;
+    flex-direction: column;
+    min-height: 3rem;
+    gap: 0.15rem;
+    margin-bottom: 0.4rem;
+    color: var(--mv-secondary);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+.pedido-field .stock-disponible {
+    font-size: 0.75rem;
+    font-weight: 400;
+    line-height: 1.3;
+}
+.pedido-field .form-control,
+.pedido-field .form-select {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+}
+.pedido-item-footer {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem 1rem;
+    padding: 0.5rem 1rem;
+    border-top: 1px solid var(--mv-outline);
+    border-radius: 0 0 1rem 1rem;
+    background: #faf7f3;
+}
+.pedido-etiqueta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-height: 44px;
+    margin: 0;
+    color: var(--mv-secondary);
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+.pedido-etiqueta-check {
+    appearance: auto;
+    flex: 0 0 20px;
     width: 20px;
     height: 20px;
     margin: 0;
-    border: 2px solid #9a6840;
-    border-radius: 50%;
-    background: #fff;
+    accent-color: var(--mv-primary-dark);
     cursor: pointer;
-    vertical-align: middle;
 }
-
-#tablaDetalles .pedido-etiqueta-check:checked {
-    border-color: var(--mv-primary-dark);
-    background: var(--mv-primary-dark);
+.pedido-item-subtotal {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.65rem;
+    margin-left: auto;
+    font-size: 0.8rem;
+    color: var(--mv-secondary);
 }
-
-#tablaDetalles .pedido-etiqueta-check:checked::after {
-    content: "✓";
-    color: #fff;
-    font-size: 0.78rem;
-    font-weight: 700;
+.pedido-item-subtotal strong {
+    color: var(--mv-primary-dark);
+    font-size: 1.05rem;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+.pedido-quitar {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 0.65rem;
+    background: transparent;
+    color: var(--mv-error);
+    font-size: 1.5rem;
     line-height: 1;
+    cursor: pointer;
 }
-
-@media (max-width: 767.98px) {
-    #tablaDetalles .etiqueta-pedido {
-        padding-top: 0;
+.pedido-quitar:hover {
+    background: #fce8e6;
+    border-color: #edc4be;
+}
+.pedido-quitar:focus-visible,
+.pedido-etiqueta-check:focus-visible {
+    outline: 3px solid var(--mv-primary-dark);
+    outline-offset: 3px;
+}
+@container (max-width: 680px) {
+    .pedido-item-fields {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 0.75rem;
     }
+    .pedido-field-producto {
+        grid-column: 1 / -1;
+    }
+    .pedido-field-producto .pedido-field-heading {
+        min-height: auto;
+    }
+}
+@container (max-width: 380px) {
+    .pedido-item-fields { padding: 0.75rem; }
+    .pedido-item-footer { gap: 0.25rem 0.5rem; padding: 0.5rem 0.75rem; }
+    .pedido-etiqueta { font-size: 0.8rem; }
+    .pedido-item-subtotal { flex-direction: column; gap: 0; }
 }
 
 /* =============================================
