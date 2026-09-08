@@ -19,6 +19,7 @@ namespace Panaderia.MVC.Controllers
         private readonly IPedidoService _pedidoService;
         private readonly IPushNotificationService _pushNotificationService;
         private readonly IConfiguration _configuration;
+        private readonly IAccesoTiendaService _accesoTiendaService;
         private readonly IConfiguracionTiendaService _configuracionTiendaService;
 
         public TiendaController(
@@ -27,13 +28,15 @@ namespace Panaderia.MVC.Controllers
             IPedidoService pedidoService,
             IPushNotificationService pushNotificationService,
             IConfiguration configuration,
-            IConfiguracionTiendaService configuracionTiendaService)
+            IConfiguracionTiendaService configuracionTiendaService,
+            IAccesoTiendaService accesoTiendaService)
         {
             _productoService = productoService;
             _clienteService = clienteService;
             _pedidoService = pedidoService;
             _pushNotificationService = pushNotificationService;
             _configuration = configuration;
+            _accesoTiendaService = accesoTiendaService;
             _configuracionTiendaService = configuracionTiendaService;
         }
 
@@ -295,6 +298,15 @@ namespace Panaderia.MVC.Controllers
                 }
             }
 
+            var clienteVinculado = await ClienteRevendedorAsync();
+            if (clienteVinculado != null)
+            {
+                vm.Nombre = clienteVinculado.Nombre;
+                vm.Apellido = clienteVinculado.Apellido;
+                vm.Telefono = clienteVinculado.Telefono ?? "";
+                vm.Direccion = clienteVinculado.Direccion;
+                vm.DatosRecordados = false;
+            }
             return View(vm);
         }
 
@@ -318,6 +330,9 @@ namespace Panaderia.MVC.Controllers
             // Nunca confiar en importes ni opciones enviados por el navegador.
             model.Carrito = carrito;
             model.FechaEntrega = ProximoSabado();
+            var clienteVinculado = await ClienteRevendedorAsync();
+            if (clienteVinculado != null && !clienteVinculado.Revendedor)
+                ModelState.AddModelError("", "Tu cuenta no tiene un cliente revendedor habilitado. Contactanos para revisar el acceso.");
             if (carrito.FaltaParaMinimo > 0)
                 ModelState.AddModelError("", $"El pedido mínimo es de ${carrito.Configuracion.MontoMinimoPedido.ToString("N2", new CultureInfo("es-AR"))}. Agregá productos para poder confirmar.");
 
@@ -341,8 +356,9 @@ namespace Panaderia.MVC.Controllers
                 return View("Checkout", model);
             }
 
-            // Cliente invitado: buscar por teléfono o crear uno nuevo
-            var cliente = await _clienteService.GetByTelefonoAsync(model.Telefono);
+            // Las cuentas nuevas usan su cliente vinculado; invitados y cuentas
+            // antiguas sin vínculo conservan la búsqueda por teléfono.
+            var cliente = clienteVinculado ?? await _clienteService.GetByTelefonoAsync(model.Telefono);
             if (cliente == null)
             {
                 cliente = new Cliente
@@ -482,6 +498,12 @@ namespace Panaderia.MVC.Controllers
         // ---------- Helpers ----------
 
         private bool EsRevendedor() => User.IsInRole("Revendedor") && !User.IsInRole("Admin");
+
+        private async Task<Cliente?> ClienteRevendedorAsync()
+        {
+            var id = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            return EsRevendedor() && id != null ? await _accesoTiendaService.ObtenerClienteAsync(id) : null;
+        }
 
         private decimal ObtenerPrecio(Producto producto) =>
             EsRevendedor() ? producto.PrecioReventa : producto.PrecioFinal;

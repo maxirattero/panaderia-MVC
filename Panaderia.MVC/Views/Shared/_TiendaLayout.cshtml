@@ -47,11 +47,20 @@
                 <span class="tt-cart-badge">@carritoCantidad</span>
             }
         </a>
-        @if (User.Identity?.IsAuthenticated == true)
+        @if (User.IsInRole("Admin"))
         {
             <a class="tt-login" asp-controller="Home" asp-action="Index" title="Ir al panel" aria-label="Ir al panel">
                 <span class="material-symbols-outlined">space_dashboard</span>
             </a>
+        }
+        else if (User.Identity?.IsAuthenticated == true)
+        {
+            <form asp-controller="Account" asp-action="Logout" method="post" class="m-0">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="tt-login" title="Cerrar sesión" aria-label="Cerrar sesión">
+                    <span class="material-symbols-outlined">logout</span>
+                </button>
+            </form>
         }
         else
         {

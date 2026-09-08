@@ -27,8 +27,9 @@ public class AccountController : Controller
     {
         if (User.Identity?.IsAuthenticated == true)
         {
+            if (!User.IsInRole("Admin")) return RedirectToAction("Index", "Tienda");
             if (Url.IsLocalUrl(returnUrl)) return LocalRedirect(returnUrl!);
-            return RedirectToAction("Index", User.IsInRole("Admin") || User.IsInRole("Revendedor") ? "Home" : "Tienda");
+            return RedirectToAction("Index", "Home");
         }
         if (formularioVencido)
             ModelState.AddModelError(string.Empty, "El formulario quedó desactualizado. Volvé a ingresar tus datos para iniciar sesión.");
@@ -49,15 +50,11 @@ public class AccountController : Controller
 
         if (result.Succeeded)
         {
-            if (Url.IsLocalUrl(returnUrl))
-                return LocalRedirect(returnUrl!);
-
-            // Admin y Revendedor van a la parte administrativa; el resto, a la tienda.
+            // Solo el admin puede volver al panel. Evita bucles al denegar acceso.
             var user = await _userManager.FindByEmailAsync(model.Email);
-            if (user != null &&
-                (await _userManager.IsInRoleAsync(user, "Admin") ||
-                 await _userManager.IsInRoleAsync(user, "Revendedor")))
+            if (user != null && await _userManager.IsInRoleAsync(user, "Admin"))
             {
+                if (Url.IsLocalUrl(returnUrl)) return LocalRedirect(returnUrl!);
                 return RedirectToAction("Index", "Home");
             }
 

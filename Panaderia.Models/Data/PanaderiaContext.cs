@@ -40,6 +40,10 @@ namespace Panaderia.Models.Data
     protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<ApplicationUser>()
+                .HasOne<Cliente>().WithMany().HasForeignKey(u => u.IdCliente)
+                .OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<ApplicationUser>().HasIndex(u => u.IdCliente).IsUnique();
             modelBuilder.Entity<ConfiguracionTienda>(entity =>
             {
                 entity.Property(c => c.Id).ValueGeneratedNever();

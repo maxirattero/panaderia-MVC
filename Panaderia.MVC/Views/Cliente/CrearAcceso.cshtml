@@ -1,0 +1,33 @@
+@model Panaderia.MVC.Models.CrearAccesoTiendaViewModel
+@{
+    ViewData["Title"] = "Crear acceso a la tienda";
+}
+<div style="max-width: 680px;">
+    <h1 class="h2 titulo-pagina mb-2">Crear acceso a la tienda</h1>
+    <p class="text-muted">Cliente: <strong>@Model.NombreCliente</strong></p>
+    <div class="card card-custom p-4">
+        <p>Esta cuenta podrá comprar en la tienda a precios de reventa. No tendrá acceso al panel administrativo.</p>
+        <form asp-action="CrearAcceso" asp-route-id="@Model.IdCliente" method="post">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="All" class="text-danger mb-3" role="alert"></div>
+            <div class="mb-3">
+                <label asp-for="Email" class="form-label">Correo para iniciar sesión</label>
+                <input asp-for="Email" type="email" class="form-control" autocomplete="off" required />
+            </div>
+            <div class="mb-3">
+                <label asp-for="Password" class="form-label">Contraseña inicial</label>
+                <input asp-for="Password" class="form-control" autocomplete="new-password" minlength="10" maxlength="128" required aria-describedby="ayudaPassword" />
+                <small id="ayudaPassword" class="text-muted">Al menos 10 caracteres, con una letra minúscula y un número. No reutilices tu contraseña de administrador.</small>
+            </div>
+            <div class="mb-3">
+                <label asp-for="ConfirmarPassword" class="form-label">Repetir contraseña</label>
+                <input asp-for="ConfirmarPassword" class="form-control" autocomplete="new-password" required />
+            </div>
+            <p class="small text-muted">No se envía un email automático. Compartí el correo y la contraseña con el revendedor por un canal privado.</p>
+            <div class="d-flex flex-column flex-sm-row gap-2">
+                <button type="submit" class="btn btn-mv-primary">Crear acceso</button>
+                <a asp-action="Details" asp-route-id="@Model.IdCliente" class="btn btn-mv-secondary">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>

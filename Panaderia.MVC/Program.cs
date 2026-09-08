@@ -80,6 +80,7 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 builder.Services.AddScoped<IProveedorService, ProveedorService>();
 builder.Services.AddScoped<IClienteService, ClienteService>();
+builder.Services.AddScoped<IAccesoTiendaService, AccesoTiendaService>();
 builder.Services.AddScoped<IPedidoService, PedidoService>();
 builder.Services.AddScoped<IReporteCajaService, ReporteCajaService>();
 builder.Services.AddScoped<ICategoriaService, CategoriaService>();

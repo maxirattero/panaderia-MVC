@@ -5,6 +5,10 @@
     ViewData["Title"] = "Detalles de Cliente";
 }
 
+@if (TempData["AccesoTiendaMsg"] != null)
+{
+    <div class="alert alert-info" role="status">@TempData["AccesoTiendaMsg"]</div>
+}
 <!-- Heading -->
 <div class="mb-4">
     <h2 class="font-literata fw-bold titulo-pagina">Detalles de Cliente</h2>
@@ -62,6 +66,23 @@
             }
         </div>
     </div>
+    <section class="mt-4 pt-4 border-top">
+        <h3 class="h5 fw-bold">Acceso a la tienda</h3>
+        @if (ViewBag.EmailAccesoTienda is string email)
+        {
+            <p class="mb-1">Cuenta vinculada: <strong>@email</strong></p>
+            <p class="small text-muted">Puede iniciar sesión en la tienda. La contraseña no se muestra por seguridad.</p>
+        }
+        else if (Model.Revendedor)
+        {
+            <p class="text-muted">Habilitá su cuenta para comprar con precios de reventa.</p>
+            <a asp-action="CrearAcceso" asp-route-id="@Model.Id" class="btn btn-mv-primary">Crear acceso a la tienda</a>
+        }
+        else
+        {
+            <p class="text-muted">Marcá al cliente como revendedor para crearle acceso.</p>
+        }
+    </section>
     <!-- Action Buttons -->
     <div class="d-flex flex-column flex-md-row justify-content-end gap-3 mt-5 pt-4 border-top">
         <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-mv-primary d-flex align-items-center justify-content-center gap-2">
