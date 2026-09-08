@@ -64,6 +64,8 @@
                 <small>Te lo llevamos el sábado de 10:30 a 12:30 hs. Coordinamos por WhatsApp.</small>
             </span>
         </label>
+        @if (Model.Carrito.Configuracion.RetiroHabilitado)
+        {
         <label class="entrega-opt">
             <input type="radio" asp-for="Entrega" value="retiro" onchange="toggleDireccion()" />
             <span class="material-symbols-outlined">storefront</span>
@@ -72,6 +74,12 @@
                 <small>Kiosco Suyay (San Martín 888) — 10 a 12:30 y de 16:30 a 22 hs.</small>
             </span>
         </label>
+        }
+        else
+        {
+            <p class="text-muted small">El punto de retiro está cerrado por el momento. Podés recibir tu pedido por delivery sin cargo.</p>
+        }
+        <span asp-validation-for="Entrega" class="text-danger small"></span>
 
         <div id="campoDireccion">
             <span class="checkout-label">Dirección para el delivery</span>
@@ -124,7 +132,8 @@
         <span class="checkout-label">Nota para la panadería (opcional)</span>
         <textarea asp-for="Notas" class="checkout-input" rows="2" placeholder="Ej.: pan cortado en rodajas, tocar timbre..."></textarea>
 
-        <button type="submit" class="btn-mv-primary carrito-cta">
+        <partial name="_MinimoPedido" model="Model.Carrito" />
+        <button type="submit" class="btn-mv-primary carrito-cta" disabled="@(Model.Carrito.FaltaParaMinimo > 0)">
             <span class="material-symbols-outlined">check_circle</span> Confirmar pedido
         </button>
         <p class="td-nota checkout-aviso">Te contactamos por WhatsApp para confirmar el pedido.</p>
@@ -134,11 +143,11 @@
 @section Scripts {
     <script>
         function toggleDireccion() {
-            const esDelivery = document.querySelector('input[name="Entrega"]:checked').value === 'delivery';
+            const esDelivery = document.querySelector('input[name="Entrega"]:checked')?.value === 'delivery';
             document.getElementById('campoDireccion').style.display = esDelivery ? '' : 'none';
         }
         function toggleAlias() {
-            const esTransferencia = document.querySelector('input[name="MedioPago"]:checked').value === 'transferencia';
+            const esTransferencia = document.querySelector('input[name="MedioPago"]:checked')?.value === 'transferencia';
             document.getElementById('aliasAviso').style.display = esTransferencia ? '' : 'none';
         }
         toggleDireccion();

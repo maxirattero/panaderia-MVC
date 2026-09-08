@@ -2071,6 +2071,11 @@ a.badge-tienda:hover {
     text-decoration: none;
 }
 
+.carrito-cta:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
 /* =============================================
    CHECKOUT: datos recordados del cliente
    ============================================= */

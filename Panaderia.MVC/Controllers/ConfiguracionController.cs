@@ -18,6 +18,7 @@ namespace Panaderia.MVC.Controllers
         private readonly IEtiquetaService _etiquetaService;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IMemoryCache _cache;
+        private readonly IConfiguracionTiendaService _configuracionTiendaService;
 
         public ConfiguracionController(
             ICategoriaService categoriaService,
@@ -25,7 +26,8 @@ namespace Panaderia.MVC.Controllers
             ITamanoService tamanoService,
             IEtiquetaService etiquetaService,
             IHttpClientFactory httpClientFactory,
-            IMemoryCache cache)
+            IMemoryCache cache,
+            IConfiguracionTiendaService configuracionTiendaService)
         {
             _categoriaService = categoriaService;
             _formatoService = formatoService;
@@ -33,19 +35,47 @@ namespace Panaderia.MVC.Controllers
             _etiquetaService = etiquetaService;
             _httpClientFactory = httpClientFactory;
             _cache = cache;
+            _configuracionTiendaService = configuracionTiendaService;
         }
 
         // GET: Configuracion
         public async Task<IActionResult> Index()
         {
+            return View(await CrearViewModelAsync());
+        }
+
+        private async Task<ConfiguracionViewModel> CrearViewModelAsync()
+        {
+            var configuracion = await _configuracionTiendaService.GetAsync();
             var vm = new ConfiguracionViewModel
             {
+                Tienda = new ConfiguracionTiendaViewModel
+                {
+                    RetiroHabilitado = configuracion.RetiroHabilitado,
+                    MontoMinimoPedido = configuracion.MontoMinimoPedido
+                },
                 Categorias = await _categoriaService.GetAllAsync(),
                 Formatos = await _formatoService.GetAllAsync(),
                 Tamanos = await _tamanoService.GetAllAsync(),
                 Etiquetas = await _etiquetaService.GetAllAsync()
             };
-            return View(vm);
+            return vm;
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> GuardarTienda([Bind(Prefix = "Tienda")] ConfiguracionTiendaViewModel tienda)
+        {
+            if (!ModelState.IsValid)
+            {
+                var vm = await CrearViewModelAsync();
+                vm.Tienda = tienda;
+                return View("Index", vm);
+            }
+
+            await _configuracionTiendaService.GuardarAsync(tienda.RetiroHabilitado, tienda.MontoMinimoPedido);
+            TempData["ConfiguracionTiendaMsg"] = "Configuración de la tienda guardada.";
+            return RedirectToAction(nameof(Index));
         }
 
         // Catálogo oficial de Google. Se carga solo al abrir el selector y queda

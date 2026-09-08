@@ -26,6 +26,7 @@ namespace Panaderia.MVC.Models
         public string? Notas { get; set; }
 
         // Solo para mostrar en la vista (no se postea)
+        [Microsoft.AspNetCore.Mvc.ModelBinding.Validation.ValidateNever]
         public CarritoViewModel Carrito { get; set; } = new();
         public DateTime FechaEntrega { get; set; }
 

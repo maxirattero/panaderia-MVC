@@ -19,19 +19,22 @@ namespace Panaderia.MVC.Controllers
         private readonly IPedidoService _pedidoService;
         private readonly IPushNotificationService _pushNotificationService;
         private readonly IConfiguration _configuration;
+        private readonly IConfiguracionTiendaService _configuracionTiendaService;
 
         public TiendaController(
             IProductoService productoService,
             IClienteService clienteService,
             IPedidoService pedidoService,
             IPushNotificationService pushNotificationService,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            IConfiguracionTiendaService configuracionTiendaService)
         {
             _productoService = productoService;
             _clienteService = clienteService;
             _pedidoService = pedidoService;
             _pushNotificationService = pushNotificationService;
             _configuration = configuration;
+            _configuracionTiendaService = configuracionTiendaService;
         }
 
         // GET: / (tienda pública)
@@ -273,7 +276,7 @@ namespace Panaderia.MVC.Controllers
                 vm.Apellido = recordados.Apellido;
                 vm.Telefono = recordados.Telefono;
                 vm.Direccion = recordados.Direccion;
-                vm.Entrega = string.IsNullOrWhiteSpace(recordados.Entrega) ? "delivery" : recordados.Entrega;
+                vm.Entrega = recordados.Entrega == "retiro" && carrito.Configuracion.RetiroHabilitado ? "retiro" : "delivery";
                 vm.MedioPago = string.IsNullOrWhiteSpace(recordados.MedioPago) ? "efectivo" : recordados.MedioPago;
                 vm.DatosRecordados = true;
 
@@ -311,6 +314,21 @@ namespace Panaderia.MVC.Controllers
         {
             var carrito = await ArmarCarritoAsync();
             if (!carrito.Items.Any()) return RedirectToAction(nameof(Carrito));
+
+            // Nunca confiar en importes ni opciones enviados por el navegador.
+            model.Carrito = carrito;
+            model.FechaEntrega = ProximoSabado();
+            if (carrito.FaltaParaMinimo > 0)
+                ModelState.AddModelError("", $"El pedido mínimo es de ${carrito.Configuracion.MontoMinimoPedido.ToString("N2", new CultureInfo("es-AR"))}. Agregá productos para poder confirmar.");
+
+            if (model.Entrega != "delivery" && model.Entrega != "retiro")
+                ModelState.AddModelError(nameof(model.Entrega), "Elegí una opción de entrega válida.");
+            if (model.Entrega == "retiro" && !carrito.Configuracion.RetiroHabilitado)
+            {
+                ModelState.AddModelError("", "El punto de retiro está cerrado. Completá tu dirección para recibir el pedido por delivery.");
+                ModelState.Remove(nameof(model.Entrega));
+                model.Entrega = "delivery";
+            }
 
             var esDelivery = model.Entrega == "delivery";
             if (esDelivery && string.IsNullOrWhiteSpace(model.Direccion))
@@ -550,7 +568,7 @@ namespace Panaderia.MVC.Controllers
         private async Task<CarritoViewModel> ArmarCarritoAsync()
         {
             var carrito = LeerCarrito();
-            var vm = new CarritoViewModel();
+            var vm = new CarritoViewModel { Configuracion = await _configuracionTiendaService.GetAsync() };
             if (!carrito.Any()) return vm;
 
             var productos = (await _productoService.GetAllAsync())

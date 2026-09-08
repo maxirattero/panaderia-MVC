@@ -12,6 +12,8 @@ namespace Panaderia.MVC.Models
 
     public class CarritoViewModel
     {
+        public ConfiguracionTienda Configuracion { get; set; } = new();
+        public decimal FaltaParaMinimo => Math.Max(0m, Configuracion.MontoMinimoPedido - Total);
         public List<CarritoItemViewModel> Items { get; set; } = new();
         public decimal Total => Items.Sum(i => i.Subtotal);
         public int CantidadTotal => Items.Sum(i => i.Cantidad);

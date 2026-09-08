@@ -1,0 +1,22 @@
+@model CarritoViewModel
+@{
+    var ar = new System.Globalization.CultureInfo("es-AR");
+}
+@if (Model.Configuracion.MontoMinimoPedido > 0)
+{
+    <div class="entrega-banner" role="status">
+        <span class="material-symbols-outlined" aria-hidden="true">shopping_cart</span>
+        <div>
+            <b>Pedido mínimo: $@Model.Configuracion.MontoMinimoPedido.ToString("N2", ar)</b>
+            @if (Model.FaltaParaMinimo > 0)
+            {
+                <small>Te faltan $@Model.FaltaParaMinimo.ToString("N2", ar) para confirmar tu pedido.</small>
+                <a asp-controller="Tienda" asp-action="Index">Agregar productos</a>
+            }
+            else
+            {
+                <small>Tu pedido ya alcanza el monto mínimo.</small>
+            }
+        </div>
+    </div>
+}

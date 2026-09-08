@@ -81,7 +81,7 @@
                 <span>$@Model.Total.ToString("N0", ar)</span>
             </div>
             <div class="cr-fila">
-                <span>Entrega (delivery o retiro)</span>
+                <span>Entrega (@(Model.Configuracion.RetiroHabilitado ? "delivery o retiro" : "delivery"))</span>
                 <span>Sin cargo</span>
             </div>
             <div class="cr-fila total">
@@ -90,8 +90,16 @@
             </div>
         </div>
 
+        <partial name="_MinimoPedido" model="Model" />
+        @if (Model.FaltaParaMinimo > 0)
+        {
+            <button type="button" class="btn-mv-primary carrito-cta" disabled>Continuar</button>
+        }
+        else
+        {
         <a class="btn-mv-primary carrito-cta" asp-controller="Tienda" asp-action="Checkout">
             Continuar <span class="material-symbols-outlined">arrow_forward</span>
         </a>
+        }
     }
 </div>

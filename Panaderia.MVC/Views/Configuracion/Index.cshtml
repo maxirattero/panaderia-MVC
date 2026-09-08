@@ -8,7 +8,7 @@
     <div class="row align-items-end mb-5 gy-4">
         <div class="col-md-7">
             <h1 class="display-6 fw-bold titulo-pagina mb-1">Configuración</h1>
-            <p class="text-secondary m-0">Administra las categorías, formatos, tamaños y etiquetas del catálogo.</p>
+            <p class="text-secondary m-0">Administrá las opciones de la tienda y el catálogo de productos.</p>
         </div>
     </div>
 
@@ -19,6 +19,37 @@
             @TempData["EtiquetaError"]
         </div>
     }
+
+    <section class="card-custom p-4 mb-4" aria-labelledby="opcionesTiendaTitulo">
+        <h2 id="opcionesTiendaTitulo" class="h5 fw-bold mb-3">Pedidos de la tienda</h2>
+        @if (TempData["ConfiguracionTiendaMsg"] != null)
+        {
+            <div class="alert alert-success" role="status">@TempData["ConfiguracionTiendaMsg"]</div>
+        }
+        <form asp-action="GuardarTienda" method="post">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="All" class="text-danger small"></div>
+            <div class="row g-4 align-items-start">
+                <div class="col-md-6">
+                    <div class="form-check form-switch">
+                        <input asp-for="Tienda.RetiroHabilitado" class="form-check-input" role="switch" />
+                        <label asp-for="Tienda.RetiroHabilitado" class="form-check-label fw-bold">Habilitar punto de retiro</label>
+                    </div>
+                    <p class="text-muted small mt-2 mb-0">Kiosco Suyay (San Martín 888). Si lo desactivás, la tienda ofrecerá únicamente delivery. Volvé a activarlo cuando abra.</p>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Tienda.MontoMinimoPedido" class="form-label fw-bold">Monto mínimo del pedido</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input asp-for="Tienda.MontoMinimoPedido" type="number" min="0" max="999999999" step="0.01" class="form-control" aria-describedby="minimoAyuda" required />
+                    </div>
+                    <span asp-validation-for="Tienda.MontoMinimoPedido" class="text-danger small"></span>
+                    <p id="minimoAyuda" class="text-muted small mt-2 mb-0">Usá 0 para no exigir un mínimo. Aplica a clientes y revendedores que compran en la tienda, no a pedidos cargados desde el panel.</p>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-mv-primary mt-3">Guardar opciones de tienda</button>
+        </form>
+    </section>
 
     <div class="row g-4">
 

@@ -87,6 +87,7 @@ builder.Services.AddScoped<IFormatoService, FormatoService>();
 builder.Services.AddScoped<ITamanoService, TamanoService>();
 builder.Services.AddScoped<IProductoService, ProductoService>();
 builder.Services.AddScoped<IEtiquetaService, EtiquetaService>();
+builder.Services.AddScoped<IConfiguracionTiendaService, ConfiguracionTiendaService>();
 builder.Services.AddScoped<IInsumoService, InsumoService>();
 builder.Services.AddScoped<IRecetaService, RecetaService>();
 builder.Services.AddScoped<ICompraService, CompraService>();

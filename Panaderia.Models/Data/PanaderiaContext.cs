@@ -12,6 +12,7 @@ namespace Panaderia.Models.Data
         }
 
         // DbSets - una por cada entidad
+        public DbSet<ConfiguracionTienda> ConfiguracionTienda { get; set; }
         public DbSet<CategoriaProducto> CategoriasProducto { get; set; }
         public DbSet<Tamano> Tamanos { get; set; }
         public DbSet<Formato> Formatos { get; set; }
@@ -39,6 +40,17 @@ namespace Panaderia.Models.Data
     protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<ConfiguracionTienda>(entity =>
+            {
+                entity.Property(c => c.Id).ValueGeneratedNever();
+                entity.Property(c => c.MontoMinimoPedido).HasPrecision(18, 2);
+                entity.ToTable("ConfiguracionTienda", table =>
+                {
+                    table.HasCheckConstraint("CK_ConfiguracionTienda_Unica", "\"Id\" = 1");
+                    table.HasCheckConstraint("CK_ConfiguracionTienda_Minimo", "\"MontoMinimoPedido\" >= 0");
+                });
+                entity.HasData(new ConfiguracionTienda { Id = 1, RetiroHabilitado = true, MontoMinimoPedido = 0m });
+            });
             // Configuración de relaciones y restricciones            
             // Producto -> CategoriaProducto
             modelBuilder.Entity<Producto>()
