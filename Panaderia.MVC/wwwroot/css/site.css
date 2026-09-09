@@ -1621,13 +1621,14 @@ a.pill-filtro.activo {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
     gap: 8px;
     padding: 0 12px 12px;
 }
 
 .tc-agregar .stepper-tienda {
     flex-shrink: 0;
+    margin-left: auto;
 }
 
 .stepper-tienda.sm input {
@@ -2058,6 +2059,7 @@ a.badge-tienda:hover {
 }
 .tc-ultimas-unidades {
     flex: 0 1 72px;
+    text-align: left;
     color: #855330;
     font-weight: 600;
     font-size: 0.75rem;

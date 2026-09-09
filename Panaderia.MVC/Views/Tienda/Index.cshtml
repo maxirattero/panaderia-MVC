@@ -96,16 +96,16 @@
                 </div>
                 <div class="tc-body">
                     <div class="tc-name">@p.NombreVisible</div>
-                    @if (p.Categoria != null)
-                    {
-                        <div class="tc-meta">@p.Categoria.Nombre</div>
-                    }
                     <div class="tc-price">$@precio.ToString("N0", ar)</div>
                 </div>
             </a>
             @if (!p.EstaSinStockEnTienda && maximoSeleccion > 0)
             {
                 <div class="tc-agregar">
+                    @if (p.AvisoUltimasUnidades is string aviso)
+                    {
+                        <span class="tc-ultimas-unidades">@aviso</span>
+                    }
                     <div class="stepper-tienda sm" data-max="@maximoSeleccion">
                         <button type="button" aria-label="Restar" onclick="cambiarCantidadCard(this, -1)">
                             <span class="material-symbols-outlined">remove</span>
@@ -115,10 +115,6 @@
                             <span class="material-symbols-outlined">add</span>
                         </button>
                     </div>
-                    @if (p.AvisoUltimasUnidades is string aviso)
-                    {
-                        <span class="tc-ultimas-unidades">@aviso</span>
-                    }
                 </div>
             }
         </div>
