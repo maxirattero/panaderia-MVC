@@ -2060,7 +2060,7 @@ a.badge-tienda:hover {
 .tc-ultimas-unidades {
     text-align: center;
     white-space: nowrap;
-    color: #855330;
+    color: var(--mv-error);
     font-weight: 600;
     font-size: 0.75rem;
     line-height: 1.3;
