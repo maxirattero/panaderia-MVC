@@ -677,7 +677,7 @@ namespace Panaderia.Services.Implementations
                 foreach (var det in receta.Detalles.Where(d => d.IdInsumo.HasValue && d.Insumo != null
                     && d.Insumo.TipoInsumo == TipoInsumo.Ingrediente))
                 {
-                    if (det.Insumo!.Nombre.Equals("Agua corriente", StringComparison.OrdinalIgnoreCase)
+                    if (det.Insumo!.Nombre.Contains("agua", StringComparison.OrdinalIgnoreCase)
                         && det.PorcentajePanadero.HasValue && receta.SumaPorcentajes > 0)
                     {
                         decimal gramosAgua = (receta.TamanioLote * receta.PesoUnitario

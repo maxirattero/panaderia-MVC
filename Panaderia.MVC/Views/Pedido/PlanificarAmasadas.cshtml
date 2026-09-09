@@ -8,9 +8,15 @@
         <button onclick="resetear()" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2">
             <span class="material-symbols-outlined">restart_alt</span>Resetear
         </button>
-        <button onclick="imprimir()" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2">
+        <button onclick="imprimirSinConfirmar()" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2">
             <span class="material-symbols-outlined">print</span>Imprimir plan
         </button>
+        @if ((int)(ViewBag.CantidadExcluidos ?? 0) == 0)
+        {
+            <button onclick="confirmarEImprimir()" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2">
+                <span class="material-symbols-outlined">check</span>Confirmar producción e imprimir
+            </button>
+        }
         <a asp-action="Produccion" class="btn btn-mv-primary">Volver</a>
     </div>
 </div>
@@ -298,7 +304,7 @@
     }
 
     // ─── Print ──────────────────────────────────────────
-    async function imprimir() {
+    async function confirmarEImprimir() {
         if (!confirm('¿Confirmar la producción y actualizar el stock antes de imprimir? Esta acción quitará estos pedidos de la próxima planificación.')) return;
 
         const form = document.getElementById('confirmarPlanificacionForm');
