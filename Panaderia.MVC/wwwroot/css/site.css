@@ -1623,6 +1623,7 @@ a.pill-filtro.activo {
     align-items: center;
     justify-content: center;
     gap: 8px;
+    margin-top: auto;
     padding: 0 12px 12px;
 }
 
