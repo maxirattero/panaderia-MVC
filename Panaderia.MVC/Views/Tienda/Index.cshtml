@@ -24,28 +24,14 @@
     <span>Tomamos pedidos de panes hasta los jueves a las 24 hs.</span>
 </aside>
 
-<!-- Buscador -->
-<form method="get" asp-controller="Tienda" asp-action="Index" class="tienda-search">
-    <span class="material-symbols-outlined">search</span>
-    <input type="text" name="q" value="@Model.Busqueda" class="search-input" placeholder="Buscar pan, crackers, untables..." />
-    @if (!string.IsNullOrEmpty(Model.CategoriaSeleccionada))
-    {
-        <input type="hidden" name="categoria" value="@Model.CategoriaSeleccionada" />
-    }
-    @if (Model.EtiquetaSeleccionada.HasValue)
-    {
-        <input type="hidden" name="etiqueta" value="@Model.EtiquetaSeleccionada" />
-    }
-</form>
-
 <!-- Categorías -->
 <div class="tienda-chips">
     <a class="pill-filtro @(string.IsNullOrEmpty(Model.CategoriaSeleccionada) ? "activo" : "")"
-       asp-controller="Tienda" asp-action="Index" asp-route-q="@Model.Busqueda" asp-route-etiqueta="@Model.EtiquetaSeleccionada">Todos</a>
+       asp-controller="Tienda" asp-action="Index" asp-route-etiqueta="@Model.EtiquetaSeleccionada">Todos</a>
     @foreach (var cat in Model.Categorias)
     {
         <a class="pill-filtro @(string.Equals(cat, Model.CategoriaSeleccionada, StringComparison.OrdinalIgnoreCase) ? "activo" : "")"
-           asp-controller="Tienda" asp-action="Index" asp-route-categoria="@cat" asp-route-q="@Model.Busqueda" asp-route-etiqueta="@Model.EtiquetaSeleccionada">@cat</a>
+           asp-controller="Tienda" asp-action="Index" asp-route-categoria="@cat" asp-route-etiqueta="@Model.EtiquetaSeleccionada">@cat</a>
     }
 </div>
 
@@ -59,7 +45,6 @@
             <a class="pill-filtro etiqueta @(activa ? "activo" : "")"
                asp-controller="Tienda" asp-action="Index"
                asp-route-categoria="@Model.CategoriaSeleccionada"
-               asp-route-q="@Model.Busqueda"
                asp-route-etiqueta="@(activa ? null : (int?)et.Id)">
                 <span class="material-symbols-outlined">@(activa ? "close" : et.Icono)</span>@et.Nombre
             </a>
@@ -71,7 +56,7 @@
 
 @if (!Model.Productos.Any())
 {
-    <p class="tienda-empty">No encontramos productos con esa búsqueda.</p>
+    <p class="tienda-empty">No encontramos productos con esos filtros.</p>
 }
 
 <form asp-controller="Tienda" asp-action="AgregarVarios" method="post" class="tienda-seleccion-form">
@@ -105,10 +90,6 @@
                     {
                         <span class="tc-tag disponible">En stock</span>
                     }
-                    @if (p.AvisoUltimasUnidades is string aviso)
-                    {
-                        <span class="tc-ultimas-unidades">@aviso</span>
-                    }
                     <span class="tc-ver-detalle">
                         <span class="material-symbols-outlined">visibility</span> Ver detalles
                     </span>
@@ -134,6 +115,10 @@
                             <span class="material-symbols-outlined">add</span>
                         </button>
                     </div>
+                    @if (p.AvisoUltimasUnidades is string aviso)
+                    {
+                        <span class="tc-ultimas-unidades">@aviso</span>
+                    }
                 </div>
             }
         </div>
