@@ -103,7 +103,7 @@
                 <tbody>
                     @foreach (var p in Model)
                     {
-                        <tr data-busqueda="@($"{p.Cliente.NombreCompleto} {p.Cliente.Direccion} {p.Notas}").ToLower()" data-estado="@p.Estado.ToString()">
+                        <tr data-pedido-id="@p.Id" data-busqueda="@($"{p.Cliente.NombreCompleto} {p.Cliente.Direccion} {p.Notas}").ToLower()" data-estado="@p.Estado.ToString()">
                             <td>
                                 <button class="btn btn-sm btn-outline-secondary" type="button"
                                         data-bs-toggle="collapse" data-bs-target="#detalle-@p.Id">
@@ -112,7 +112,7 @@
                             </td>
                             <td>@p.Cliente.NombreCompleto</td>
                             <td>@(p.FechaEntrega?.ToString("dd/MM/yyyy") ?? "-")</td>
-                            <td>@p.Estado</td>
+                            <td>@(p.Estado == Panaderia.Models.Enums.EstadoPedido.EnProduccion ? "En Producción" : p.Estado.ToString())</td>
                             <td>
                                 $@(p.MontoTotal.ToString("N0", new System.Globalization.CultureInfo("es-AR")))
                                 @if (p.DescuentoPorcentaje > 0)
@@ -235,7 +235,7 @@
                     <div class="pedido-card-header">
                         <h3 class="pedido-card-name">@p.Cliente.NombreCompleto</h3>
                         <div class="d-flex flex-column align-items-end gap-1">
-                            <span class="status-badge status-pending">@p.Estado</span>
+                            <span class="status-badge status-pending">@(p.Estado == Panaderia.Models.Enums.EstadoPedido.EnProduccion ? "En Producción" : p.Estado.ToString())</span>
                             @if (p.EstaPagado)
                             {
                                 <span class="status-badge status-active" style="font-size:0.7rem;padding:0.15rem 0.5rem;">Cobrado</span>
@@ -373,7 +373,7 @@
         (function () {
             const inputTexto = document.getElementById('filtroTexto');
             const contador   = document.getElementById('contadorVisible');
-            const filas      = document.querySelectorAll('.table-custom tbody > tr:not(.collapse)');
+            const filas      = document.querySelectorAll('.table-custom > tbody > tr[data-pedido-id]');
             const cards      = document.querySelectorAll('.pedido-card');
 
             function normalizar(str) {
