@@ -5,7 +5,7 @@
     var cultura = new System.Globalization.CultureInfo("es-AR");
 }
 
-<div style="max-width: 800px;">
+<div style="max-width: 1100px;">
     <div class="mb-4">
         <h1 class="display-6 fw-bold titulo-pagina mb-1">Detalle de compra</h1>
     </div>
@@ -47,6 +47,8 @@
                         <th>Unidad de compra</th>
                         <th>Cantidad</th>
                         <th>Precio unitario</th>
+                        <th>Envío del ítem</th>
+                        <th>Costo unitario con envío</th>
                         <th>Subtotal</th>
                     </tr>
                 </thead>
@@ -58,6 +60,8 @@
                             <td>@d.UnidadCompra.Nombre</td>
                             <td>@d.Cantidad.ToString("0.###")</td>
                             <td>@d.PrecioUnitario.ToString("C", cultura)</td>
+                            <td>@d.CostoEnvio.ToString("C", cultura)</td>
+                            <td>@((d.PrecioUnitario + (d.Cantidad > 0 ? d.CostoEnvio / d.Cantidad : 0m)).ToString("C", cultura))</td>
                             <td>@d.Subtotal.ToString("C", cultura)</td>
                         </tr>
                     }

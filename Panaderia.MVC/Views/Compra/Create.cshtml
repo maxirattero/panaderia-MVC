@@ -78,6 +78,7 @@
                 </div>
                 <div class="col-md-8">
                     <label class="form-label small fw-bold text-muted d-block">Distribuir en</label>
+                    <p class="text-muted small">El envío se reparte según la cantidad de unidades de compra seleccionadas (por ejemplo, bolsas), sin ponderar su peso o precio.</p>
                     <div id="checkboxesEnvio" class="d-flex flex-wrap gap-3">
                         <span class="text-muted small">Agregá ítems para distribuir el envío.</span>
                     </div>
@@ -181,6 +182,11 @@
         const rows         = Array.from(tbody.querySelectorAll('tr'));
         const checkedBoxes = Array.from(checkboxesDiv.querySelectorAll('.chk-envio:checked'));
         const checkedIdx   = new Set(checkedBoxes.map(cb => parseInt(cb.dataset.rowIndex)));
+        const cantidadSeleccionada = rows.reduce((total, tr, i) => total + (checkedIdx.has(i)
+            ? Math.max(0, parseFloat(tr.querySelector('.inp-cantidad').value) || 0) : 0), 0);
+        const envioCentavos = Math.round(costoEnvio * 100);
+        let cantidadAcumulada = 0;
+        let centavosAsignados = 0;
 
         rows.forEach((tr, i) => {
             const span     = tr.querySelector('.span-subtotal');
@@ -188,9 +194,14 @@
             const precio   = parseFloat(tr.querySelector('.inp-precio').value)   || 0;
             const base     = cantidad * precio;
 
-            const porcion = (costoEnvio > 0 && checkedBoxes.length > 0 && checkedIdx.has(i))
-                ? costoEnvio / checkedBoxes.length
-                : 0;
+            let porcion = 0;
+            if (costoEnvio > 0 && cantidadSeleccionada > 0 && checkedIdx.has(i)) {
+                cantidadAcumulada += Math.max(0, cantidad);
+                // Redondear el acumulado conserva el importe exacto del envío.
+                const centavosAcumulados = Math.round(envioCentavos * cantidadAcumulada / cantidadSeleccionada);
+                porcion = (centavosAcumulados - centavosAsignados) / 100;
+                centavosAsignados = centavosAcumulados;
+            }
 
             const hidden = tr.querySelector('.inp-costo-envio');
             if (hidden) hidden.value = porcion.toFixed(2);
@@ -221,7 +232,7 @@
             div.className = 'form-check';
             div.innerHTML =
                 `<input class="form-check-input chk-envio" type="checkbox" ` +
-                `data-row-index="${i}" id="chkEnvio_${i}" checked />` +
+                `data-row-index="${i}" id="chkEnvio_${i}" ${tr.dataset.incluirEnvio !== 'false' ? 'checked' : ''} />` +
                 `<label class="form-check-label" for="chkEnvio_${i}">${etiqueta}</label>`;
             checkboxesDiv.appendChild(div);
         });
@@ -283,7 +294,11 @@
 
     costoEnvioInput.addEventListener('input', distribuirEnvio);
     checkboxesDiv.addEventListener('change', e => {
-        if (e.target.classList.contains('chk-envio')) distribuirEnvio();
+        if (e.target.classList.contains('chk-envio')) {
+            const tr = tbody.querySelectorAll('tr')[Number(e.target.dataset.rowIndex)];
+            if (tr) tr.dataset.incluirEnvio = String(e.target.checked);
+            distribuirEnvio();
+        }
     });
 
     btnAgregar.addEventListener('click', agregarFila);
@@ -295,6 +310,10 @@
 
         const rows   = Array.from(tbody.querySelectorAll('tr'));
         const errores = [];
+
+        distribuirEnvio();
+        if (Number(costoEnvioInput.value) > 0 && !checkboxesDiv.querySelector('.chk-envio:checked'))
+            errores.push('Seleccioná al menos un ítem para distribuir el envío.');
 
         if (rows.length === 0) {
             errores.push('Debe agregar al menos un ítem a la compra.');
