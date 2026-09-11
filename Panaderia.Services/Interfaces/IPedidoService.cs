@@ -6,6 +6,8 @@ namespace Panaderia.Services.Interfaces
 {
     public interface IPedidoService
     {
+        Task<Dictionary<int, decimal>> GetPreciosCostoAsync(IEnumerable<int> idsProductos);
+
         //Obtener todos los pedidos
         Task<IEnumerable<Pedido>> GetAllAsync();
 

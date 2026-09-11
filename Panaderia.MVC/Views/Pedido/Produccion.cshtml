@@ -9,7 +9,7 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="display-6 fw-bold titulo-pagina mb-1">Dashboard de Producción</h1>
     <div class="d-flex gap-2">
-        <a asp-action="PlanificarAmasadas"
+        <a asp-action="PlanificarAmasadas" onclick="return imprimirPlan(event, true)"
            class="btn btn-outline-secondary d-inline-flex align-items-center gap-2">
             <span class="material-symbols-outlined">blender</span>Planificar amasadas
         </a>
@@ -330,7 +330,7 @@
             });
         });
 
-        function imprimirPlan(e) {
+        function imprimirPlan(e, planificar = false) {
             const params = [];
             document.querySelectorAll('.sr-card').forEach(card => {
                 const idSub = card.dataset.sr;
@@ -343,9 +343,10 @@
 
             if (params.length) {
                 e.preventDefault();
-                const base = '@Url.Action("ImprimirProduccion", "Pedido")';
+                const base = planificar ? '@Url.Action("PlanificarAmasadas", "Pedido")' : '@Url.Action("ImprimirProduccion", "Pedido")';
                 const url = base + '?anteriores=' + encodeURIComponent(params.join(','));
-                window.open(url, '_blank');
+                if (planificar) window.location.href = url;
+                else window.open(url, '_blank');
                 return false;
             }
             return true;

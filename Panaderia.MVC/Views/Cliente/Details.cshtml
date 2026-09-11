@@ -49,6 +49,10 @@
             </p>
         </div>
         <div class="col-md-6">
+            <p class="small fw-bold text-muted mb-1">Precio de los productos</p>
+            <p class="mb-0">@(Model.PrecioDeCosto ? "Precio de costo: solo ingredientes, sin descuentos adicionales" : "Precio habitual")</p>
+        </div>
+        <div class="col-md-6">
             <p class="small fw-bold text-muted mb-1">Tipo</p>
             @if (Model.Revendedor)
             {

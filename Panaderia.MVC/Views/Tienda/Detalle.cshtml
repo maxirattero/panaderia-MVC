@@ -3,7 +3,7 @@
     Layout = "_TiendaLayout";
     ViewData["Title"] = Model.NombreVisible;
     var ar = new System.Globalization.CultureInfo("es-AR");
-    var precio = ViewBag.EsRevendedor is true ? Model.PrecioReventa : Model.PrecioFinal;
+    var precio = ((Dictionary<int, decimal>?)ViewBag.Costos)?.TryGetValue(Model.Id, out var costo) == true ? costo : (ViewBag.EsRevendedor is true ? Model.PrecioReventa : Model.PrecioFinal);
 }
 
 @if (TempData["TiendaMsg"] != null)

@@ -129,6 +129,7 @@ namespace Panaderia.Services.Implementations
         public async Task CreateAsync(Pedido pedido)
         {
             await using var transaction = await IniciarMutacionAsync();
+            await AplicarPrecioDeCostoAsync(pedido);
             await AplicarCostoEmpaqueAsync(pedido.Detalles);
             await ReservarStockAsync(pedido.Detalles);
             await _context.Pedidos.AddAsync(pedido);
@@ -152,6 +153,12 @@ namespace Panaderia.Services.Implementations
                 existente = candidatos.FirstOrDefault();
                 if (existente != null) await _context.Entry(existente).Collection(p => p.Detalles).LoadAsync();
             }
+            await AplicarPrecioDeCostoAsync(pedido);
+            // Un descuento global anterior no debe abaratar las nuevas líneas a costo.
+            // Conservar ese pedido y registrar otro evita reescribir importes históricos.
+            if (existente?.DescuentoPorcentaje > 0 &&
+                (await _context.Clientes.FindAsync(pedido.IdCliente))?.PrecioDeCosto == true)
+                existente = null;
             await AplicarCostoEmpaqueAsync(pedido.Detalles);
             await ReservarStockAsync(pedido.Detalles);
             if (existente == null) _context.Pedidos.Add(pedido);
@@ -173,15 +180,17 @@ namespace Panaderia.Services.Implementations
             existing.IdCliente = pedido.IdCliente;
             existing.FechaEntrega = pedido.FechaEntrega;
             existing.Notas = pedido.Notas;
-            existing.DescuentoPorcentaje = pedido.DescuentoPorcentaje;
-            existing.MontoTotal = pedido.MontoTotal;
             existing.FechaModificacion = DateTime.UtcNow;
 
             // Libera la reserva anterior dentro de la misma transacción: si la nueva
             // selección no alcanza, todo se revierte y el pedido queda intacto.
             await RestituirStockReservadoAsync(existing.Detalles);
+            await AplicarPrecioDeCostoAsync(pedido);
             await AplicarCostoEmpaqueAsync(pedido.Detalles);
             await ReservarStockAsync(pedido.Detalles);
+
+            existing.DescuentoPorcentaje = pedido.DescuentoPorcentaje;
+            existing.MontoTotal = pedido.MontoTotal;
 
             var producidas = existing.Detalles.GroupBy(d => d.IdProducto)
                 .ToDictionary(g => g.Key, g => g.Sum(d => d.CantidadProducida));
@@ -340,20 +349,23 @@ namespace Panaderia.Services.Implementations
                 var receta = await _context.Recetas
                     .Include(r => r.Detalles)
                         .ThenInclude(rd => rd.Insumo)
+                    .Include(r => r.Detalles).ThenInclude(rd => rd.SubReceta)
+                        .ThenInclude(sr => sr!.Detalles).ThenInclude(sd => sd.Insumo)
                     .FirstOrDefaultAsync(r => r.IdProducto == grupo.Key);
 
                 decimal costoUnitario = receta != null && receta.TamanioLote > 0
-                    ? receta.CostoPorUnidad
+                    ? receta.CostoIngredientesPorUnidad
                     : 0m;
 
                 detalles.Add(new CostoProductoItem
                 {
                     NombreProducto = primerDetalle.Producto.NombreVisible,
                     CantidadVendida = cantidadTotal,
-                    CostoUnitario = costoUnitario
+                    CostoUnitario = costoUnitario,
+                    CostoEmpaque = grupo.Sum(d => d.Cantidad * d.CostoEmpaque)
                 });
 
-                costoTotal += costoUnitario * cantidadTotal;
+                costoTotal += costoUnitario * cantidadTotal + grupo.Sum(d => d.Cantidad * d.CostoEmpaque);
             }
 
             return new ResumenCierreSemanal
@@ -798,6 +810,33 @@ namespace Panaderia.Services.Implementations
                         .SetProperty(p => p.Stock, p => p.Stock + cantidad)
                         .SetProperty(p => p.SinStock, p => !p.PorEncargo && p.Stock + cantidad <= 0));
             }
+        }
+
+        public async Task<Dictionary<int, decimal>> GetPreciosCostoAsync(IEnumerable<int> idsProductos)
+        {
+            var ids = idsProductos.Distinct().ToList();
+            var recetas = await _context.Recetas.AsNoTracking()
+                .Include(r => r.Detalles).ThenInclude(d => d.Insumo)
+                .Include(r => r.Detalles).ThenInclude(d => d.SubReceta)
+                    .ThenInclude(sr => sr!.Detalles).ThenInclude(d => d.Insumo)
+                .Where(r => ids.Contains(r.IdProducto)).ToListAsync();
+            return recetas.Where(r => r.CostoIngredientesPorUnidad > 0)
+                .ToDictionary(r => r.IdProducto, r => Math.Round(r.CostoIngredientesPorUnidad, 4, MidpointRounding.AwayFromZero));
+        }
+
+        private async Task AplicarPrecioDeCostoAsync(Pedido pedido)
+        {
+            var cliente = await _context.Clientes.FindAsync(pedido.IdCliente);
+            if (cliente?.PrecioDeCosto != true) return;
+            var costos = await GetPreciosCostoAsync(pedido.Detalles.Select(d => d.IdProducto));
+            foreach (var detalle in pedido.Detalles)
+            {
+                if (!costos.TryGetValue(detalle.IdProducto, out var costo))
+                    throw new InvalidOperationException("No se puede cobrar a precio de costo: hay un producto sin receta o sin costo de ingredientes. Revisá su receta.");
+                detalle.PrecioUnitario = costo;
+            }
+            pedido.DescuentoPorcentaje = 0m;
+            pedido.MontoTotal = Math.Round(pedido.Detalles.Sum(d => d.Cantidad * d.PrecioUnitario), 0, MidpointRounding.AwayFromZero);
         }
 
         private async Task AplicarCostoEmpaqueAsync(IEnumerable<DetallePedido> detalles)

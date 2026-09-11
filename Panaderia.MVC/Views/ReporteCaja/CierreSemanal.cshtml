@@ -122,7 +122,8 @@
                             <tr>
                                 <th>Producto</th>
                                 <th class="text-end">Cantidad vendida</th>
-                                <th class="text-end">Costo unitario</th>
+                                <th class="text-end">Ingredientes / unidad</th>
+                                <th class="text-end">Bolsas y etiquetas</th>
                                 <th class="text-end">Costo total</th>
                             </tr>
                         </thead>
@@ -133,13 +134,14 @@
                                     <td>@item.NombreProducto</td>
                                     <td class="text-end">@item.CantidadVendida</td>
                                     <td class="text-end">@item.CostoUnitario.ToString("C", cultura)</td>
+                                    <td class="text-end">@item.CostoEmpaque.ToString("C", cultura)</td>
                                     <td class="text-end fw-bold">@item.CostoTotal.ToString("C", cultura)</td>
                                 </tr>
                             }
                         </tbody>
                     </table>
                     <p class="text-muted small mb-0">
-                        Los costos se calculan con los precios actuales de los insumos.
+                        Los ingredientes incluyen subrecetas y se calculan a precios actuales. Las bolsas y etiquetas usan el costo guardado en cada pedido entregado.
                     </p>
                 }
             </div>

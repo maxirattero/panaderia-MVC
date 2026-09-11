@@ -87,6 +87,7 @@ namespace Panaderia.MVC.Controllers
                     .ToList();
             }
 
+            ViewBag.Costos = await CostosClienteAsync(productos.Select(p => p.Id));
             var vm = new TiendaIndexViewModel
             {
                 Productos = productos,
@@ -109,6 +110,7 @@ namespace Panaderia.MVC.Controllers
             if (producto == null || producto.OcultoEnTienda) return NotFound();
 
             ViewBag.EsRevendedor = EsRevendedor();
+            ViewBag.Costos = await CostosClienteAsync(new[] { producto.Id });
             var carrito = LeerCarrito();
             carrito.TryGetValue(id, out var cantidadEnCarrito);
             ViewBag.MaxCantidadAgregar = producto.PorEncargo
@@ -513,6 +515,14 @@ namespace Panaderia.MVC.Controllers
             return EsRevendedor() && id != null ? await _accesoTiendaService.ObtenerClienteAsync(id) : null;
         }
 
+        private async Task<Dictionary<int, decimal>> CostosClienteAsync(IEnumerable<int> ids)
+        {
+            var cliente = await ClienteRevendedorAsync();
+            return cliente?.PrecioDeCosto == true
+                ? await _pedidoService.GetPreciosCostoAsync(ids)
+                : new Dictionary<int, decimal>();
+        }
+
         private decimal ObtenerPrecio(Producto producto) =>
             EsRevendedor() ? producto.PrecioReventa : producto.PrecioFinal;
 
@@ -606,6 +616,7 @@ namespace Panaderia.MVC.Controllers
                 .ToDictionary(p => p.Id);
 
             var huboCambios = false;
+            var costos = await CostosClienteAsync(carrito.Keys);
             foreach (var (idProducto, cantidad) in carrito.ToList())
             {
                 if (productos.TryGetValue(idProducto, out var producto))
@@ -629,7 +640,7 @@ namespace Panaderia.MVC.Controllers
                     {
                         Producto = producto,
                         Cantidad = cantidadSegura,
-                        PrecioUnitario = ObtenerPrecio(producto)
+                        PrecioUnitario = costos.TryGetValue(producto.Id, out var costo) ? costo : ObtenerPrecio(producto)
                     });
                 }
                 else

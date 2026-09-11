@@ -64,7 +64,7 @@
 <div class="tienda-grid">
     @foreach (var p in Model.Productos)
     {
-        var precio = Model.EsRevendedor ? p.PrecioReventa : p.PrecioFinal;
+        var precio = ((Dictionary<int, decimal>?)ViewBag.Costos)?.TryGetValue(p.Id, out var costo) == true ? costo : (Model.EsRevendedor ? p.PrecioReventa : p.PrecioFinal);
         Model.CantidadesEnCarrito.TryGetValue(p.Id, out var cantidadEnCarrito);
         var maximoSeleccion = p.PorEncargo ? 50 : Math.Max(0, p.Stock - cantidadEnCarrito);
         <div class="tienda-card @(p.EstaSinStockEnTienda ? "agotado" : "")">

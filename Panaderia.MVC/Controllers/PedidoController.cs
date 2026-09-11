@@ -388,6 +388,7 @@ namespace Panaderia.MVC.Controllers
 
             ViewBag.Clientes = clientes;
             ViewBag.Productos = productos;
+            ViewBag.Costos = await _pedidoService.GetPreciosCostoAsync(productos.Select(p => p.Id));
             ViewBag.Empaques = empaques;
         }
 

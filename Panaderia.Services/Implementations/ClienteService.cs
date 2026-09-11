@@ -49,6 +49,7 @@ namespace Panaderia.Services.Implementations
             existe.Provincia = cliente.Provincia;
             existe.Telefono = cliente.Telefono;
             existe.Revendedor = cliente.Revendedor;
+            existe.PrecioDeCosto = cliente.PrecioDeCosto;
             existe.DescuentoPorcentaje = cliente.DescuentoPorcentaje;
             existe.FechaModificacion = DateTime.UtcNow;
 

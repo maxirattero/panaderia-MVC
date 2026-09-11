@@ -82,6 +82,9 @@
     // ─── Data & State ───────────────────────────────────
     const productosOriginales = @Html.Raw(ViewBag.ProductosJson);
     const subRecetasOriginales = @Html.Raw(ViewBag.SubRecetasJson);
+    const anteriores = new Map((new URLSearchParams(location.search).get('anteriores') || '')
+        .split(',').map(par => par.split(':').map(Number))
+        .filter(([id, cantidad]) => Number.isInteger(id) && id > 0 && Number.isFinite(cantidad) && cantidad > 0));
     let amasadas = [];
     let nextId = 1;
 
@@ -395,10 +398,14 @@
                 <div class="grid-amasadas">`;
 
             for (const sr of subRecetasOriginales) {
+                const anterior = anteriores.get(sr.idSubReceta) || 0;
+                const restante = Math.max(0, sr.totalGramos - anterior);
+                const factor = sr.totalGramos > 0 ? restante / sr.totalGramos : 0;
                 html += `<div class="amasada-card">
-                    <h5 style="margin:0 0 4px 0; font-size:14px;">${sr.nombre}</h5>
+                    <h5 style="margin:0 0 4px 0; font-size:14px;">${escaparHtml(sr.nombre)}</h5>
                     <p style="margin:0 0 6px 0; font-size:11px; color:#555;">
                         Total con margen: <strong>${Math.round(sr.totalGramos)} g</strong>
+                        ${anterior > 0 ? `<br>Ya preparado: <strong>${anterior} g</strong><br>A preparar: <strong>${Math.round(restante)} g</strong>` : ''}
                     </p>
                     <table style="width:100%; border-collapse:collapse; font-size:11px;">
                         <thead>
@@ -411,8 +418,8 @@
 
                 for (const ing of sr.ingredientes) {
                     html += `<tr>
-                        <td style="border:1px solid #ccc; padding:3px 6px;">${ing.nombreInsumo}</td>
-                        <td style="border:1px solid #ccc; padding:3px 6px; text-align:right;">${Math.round(ing.cantidad)} ${ing.unidad}</td>
+                        <td style="border:1px solid #ccc; padding:3px 6px;">${escaparHtml(ing.nombreInsumo)}</td>
+                        <td style="border:1px solid #ccc; padding:3px 6px; text-align:right;">${Math.round(ing.cantidad * factor * 10) / 10} ${escaparHtml(ing.unidad)}</td>
                     </tr>`;
                 }
 

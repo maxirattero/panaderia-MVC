@@ -13,6 +13,8 @@ namespace Panaderia.Models.Entities
         public string? Localidad { get; set; }
         public string? Provincia { get; set; }
         public string? Telefono { get; set; }
+        [Display(Name = "Cobrar a precio de costo (solo ingredientes)")]
+        public bool PrecioDeCosto { get; set; }
         public bool Revendedor { get; set; } = false;
         // Descuento habitual del cliente. Null = sin descuento (el input queda vacío).
         // Solo se usa en el admin: autocompleta el descuento al crear/editar un pedido.

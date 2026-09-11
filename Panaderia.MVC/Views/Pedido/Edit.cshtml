@@ -28,8 +28,9 @@
                         {
                             <option value="@c.Id"
                                     data-revendedor="@c.Revendedor.ToString().ToLower()"
-                                    data-descuento="@((c.DescuentoPorcentaje ?? 0m).ToString(System.Globalization.CultureInfo.InvariantCulture))">
-                                @c.NombreCompleto
+                                    data-costo="@c.PrecioDeCosto.ToString().ToLowerInvariant()"
+                                data-descuento="@((c.DescuentoPorcentaje ?? 0m).ToString(System.Globalization.CultureInfo.InvariantCulture))">
+                                @c.NombreCompleto @(c.PrecioDeCosto ? "· Precio de costo" : "")
                             </option>
                         }
                     </select>
@@ -174,11 +175,13 @@
                 });
             }
 
+            function clienteACosto() { return clienteSelect.selectedOptions[0]?.dataset.costo === 'true'; }
+
             function precioFila(tr) {
                 const prodSelect = tr.querySelector('.prod-select');
                 const opt = prodSelect.options[prodSelect.selectedIndex];
                 if (!opt || !opt.value) return 0;
-                const precio = clienteEsRevendedor()
+                const precio = clienteACosto() ? parseFloat(opt.dataset.costo) : clienteEsRevendedor()
                     ? parseFloat(opt.dataset.reventa)
                     : parseFloat(opt.dataset.final);
                 const cant = parseInt(tr.querySelector('.cant-input').value) || 0;
@@ -189,7 +192,8 @@
                 let bruto = 0;
                 tbody.querySelectorAll('.pedido-item').forEach(tr => { bruto += precioFila(tr); });
 
-                let pct = parseFloat(descuentoInput.value);
+                descuentoInput.disabled = clienteACosto();
+                let pct = clienteACosto() ? 0 : parseFloat(descuentoInput.value);
                 if (isNaN(pct) || pct < 0) pct = 0;
                 if (pct > 100) pct = 100;
 
@@ -212,10 +216,11 @@
 
                 let precio = 0;
                 if (opt && opt.value) {
-                    precio = clienteEsRevendedor()
+                    precio = clienteACosto() ? parseFloat(opt.dataset.costo) : clienteEsRevendedor()
                         ? parseFloat(opt.dataset.reventa)
                         : parseFloat(opt.dataset.final);
                 }
+                prodSelect.setCustomValidity(clienteACosto() && opt?.value && !(precio > 0) ? 'Este producto no tiene costo de ingredientes. Revisá su receta.' : '');
                 const cant = parseInt(cantInput.value) || 0;
                 subtotalCell.textContent = '$' + (precio * cant).toFixed(0);
                 recalcularTotales();
@@ -271,7 +276,7 @@
             // Solo al cambiar de cliente se trae su descuento habitual; el valor guardado del pedido se respeta al abrir.
             function aplicarDescuentoDelCliente() {
                 const opt = clienteSelect.options[clienteSelect.selectedIndex];
-                const pct = opt ? parseFloat(opt.dataset.descuento) : 0;
+                const pct = !clienteACosto() && opt ? parseFloat(opt.dataset.descuento) : 0;
                 descuentoInput.value = (!isNaN(pct) && pct > 0) ? pct : '';
             }
 

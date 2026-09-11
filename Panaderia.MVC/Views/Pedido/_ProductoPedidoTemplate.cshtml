@@ -10,6 +10,7 @@
                     @foreach (var p in (IEnumerable<Producto>)ViewBag.Productos)
                     {
                         <option value="@p.Id"
+                                data-costo="@(((Dictionary<int, decimal>)ViewBag.Costos).GetValueOrDefault(p.Id).ToString(System.Globalization.CultureInfo.InvariantCulture))"
                                 data-final="@p.PrecioFinal.ToString(System.Globalization.CultureInfo.InvariantCulture)"
                                 data-reventa="@p.PrecioReventa.ToString(System.Globalization.CultureInfo.InvariantCulture)"
                                 data-stock="@p.Stock"

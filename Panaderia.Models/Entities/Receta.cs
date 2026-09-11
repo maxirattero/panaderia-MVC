@@ -32,10 +32,18 @@ public class Receta
                  .Sum(d => d.PorcentajePanadero!.Value) ?? 0m;
 
     [NotMapped]
-    public decimal CostoTotal =>
+    public decimal CostoTotal => CalcularCosto(false);
+
+    [NotMapped]
+    public decimal CostoIngredientesPorUnidad =>
+        TamanioLote > 0 ? CalcularCosto(true) / TamanioLote : 0m;
+
+    private decimal CalcularCosto(bool soloIngredientes) =>
         SumaPorcentajes == 0 ? 0m :
         Detalles?.Sum(d =>
         {
+            if (soloIngredientes && d.Insumo is not null && d.Insumo.TipoInsumo != Panaderia.Models.Enums.TipoInsumo.Ingrediente)
+                return 0m;
             if (d.Insumo is not null && d.PorcentajePanadero.HasValue)
                 return d.Insumo.CostoPorUnidadBase
                        * (PesoMasaTotal / SumaPorcentajes * d.PorcentajePanadero.Value);
@@ -51,7 +59,7 @@ public class Receta
                     .Sum(sd => sd.PorcentajePanadero!.Value) ?? 0m;
                 if (sumaPctSub == 0) return 0m;
                 return d.SubReceta.Detalles?.Sum(sd =>
-                    sd.Insumo is null ? 0m :
+                    sd.Insumo is null || (soloIngredientes && sd.Insumo.TipoInsumo != Panaderia.Models.Enums.TipoInsumo.Ingrediente) ? 0m :
                     sd.PorcentajePanadero.HasValue
                         ? sd.Insumo.CostoPorUnidadBase
                           * (gramosSubReceta / sumaPctSub * sd.PorcentajePanadero.Value)

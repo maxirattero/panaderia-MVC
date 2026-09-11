@@ -69,7 +69,8 @@
                             Revendedor
                         </span>
                     }
-                    @if (c.DescuentoPorcentaje > 0)
+                    @if (c.PrecioDeCosto) { <span class="badge bg-secondary">Precio de costo</span> }
+                    @if (!c.PrecioDeCosto && c.DescuentoPorcentaje > 0)
                     {
                         <span class="badge rounded-pill bg-secondary" style="font-size:0.7rem;"
                               title="Descuento habitual">
@@ -169,7 +170,8 @@
                                     Minorista
                                 </span>
                             }
-                            @if (c.DescuentoPorcentaje > 0)
+                            @if (c.PrecioDeCosto) { <span class="badge bg-secondary">Precio de costo</span> }
+                    @if (!c.PrecioDeCosto && c.DescuentoPorcentaje > 0)
                             {
                                 <span class="badge bg-secondary ms-1" title="Descuento habitual">
                                     -@(c.DescuentoPorcentaje.GetValueOrDefault().ToString("0.##"))%

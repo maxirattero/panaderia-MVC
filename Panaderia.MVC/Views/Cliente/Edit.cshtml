@@ -45,6 +45,10 @@
                 <input asp-for="Telefono" class="form-control" placeholder="+54 000 000000" />
                 <span asp-validation-for="Telefono" class="text-danger"></span>
             </div>
+            <div class="col-12">
+                <div class="form-check mb-3"><input asp-for="PrecioDeCosto" class="form-check-input" /><label asp-for="PrecioDeCosto" class="form-check-label"></label></div>
+                <div class="form-text mb-3">El precio de costo reemplaza el precio habitual y los descuentos en los pedidos nuevos o editados.</div>
+                </div>
             <div class="col-md-3">
                 <label asp-for="DescuentoPorcentaje" class="form-label small fw-bold text-muted">Descuento habitual</label>
                 <div class="input-group">
