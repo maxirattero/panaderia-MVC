@@ -87,22 +87,26 @@
         </div>
     </div>
 
-    <form id="seleccionPedidos" asp-action="ActualizarSeleccion" method="post" class="card-custom p-3 mb-4">
+    <form id="seleccionPedidos" asp-action="ActualizarSeleccion" method="post" class="d-flex align-items-center gap-2 mb-3">
         @Html.AntiForgeryToken()
-        <div class="d-flex flex-wrap align-items-center gap-3">
-            <label class="d-flex align-items-center gap-2">
-                <input id="seleccionarVisibles" type="checkbox" class="form-check-input mt-0" />
-                Seleccionar todos los visibles
-            </label>
-            <span id="contadorSeleccion" class="small text-secondary" aria-live="polite">0 seleccionados</span>
-            <button id="limpiarSeleccion" type="button" class="btn btn-sm btn-mv-secondary" disabled>Limpiar selección</button>
-        </div>
-        <div class="d-flex flex-wrap gap-2 mt-3">
-            <button type="submit" name="Accion" value="cobrar" class="btn btn-mv-secondary" disabled>Marcar cobrados</button>
-            <button type="submit" name="Accion" value="entregar" class="btn btn-mv-secondary" disabled>Marcar entregados</button>
-            <button type="submit" name="Accion" value="cobrar-entregar" class="btn btn-mv-primary" disabled>Cobrar y entregar</button>
-        </div>
-        <p class="small text-secondary mb-0 mt-2">Cobrar completa el saldo pendiente y lo registra en caja. Para entregar, el pedido debe estar cobrado. Al buscar, se quitan de la selección los pedidos que quedan ocultos.</p>
+        <button id="seleccionarVisibles" type="button" class="btn btn-sm btn-mv-secondary d-inline-flex p-2" title="Seleccionar todos los visibles" aria-label="Seleccionar todos los visibles" aria-pressed="false">
+            <span class="material-symbols-outlined" aria-hidden="true">select_all</span>
+        </button>
+        <span class="vr mx-1" aria-hidden="true"></span>
+        <button type="submit" name="Accion" value="cobrar" class="btn btn-sm btn-mv-secondary d-inline-flex p-2" title="Marcar cobrados" aria-label="Marcar cobrados" disabled>
+            <span class="material-symbols-outlined" aria-hidden="true">payments</span>
+        </button>
+        <button type="submit" name="Accion" value="entregar" class="btn btn-sm btn-mv-secondary d-inline-flex p-2" title="Marcar entregados" aria-label="Marcar entregados" disabled>
+            <span class="material-symbols-outlined" aria-hidden="true">local_shipping</span>
+        </button>
+        <button type="submit" name="Accion" value="cobrar-entregar" class="btn btn-sm btn-mv-primary d-inline-flex p-2" title="Cobrar y entregar" aria-label="Cobrar y entregar" disabled>
+            <span class="material-symbols-outlined" aria-hidden="true">check_circle</span>
+        </button>
+        <span id="contadorSeleccion" class="badge text-bg-secondary" hidden aria-hidden="true">0</span>
+        <span id="estadoSeleccion" class="visually-hidden" aria-live="polite">0 seleccionados</span>
+        <button id="limpiarSeleccion" type="button" class="btn btn-sm btn-link text-secondary p-1" title="Limpiar selección" aria-label="Limpiar selección" hidden disabled>
+            <span class="material-symbols-outlined" aria-hidden="true">close</span>
+        </button>
         <div id="idsSeleccionados"></div>
     </form>
 
@@ -256,9 +260,8 @@
         {
             <div class="pedido-card" data-pedido-id="@p.Id" data-busqueda="@($"{p.Cliente.NombreCompleto} {p.Cliente.Direccion} {p.Notas}").ToLower()" data-estado="@p.Estado.ToString()">
                 <div class="pedido-card-body">
-                    <label class="d-flex align-items-center gap-2 small mb-3">
+                    <label class="d-flex align-items-center mb-2">
                         <input type="checkbox" class="form-check-input mt-0 seleccionar-pedido" data-id="@p.Id" aria-label="Seleccionar pedido @p.Id de @p.Cliente.NombreCompleto" />
-                        Seleccionar pedido
                     </label>
                     @* Encabezado: nombre + badges *@
                     <div class="pedido-card-header">

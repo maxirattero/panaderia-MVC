@@ -17,12 +17,18 @@
         checkboxes.forEach(box => { box.checked = selected.has(box.dataset.id); });
         const visible = visibleIds();
         const count = visible.filter(id => selected.has(id)).length;
-        selectAll.checked = visible.length > 0 && count === visible.length;
-        selectAll.indeterminate = count > 0 && count < visible.length;
+        const allSelected = visible.length > 0 && count === visible.length;
+        const partial = count > 0 && count < visible.length;
+        selectAll.setAttribute('aria-pressed', partial ? 'mixed' : String(allSelected));
+        selectAll.querySelector('.material-symbols-outlined').textContent = allSelected ? 'check_box' : partial ? 'indeterminate_check_box' : 'select_all';
         selectAll.disabled = visible.length === 0 || submitting;
         clear.disabled = selected.size === 0 || submitting;
+        clear.hidden = selected.size === 0;
         buttons.forEach(button => { button.disabled = selected.size === 0 || submitting; });
-        document.getElementById('contadorSeleccion').textContent = selected.size === 1 ? '1 seleccionado' : `${selected.size} seleccionados`;
+        const counter = document.getElementById('contadorSeleccion');
+        counter.textContent = selected.size;
+        counter.hidden = selected.size === 0;
+        document.getElementById('estadoSeleccion').textContent = selected.size === 1 ? '1 seleccionado' : `${selected.size} seleccionados`;
         const inputs = [...selected].map(id => {
             const input = document.createElement('input');
             input.type = 'hidden';
@@ -52,8 +58,10 @@
         else selected.delete(box.dataset.id);
         sync();
     }));
-    selectAll.addEventListener('change', () => {
-        visibleIds().forEach(id => { if (selectAll.checked) selected.add(id); else selected.delete(id); });
+    selectAll.addEventListener('click', () => {
+        const visible = visibleIds();
+        const allSelected = visible.every(id => selected.has(id));
+        visible.forEach(id => { if (allSelected) selected.delete(id); else selected.add(id); });
         sync();
     });
     clear.addEventListener('click', () => { selected.clear(); sync(); });

@@ -6,6 +6,8 @@
 
     // Fecha del recibo = fecha de entrega del pedido. Si el pedido no tiene, se usa la de hoy.
     var fechaRecibo = Model.FechaEntrega ?? DateTime.Today;
+    // Conservar la altura del detalle aun cuando el pedido tenga pocos productos.
+    var filasVacias = Math.Max(0, 15 - Model.Detalles.Count);
 
     // MontoTotal se guarda NETO (con el descuento ya aplicado). Si hay descuento hay que
     // mostrar el desglose, o los subtotales de los renglones no cerrarían contra el TOTAL.
@@ -34,16 +36,17 @@
             padding: 16px;
             background: #f2f2f2;
             font-family: 'Plus Jakarta Sans', Arial, Helvetica, sans-serif;
-            font-size: 13px;
+            font-size: 11px;
             color: #111;
         }
 
         .hoja {
             background: #fff;
             border: 1px solid #111;
-            max-width: 190mm;
+            width: 132mm;
+            max-width: 100%;
             margin: 0 auto;
-            padding: 12mm 10mm;
+            padding: 6mm;
         }
 
         /* ── Cabecera: logo + fecha ── */
@@ -51,21 +54,21 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 16px;
-            margin-bottom: 18px;
+            gap: 10px;
+            margin-bottom: 12px;
         }
 
-        .logo { height: 105px; width: auto; }
+        .logo { height: 70px; width: auto; }
 
         .fecha { display: flex; align-items: baseline; gap: 10px; }
         .fecha .valor {
             border-bottom: 1px solid #111;
-            min-width: 130px;
+            min-width: 90px;
             text-align: center;
-            padding: 0 8px 2px;
+            padding: 0 4px 2px;
         }
 
-        .linea { border: 0; border-top: 1px solid #111; margin: 14px 0; }
+        .linea { border: 0; border-top: 1px solid #111; margin: 10px 0; }
 
         /* ── Datos del cliente ── */
         .datos p { margin: 0 0 4px; }
@@ -81,8 +84,8 @@
         table.detalle th,
         table.detalle td {
             border: 0;
-            padding: 4px 8px;
-            height: 22px;
+            padding: 3px 4px;
+            height: 20px;
         }
 
         table.detalle th {
@@ -114,11 +117,11 @@
         .totales tr.total td {
             background: #ededed;
             font-weight: 700;
-            font-size: 16px;
+            font-size: 14px;
         }
 
         /* ── Pantalla ── */
-        .barra { max-width: 190mm; margin: 0 auto 12px; }
+        .barra { max-width: 132mm; margin: 0 auto 12px; }
         .barra button {
             font: inherit;
             padding: 6px 14px;
@@ -132,7 +135,8 @@
         @@media print {
             body { background: #fff; padding: 0; }
             .no-print { display: none !important; }
-            .hoja { border: 1px solid #111; width: 190mm; max-width: 100%; margin: 0 0 0 auto; padding: 8mm; }
+            /* Dos recibos de 132 mm entran lado a lado en los 273 mm útiles del A4. */
+            .hoja { margin: 0 0 0 auto; }
         }
     </style>
 </head>
@@ -177,6 +181,15 @@
                         <td class="col-prod">@d.Producto.NombreVisible</td>
                         <td class="col-precio">@d.PrecioUnitario.ToString("C0", ar)</td>
                         <td class="col-total">@((d.Cantidad * d.PrecioUnitario).ToString("C0", ar))</td>
+                    </tr>
+                }
+                @for (var i = 0; i < filasVacias; i++)
+                {
+                    <tr aria-hidden="true">
+                        <td class="col-cant">&nbsp;</td>
+                        <td class="col-prod">&nbsp;</td>
+                        <td class="col-precio">&nbsp;</td>
+                        <td class="col-total">&nbsp;</td>
                     </tr>
                 }
             </tbody>
