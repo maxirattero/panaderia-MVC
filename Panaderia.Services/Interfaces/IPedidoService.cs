@@ -49,6 +49,8 @@ namespace Panaderia.Services.Interfaces
         Task<List<string>> ConfirmarProduccionAsync(List<ItemProduccionSeleccionable> items);
         // Marcar pedido como entregado
         Task MarcarEntregadoAsync(int id);
+        // Completar saldos y/o entregar una selección en una única transacción.
+        Task ActualizarSeleccionAsync(IEnumerable<int> ids, bool cobrar, bool entregar);
         // Total vendido en la semana actual (domingo a sábado)
         Task<decimal> GetTotalVendidoSemanaAsync();
         // Total vendido por fecha de entrega. Es un dato de pedidos, independiente de caja.

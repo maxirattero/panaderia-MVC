@@ -7,11 +7,6 @@
     // Fecha del recibo = fecha de entrega del pedido. Si el pedido no tiene, se usa la de hoy.
     var fechaRecibo = Model.FechaEntrega ?? DateTime.Today;
 
-    // El recuadro del detalle siempre baja hasta la misma altura, como la planilla de papel:
-    // si el pedido tiene menos renglones, se completan vacíos.
-    const int filasFijas = 16;
-    var filasVacias = Math.Max(0, filasFijas - Model.Detalles.Count);
-
     // MontoTotal se guarda NETO (con el descuento ya aplicado). Si hay descuento hay que
     // mostrar el desglose, o los subtotales de los renglones no cerrarían contra el TOTAL.
     var subtotalBruto = Model.Detalles.Sum(d => d.Cantidad * d.PrecioUnitario);
@@ -28,7 +23,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@@400;600;700&display=swap" rel="stylesheet">
     <style>
         @@page {
-            size: A4;
+            size: A4 landscape;
             margin: 12mm;
         }
 
@@ -85,7 +80,7 @@
 
         table.detalle th,
         table.detalle td {
-            border: 1px solid #111;
+            border: 0;
             padding: 4px 8px;
             height: 22px;
         }
@@ -95,6 +90,9 @@
             font-weight: 700;
             text-align: center;
         }
+
+        table.detalle tr { break-inside: avoid; }
+        .totales { break-inside: avoid; }
 
         .col-cant { width: 9%; text-align: right; }
         .col-prod { width: 55%; }
@@ -134,7 +132,7 @@
         @@media print {
             body { background: #fff; padding: 0; }
             .no-print { display: none !important; }
-            .hoja { border: 1px solid #111; max-width: none; margin: 0; padding: 8mm; }
+            .hoja { border: 1px solid #111; width: 190mm; max-width: 100%; margin: 0 0 0 auto; padding: 8mm; }
         }
     </style>
 </head>
@@ -179,15 +177,6 @@
                         <td class="col-prod">@d.Producto.NombreVisible</td>
                         <td class="col-precio">@d.PrecioUnitario.ToString("C0", ar)</td>
                         <td class="col-total">@((d.Cantidad * d.PrecioUnitario).ToString("C0", ar))</td>
-                    </tr>
-                }
-                @for (var i = 0; i < filasVacias; i++)
-                {
-                    <tr>
-                        <td class="col-cant">&nbsp;</td>
-                        <td class="col-prod">&nbsp;</td>
-                        <td class="col-precio">&nbsp;</td>
-                        <td class="col-total">&nbsp;</td>
                     </tr>
                 }
             </tbody>

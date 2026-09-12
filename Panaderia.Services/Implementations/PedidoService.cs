@@ -103,6 +103,7 @@ namespace Panaderia.Services.Implementations
             if (monto <= 0)
                 throw new InvalidOperationException("El cobro debe ser mayor a cero.");
 
+            await using var transaction = await IniciarMutacionAsync();
             var pedido = await _context.Pedidos
                 .Include(p => p.Cliente)
                 .FirstOrDefaultAsync(p => p.Id == idPedido);
@@ -111,18 +112,55 @@ namespace Panaderia.Services.Implementations
                 if (monto > pedido.SaldoPendiente)
                     throw new InvalidOperationException("El cobro no puede superar el saldo pendiente.");
 
-                pedido.MontoCobrado += monto;
-                _context.ReportesCaja.Add(new ReporteCaja
-                {
-                    Fecha = DateTime.UtcNow,
-                    Tipo = TipoMovimiento.Ingreso,
-                    Categoria = CategoriaMovimiento.Venta,
-                    Monto = monto,
-                    Descripcion = $"Venta - {pedido.Cliente.NombreCompleto}",
-                    IdPedido = pedido.Id
-                });
+                AplicarCobro(pedido, monto);
                 await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
             }
+        }
+
+        private void AplicarCobro(Pedido pedido, decimal monto)
+        {
+            pedido.MontoCobrado += monto;
+            pedido.FechaModificacion = DateTime.UtcNow;
+            _context.ReportesCaja.Add(new ReporteCaja
+            {
+                Fecha = DateTime.UtcNow,
+                Tipo = TipoMovimiento.Ingreso,
+                Categoria = CategoriaMovimiento.Venta,
+                Monto = monto,
+                Descripcion = $"Venta - {pedido.Cliente.NombreCompleto}",
+                IdPedido = pedido.Id
+            });
+        }
+
+        public async Task ActualizarSeleccionAsync(IEnumerable<int> ids, bool cobrar, bool entregar)
+        {
+            var seleccion = ids.Distinct().ToArray();
+            if (seleccion.Length == 0 || seleccion.Any(id => id <= 0))
+                throw new InvalidOperationException("Seleccioná al menos un pedido válido.");
+            if (!cobrar && !entregar)
+                throw new InvalidOperationException("Elegí cobrar, entregar o ambas acciones.");
+
+            await using var transaction = await IniciarMutacionAsync();
+            var pedidos = await _context.Pedidos.Include(p => p.Cliente)
+                .Where(p => seleccion.Contains(p.Id)).OrderBy(p => p.Id).ToListAsync();
+            if (pedidos.Count != seleccion.Length)
+                throw new InvalidOperationException("Algún pedido ya no está disponible. Actualizá el listado y volvé a seleccionarlos.");
+            if (entregar && !cobrar && pedidos.Any(p => !p.EstaPagado))
+                throw new InvalidOperationException("Hay pedidos sin cobrar en la selección. Usá «Cobrar y entregar» o seleccioná solo pedidos cobrados. No se modificó ningún pedido.");
+
+            foreach (var pedido in pedidos)
+            {
+                if (cobrar && pedido.SaldoPendiente > 0)
+                    AplicarCobro(pedido, pedido.SaldoPendiente);
+                if (entregar && pedido.Estado != EstadoPedido.Entregado)
+                {
+                    pedido.Estado = EstadoPedido.Entregado;
+                    pedido.FechaModificacion = DateTime.UtcNow;
+                }
+            }
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
         }
 
         //crear un nuevo pedido
@@ -267,8 +305,11 @@ namespace Panaderia.Services.Implementations
         public async Task MarcarEntregadoAsync(int id)
         {
             await using var transaction = await IniciarMutacionAsync();
-            var pedido = await _context.Pedidos.FindAsync(id);
+            var pedido = await _context.Pedidos.FirstOrDefaultAsync(p => p.Id == id);
             if (pedido == null) return;
+
+            if (!pedido.EstaPagado)
+                throw new InvalidOperationException("No se puede marcar como entregado: el pedido no está cobrado en su totalidad.");
 
             pedido.Estado = EstadoPedido.Entregado;
             pedido.FechaModificacion = DateTime.UtcNow;

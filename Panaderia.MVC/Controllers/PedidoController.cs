@@ -291,6 +291,7 @@ namespace Panaderia.MVC.Controllers
             var enProduccion = await _pedidoService.GetByEstadoAsync(EstadoPedido.EnProduccion);
             var pedidos = pendientes.Concat(enProduccion)
                 .OrderBy(p => p.FechaEntrega)
+                .ThenBy(p => p.Id)
                 .ToList();
             ViewBag.TotalVendidoSemana = await _pedidoService.GetTotalVendidoSemanaAsync();
             return View(pedidos);
@@ -580,8 +581,7 @@ namespace Panaderia.MVC.Controllers
             if (!ModelState.IsValid)
                 return RedirectToAction(nameof(Index));
 
-            var pedido = await _pedidoService.GetByIdAsync(vm.IdPedido);
-            if (pedido == null) return NotFound();
+            if (!await _pedidoService.ExistsAsync(vm.IdPedido)) return NotFound();
 
             try
             {
@@ -596,18 +596,48 @@ namespace Panaderia.MVC.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> MarcarEntregado(int id)
+        public async Task<IActionResult> ActualizarSeleccion(SeleccionPedidosViewModel vm)
         {
-            var pedido = await _pedidoService.GetByIdAsync(id);
-            if (pedido == null) return NotFound();
-
-            if (pedido.MontoCobrado < pedido.MontoTotal)
+            if (!ModelState.IsValid)
             {
-                TempData["Error"] = "No se puede marcar como entregado: el pedido no está cobrado en su totalidad.";
+                TempData["Error"] = "Seleccioná entre 1 y 1000 pedidos y una acción válida.";
                 return RedirectToAction(nameof(Index));
             }
 
-            await _pedidoService.MarcarEntregadoAsync(id);
+            try
+            {
+                await _pedidoService.ActualizarSeleccionAsync(vm.Ids,
+                    vm.Accion is "cobrar" or "cobrar-entregar",
+                    vm.Accion is "entregar" or "cobrar-entregar");
+                var estado = vm.Accion switch
+                {
+                    "cobrar" => "cobrados",
+                    "entregar" => "entregados",
+                    _ => "cobrados y entregados"
+                };
+                TempData["Success"] = $"{vm.Ids.Distinct().Count()} pedido(s) marcados como {estado}.";
+            }
+            catch (InvalidOperationException ex)
+            {
+                TempData["Error"] = ex.Message;
+            }
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> MarcarEntregado(int id)
+        {
+            if (!await _pedidoService.ExistsAsync(id)) return NotFound();
+
+            try
+            {
+                await _pedidoService.MarcarEntregadoAsync(id);
+            }
+            catch (InvalidOperationException ex)
+            {
+                TempData["Error"] = ex.Message;
+            }
             return RedirectToAction(nameof(Index));
         }
 
