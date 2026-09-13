@@ -1,0 +1,9 @@
+@model List<Panaderia.Models.Entities.CierreCaja>
+@using Panaderia.MVC.Models
+@{ ViewData["Title"] = "Historial de cierres"; }
+<h1 class="display-6 fw-bold titulo-pagina mb-3">Historial de cierres</h1><p><a asp-action="Index">Volver a Caja</a></p>
+<partial name="_Avisos" />
+<div class="card-custom p-3 table-responsive"><table class="table align-middle"><thead><tr><th>Semana</th><th>Reserva</th><th>Ani</th><th>Maxi</th><th></th></tr></thead><tbody>
+@foreach(var c in Model) { <tr><td>@c.InicioSemana.ToString("dd/MM/yyyy") @if(c.EsHistorico) { <span class="badge text-bg-secondary">Histórico</span> }</td><td>@(c.EsHistorico ? "No registrada" : CajaUi.Moneda(c.Reserva))</td><td>@(c.EsHistorico ? "—" : CajaUi.Moneda(c.Ani))</td><td>@(c.EsHistorico ? "—" : CajaUi.Moneda(c.Maxi))</td><td><a asp-action="DetalleCierre" asp-route-id="@c.Id" class="btn btn-mv-secondary btn-sm">Ver cierre</a></td></tr> }
+@if(!Model.Any()) { <tr><td colspan="5">Todavía no hay cierres guardados.</td></tr> }
+</tbody></table></div>

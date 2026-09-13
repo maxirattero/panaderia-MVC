@@ -1,217 +1,153 @@
-@model Panaderia.MVC.Models.CierreSemanalViewModel
+@model Panaderia.MVC.Models.CierreCajaViewModel
+@using Panaderia.Models.Enums
+@using Panaderia.MVC.Models
+@using Panaderia.Services.Implementations
 @using System.Globalization
-
 @{
     ViewData["Title"] = "Cierre semanal";
-    var cultura = new CultureInfo("es-AR");
+    var r = Model.Resumen;
+    var c = r.Cierre;
     var inv = CultureInfo.InvariantCulture;
-    var gEstimadaStr = Model.GananciaEstimada.ToString("0.00", inv);
-    var gFijaStr = Model.GananciaFija.ToString("0.00", inv);
-    bool yaCerrado = ViewBag.YaCerrado == true;
-    string semanaSeleccionada = ViewBag.SemanaSeleccionada;
-    var semanas = ViewBag.Semanas as IEnumerable<dynamic>;
 }
-
-    <div class="mb-4">
-        <h1 class="display-6 fw-bold titulo-pagina mb-1">Cierre semanal</h1>
-        <p class="text-secondary m-0">
-            Semana del @Model.InicioSemana.ToString("dd/MM") al @Model.FinSemana.ToString("dd/MM/yyyy")
-        </p>
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+    <div><h1 class="display-6 fw-bold titulo-pagina">Cierre semanal</h1>
+        <p class="text-muted mb-0">@c.InicioSemana.ToString("dd/MM") al @c.InicioSemana.AddDays(6).ToString("dd/MM/yyyy") · @(r.Guardado ? "Guardado" : "Vista previa")</p></div>
+    <div class="d-flex gap-2"><a asp-action="Historial" class="btn btn-mv-secondary">Historial</a><a asp-action="Index" class="btn btn-mv-secondary">Caja</a></div>
+</div>
+<partial name="_Avisos" />
+@if (Model.Semanas.Any())
+{
+    <form method="get" class="d-flex gap-2 mb-4" style="max-width:440px">
+        <label for="inicioSemana" class="visually-hidden">Semana</label>
+        <select name="inicioSemana" id="inicioSemana" class="form-select">
+            @foreach (var s in Model.Semanas) { <option value="@s.ToString("yyyy-MM-dd")" selected="@(s == Model.InicioSemana)">@s.ToString("dd/MM") — @s.AddDays(6).ToString("dd/MM/yyyy")</option> }
+        </select><button class="btn btn-mv-secondary">Ver</button>
+    </form>
+}
+@if (c.EsHistorico)
+{
+    <div class="card-custom p-4">
+        <h2 class="h5">Cierre histórico conservado</h2>
+        <p>Retiro registrado: <strong>@CajaUi.Moneda(c.RetiroHistorico ?? 0)</strong></p>
+        <p>Total vendido guardado: <strong>@(c.TotalVendido.HasValue ? CajaUi.Moneda(c.TotalVendido.Value) : "No disponible")</strong></p>
+        <p class="text-muted mb-0">Este cierre anterior no guardó porcentaje, reparto por persona, cuentas ni costos. No se inventaron esos datos ni se volvió a registrar el retiro.</p>
     </div>
-
-    @if (TempData["Error"] != null)
-    {
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            @TempData["Error"]
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+}
+else
+{
+    <div class="card-custom p-4 mb-4">
+        <h2 class="h5 fw-bold mb-3">Cobros de la semana</h2>
+        <div class="row g-3">
+            <div class="col-sm-4"><div class="text-muted">Efectivo</div><strong class="fs-4">@CajaUi.Moneda(c.CobrosEfectivo)</strong></div>
+            <div class="col-sm-4"><div class="text-muted">Transferencias</div><strong class="fs-4">@CajaUi.Moneda(c.CobrosBanco)</strong></div>
+            <div class="col-sm-4"><div class="text-muted">Total cobrado</div><strong class="fs-4 text-success">@CajaUi.Moneda(c.CobrosEfectivo + c.CobrosBanco + c.CobrosSinClasificar)</strong></div>
         </div>
-    }
-    @if (TempData["Success"] != null)
+        <p class="text-muted small mt-3 mb-0">Por fecha de cobro. Puede incluir anticipos o cobros de pedidos de otra semana.</p>
+        @if (c.Devoluciones != 0 || c.GastosReparto != 0) { <p class="mt-2 mb-0">Devoluciones: @CajaUi.Moneda(c.Devoluciones) · Gastos elegidos para descontar: @CajaUi.Moneda(c.GastosReparto)</p> }
+    </div>
+    @if (r.SinClasificar.Any())
     {
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            @TempData["Success"]
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    }
-
-    @* Selector de semana *@
-    <div class="card card-custom p-3 mb-4" style="max-width: 400px;">
-        <label class="form-label small fw-bold text-muted mb-1">Seleccionar semana</label>
-        <select class="form-select"
-                onchange="window.location.href = '@Url.Action("CierreSemanal")' + '?inicioSemana=' + this.value">
-            @if (semanas != null)
+        <div class="card-custom p-4 mb-4 border border-warning">
+            <h2 class="h5">Identificar el origen de movimientos anteriores</h2>
+            <p>Antes de cerrar, indicá en qué cuenta entró o salió cada importe. Los movimientos antiguos no guardaban ese dato.</p>
+            @foreach (var m in r.SinClasificar)
             {
-                foreach (var s in semanas)
-                {
-                    if ((string)s.Valor == semanaSeleccionada)
-                    {
-                        <option value="@s.Valor" selected>@s.Label</option>
-                    }
-                    else
-                    {
-                        <option value="@s.Valor">@s.Label</option>
-                    }
-                }
+                <form asp-action="Clasificar" method="post" class="row g-2 align-items-center mb-3">
+                    @Html.AntiForgeryToken()<input type="hidden" name="id" value="@m.Id" /><input type="hidden" name="inicioSemana" value="@c.InicioSemana.ToString("yyyy-MM-dd")" />
+                    <div class="col-md-6">@m.Descripcion <strong>@CajaUi.Moneda(m.Monto)</strong></div>
+                    <div class="col-md-4"><select name="cuenta" class="form-select" aria-label="Origen del movimiento @m.Id" required><option value="">Elegir cuenta</option><option value="1">Efectivo</option><option value="2">Banco</option>@if (m.Categoria != CategoriaMovimiento.Venta) { <option value="3">Reserva Mercado Pago</option> }</select></div>
+                    <div class="col-md-2"><button class="btn btn-mv-secondary">Guardar</button></div>
+                </form>
             }
-        </select>
-    </div>
-
-    @if (yaCerrado)
-    {
-        <div class="alert alert-info d-flex align-items-center gap-2" role="alert">
-            <span class="material-symbols-outlined">check_circle</span>
-            El cierre de esta semana ya fue registrado.
         </div>
+    }
+    <div class="card-custom p-4 mb-4">
+        <div class="d-flex flex-wrap justify-content-between gap-2"><h2 class="h5 fw-bold">Costo de productos vendidos</h2><span class="status-badge">Informativo</span></div>
+        <div class="fs-3 fw-bold my-2">@CajaUi.Moneda(c.CostoInsumos ?? 0)</div>
+        <p class="text-muted">Ingredientes, bolsas y etiquetas de productos entregados. No se descuenta del reparto por porcentaje.</p>
+        <details><summary class="fw-semibold">Ver productos y costos</summary>
+            <div class="table-responsive mt-3"><table class="table table-sm align-middle"><thead><tr><th>Producto</th><th>Cantidad</th><th>Ingredientes</th><th>Bolsas y etiquetas</th><th>Total</th></tr></thead><tbody>
+            @foreach (var costo in c.Costos)
+            { <tr><td>@costo.Producto @if (costo.CostoPendiente) { <span class="badge text-bg-warning">Costo pendiente</span> }</td><td>@costo.Cantidad</td><td>@CajaUi.Moneda(costo.Ingredientes)</td><td>@CajaUi.Moneda(costo.Empaque)</td><td>@CajaUi.Moneda(costo.Ingredientes + costo.Empaque)</td></tr> }
+            </tbody></table></div>
+            <p class="small text-muted">Costo estimado según recetas; en entregas nuevas se guarda el costo de ingredientes al entregar y el empaque del pedido. Los anteriores se reconstruyen con precios actuales. Un cierre guardado conserva sus cifras.</p>
+        </details>
+        <p class="small mb-0">Ventas de estos productos: @CajaUi.Moneda(c.TotalVendido ?? 0) @if (c.TotalVendido > 0) { <span>· Costo: @(((c.CostoInsumos ?? 0) / c.TotalVendido.Value * 100).ToString("N1")) %</span> }</p>
+    </div>
+    @if (!r.Guardado)
+    {
+        <form asp-action="RegistrarCierre" method="post" class="card-custom p-4 mb-4" id="formCierre" data-base-centavos="@decimal.Round(Math.Max(0,c.BaseReparto)*100,0).ToString(inv)">
+            @Html.AntiForgeryToken()<input type="hidden" name="InicioSemana" value="@c.InicioSemana.ToString("yyyy-MM-dd")" />
+            <h2 class="h5 fw-bold">Reserva y reparto</h2>
+            <p>Base para repartir: <strong>@CajaUi.Moneda(c.BaseReparto)</strong></p>
+            <label asp-for="PorcentajeReserva" class="form-label">Porcentaje para reserva de insumos</label>
+            <div class="input-group mb-3" style="max-width:220px"><input asp-for="PorcentajeReserva" type="number" min="0" max="100" step="0.01" class="form-control" value="@Model.PorcentajeReserva.ToString("0.##", inv)" required /><span class="input-group-text">%</span></div>
+            <p class="text-muted small">Se recordará para el próximo cierre. Los cierres anteriores conservan su porcentaje.</p>
+            <div class="row g-3 mb-4" aria-live="polite">
+                <div class="col-sm-4"><div class="text-muted">A reservar</div><strong class="fs-4" id="importeReserva">@CajaUi.Moneda(c.Reserva)</strong></div>
+                <div class="col-sm-4"><div class="text-muted">Ani</div><strong class="fs-4" id="importeAni">@CajaUi.Moneda(c.Ani)</strong></div>
+                <div class="col-sm-4"><div class="text-muted">Maxi</div><strong class="fs-4" id="importeMaxi">@CajaUi.Moneda(c.Maxi)</strong></div>
+            </div>
+            @if (c.BaseReparto < 0) { <p class="alert alert-warning">La semana tiene un déficit. Se puede guardar el cierre sin asignar reserva ni retiros nuevos.</p> }
+            <label asp-for="Notas" class="form-label">Notas (opcional)</label><textarea asp-for="Notas" class="form-control mb-3" maxlength="1000" rows="2"></textarea>
+            @if (c.Costos.Any(x => x.CostoPendiente)) { <div class="form-check mb-3"><input asp-for="AceptarCostosPendientes" class="form-check-input" /><label asp-for="AceptarCostosPendientes" class="form-check-label">Guardar con la advertencia de costos pendientes</label></div> }
+            <button class="btn btn-mv-primary" disabled="@(r.SinClasificar.Any())">Guardar cierre</button>
+            <p class="small text-muted mt-3 mb-0">Guardar calcula las asignaciones. Después registrás las transferencias y retiros que efectivamente realices.</p>
+        </form>
     }
     else
     {
-        @* Card 1: Resumen de movimientos *@
-        <div class="card card-custom p-4 mb-4">
-            <h5 class="fw-bold mb-3">Resumen de la semana</h5>
-            <div class="row g-3">
-                <div class="col-md-4 col-lg">
-                    <div class="text-muted small mb-1">Ingresos</div>
-                    <div class="fs-4 fw-bold text-success">@Model.TotalIngresos.ToString("C", cultura)</div>
-                    <div class="text-muted small">Ventas y otros ingresos</div>
+        <div class="card-custom p-4 mb-4">
+            <h2 class="h5 fw-bold">Reserva y reparto guardados</h2><p>Reserva: @c.PorcentajeReserva % · Base: @CajaUi.Moneda(c.BaseReparto)</p>
+            @foreach (var destino in new[] { DestinoCierre.Reserva, DestinoCierre.Ani, DestinoCierre.Maxi })
+            {
+                var asignado = destino == DestinoCierre.Reserva ? c.Reserva : destino == DestinoCierre.Ani ? c.Ani : c.Maxi;
+                var pendiente = r.Pendiente(destino);
+                <div class="border-top pt-3 mt-3">
+                    <h3 class="h6 fw-bold">@(destino == DestinoCierre.Reserva ? "Reserva de insumos" : destino.ToString())</h3>
+                    <p>Asignado: <strong>@CajaUi.Moneda(asignado)</strong> · Registrado: @CajaUi.Moneda(asignado-pendiente) · Pendiente: <strong>@CajaUi.Moneda(pendiente)</strong></p>
+                    @if (pendiente > 0 && r.SaldosConfigurados)
+                    {
+                        <form asp-action="RegistrarPago" method="post" class="row g-2 align-items-end">
+                            @Html.AntiForgeryToken()<input type="hidden" name="Id" value="@c.Id" /><input type="hidden" name="Destino" value="@((int)destino)" /><input type="hidden" name="Clave" value="@Guid.NewGuid()" />
+                            <div class="col-sm-4"><label class="form-label" for="cuenta-@destino">Sale de</label><select class="form-select" name="Cuenta" id="cuenta-@destino" required><option value="">Elegir cuenta</option><option value="1">Efectivo</option><option value="2">Banco</option></select></div>
+                            <div class="col-sm-4"><label class="form-label" for="monto-@destino">Importe realizado</label><input id="monto-@destino" name="Monto" type="number" min="0.01" max="@pendiente.ToString(inv)" step="0.01" value="@pendiente.ToString("0.00", inv)" class="form-control" required /></div>
+                            <div class="col-sm-4"><button class="btn btn-mv-primary">@(destino == DestinoCierre.Reserva ? "Registrar envío a MP" : "Registrar retiro")</button></div>
+                        </form>
+                    }
                 </div>
-                <div class="col-md-4 col-lg">
-                    <div class="text-muted small mb-1">Egresos</div>
-                    <div class="fs-4 fw-bold text-danger">@Model.TotalEgresos.ToString("C", cultura)</div>
-                    <div class="text-muted small">Compras, gastos manuales</div>
-                </div>
-                <div class="col-md-4 col-lg">
-                    <div class="text-muted small mb-1">Neto en caja</div>
-                    <div class="fs-4 fw-bold @(Model.NetoSemana >= 0 ? "text-success" : "text-danger")">
-                        @Model.NetoSemana.ToString("C", cultura)
-                    </div>
-                    <div class="text-muted small">Reserva + ganancia</div>
-                </div>
-                <div class="col-md-4 col-lg border-start-md">
-                    <div class="text-muted small mb-1">Costo est. insumos</div>
-                    <div class="fs-5 fw-semibold text-danger">@Model.CostoInsumos.ToString("C", cultura)</div>
-                    <div class="text-muted small">Queda en caja como reserva</div>
-                </div>
-                <div class="col-md-4 col-lg">
-                    <div class="text-muted small mb-1">Ganancia estimada</div>
-                    <div class="fs-5 fw-semibold @(Model.GananciaEstimada >= 0 ? "text-success" : "text-danger")">
-                        @Model.GananciaEstimada.ToString("C", cultura)
-                    </div>
-                    <div class="text-muted small">Lo que se retira</div>
-                </div>
-            </div>
-        </div>
-
-        @* Card 2: Desglose colapsable *@
-        <div class="card card-custom p-4 mb-4">
-            <div class="d-flex justify-content-between align-items-center">
-                <h5 class="fw-bold mb-0">Desglose por producto</h5>
-                <button class="btn btn-sm btn-outline-secondary" type="button"
-                        data-bs-toggle="collapse" data-bs-target="#collapseDesglose">
-                    Ver desglose
-                </button>
-            </div>
-            <div class="collapse mt-3" id="collapseDesglose">
-                @if (!Model.DetallesCosto.Any())
-                {
-                    <p class="text-muted">No hay pedidos entregados esta semana con receta cargada.</p>
-                }
-                else
-                {
-                    <table class="table table-sm align-middle">
-                        <thead>
-                            <tr>
-                                <th>Producto</th>
-                                <th class="text-end">Cantidad vendida</th>
-                                <th class="text-end">Ingredientes / unidad</th>
-                                <th class="text-end">Bolsas y etiquetas</th>
-                                <th class="text-end">Costo total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var item in Model.DetallesCosto)
-                            {
-                                <tr>
-                                    <td>@item.NombreProducto</td>
-                                    <td class="text-end">@item.CantidadVendida</td>
-                                    <td class="text-end">@item.CostoUnitario.ToString("C", cultura)</td>
-                                    <td class="text-end">@item.CostoEmpaque.ToString("C", cultura)</td>
-                                    <td class="text-end fw-bold">@item.CostoTotal.ToString("C", cultura)</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                    <p class="text-muted small mb-0">
-                        Los ingredientes incluyen subrecetas y se calculan a precios actuales. Las bolsas y etiquetas usan el costo guardado en cada pedido entregado.
-                    </p>
-                }
-            </div>
-        </div>
-
-        @* Card 3: Registrar retiro *@
-        <div class="card card-custom p-4" style="max-width: 540px;">
-            <h5 class="fw-bold mb-3">Registrar retiro</h5>
-
-            <div class="d-flex gap-2 mb-3">
-                <button type="button" id="btnNeto"
-                        class="btn btn-outline-secondary flex-fill"
-                        onclick="usarMonto(@Model.NetoSemana.ToString("0.00", inv), 'btnNeto')">
-                    Neto en caja<br />
-                    <strong>@Model.NetoSemana.ToString("C", cultura)</strong>
-                </button>
-                <button type="button" id="btnEstimado"
-                        class="btn btn-outline-secondary flex-fill active"
-                        onclick="usarMonto(@gEstimadaStr, 'btnEstimado')">
-                    Ganancia estimada<br />
-                    <strong>@Model.GananciaEstimada.ToString("C", cultura)</strong>
-                </button>
-                <button type="button" id="btnFijo"
-                        class="btn btn-outline-secondary flex-fill"
-                        onclick="usarMonto(@gFijaStr, 'btnFijo')">
-                    Fijo 70%<br />
-                    <strong>@Model.GananciaFija.ToString("C", cultura)</strong>
-                </button>
-            </div>
-
-            <form asp-action="RegistrarCierre" method="post">
-                @Html.AntiForgeryToken()
-                <input type="hidden" name="InicioSemana" value="@Model.InicioSemana.ToString("yyyy-MM-dd")" />
-                <input type="hidden" name="FinSemana"    value="@Model.FinSemana.ToString("yyyy-MM-dd")" />
-
-                <div class="mb-3">
-                    <label asp-for="MontoARetirar" class="form-label fw-semibold">Monto a retirar</label>
-                    <input asp-for="MontoARetirar" type="number" class="form-control"
-                           step="0.01" min="0.01" lang="en"
-                           value="@Model.MontoARetirar.ToString("0.00", inv)" />
-                    <span asp-validation-for="MontoARetirar" class="text-danger small"></span>
-                </div>
-
-                <div class="mb-4">
-                    <label asp-for="Notas" class="form-label fw-semibold">
-                        Notas <span class="text-muted fw-normal">(opcional)</span>
-                    </label>
-                    <input asp-for="Notas" type="text" class="form-control"
-                           placeholder="Ej: semana con ventas altas" />
-                </div>
-
-                <div class="d-flex gap-2">
-                    <button type="submit"
-                            class="btn btn-mv-primary d-inline-flex align-items-center gap-2">
-                        <span class="material-symbols-outlined">savings</span>Registrar recaudación
-                    </button>
-                    <a asp-controller="ReporteCaja" asp-action="Index"
-                       class="btn btn-mv-secondary">Cancelar</a>
-                </div>
-            </form>
+            }
+            <p class="small text-muted mt-3 mb-0">Se registra un movimiento que ya realizaste. El sistema no ejecuta transferencias bancarias.</p>
         </div>
     }
-
+    @if (c.Saldos.Any())
+    {
+        <div class="card-custom p-4 mb-4"><h2 class="h5">Saldos de la semana al calcular el cierre</h2><div class="table-responsive"><table class="table"><thead><tr><th>Cuenta</th><th>Inicial</th><th>Entradas</th><th>Salidas</th><th>Final</th></tr></thead><tbody>
+        @foreach(var s in c.Saldos) { <tr><td>@CajaUi.Cuenta(s.Cuenta)</td><td>@CajaUi.Moneda(s.Inicial)</td><td>@CajaUi.Moneda(s.Entradas)</td><td>@CajaUi.Moneda(s.Salidas)</td><td>@CajaUi.Moneda(s.Final)</td></tr> }
+        </tbody></table></div><p class="small text-muted mb-0">Desde la apertura configurada, si comenzó durante la semana. La fotografía no cambia con retiros realizados después.</p></div>
+    }
+}
+<div class="card-custom p-4 mt-4">
+    <h2 class="h5">Dónde está el dinero ahora</h2>
+    @if (!r.SaldosConfigurados) { <p>Los datos antiguos no separaban las cuentas. Ingresá los saldos comprobados para comenzar.</p><a asp-action="Configuracion" class="btn btn-mv-primary">Configurar saldos iniciales</a> }
+    else { <div class="row g-3">@foreach (var saldo in r.SaldosActuales) { <div class="col-sm-4"><div class="text-muted">@CajaUi.Cuenta(saldo.Cuenta)</div><strong class="fs-4">@CajaUi.Moneda(saldo.Saldo)</strong></div> }</div> }
+</div>
 @section Scripts {
 <script>
-function usarMonto(valor, btnId) {
-    document.getElementById('MontoARetirar').value = valor.toFixed(2);
-    ['btnNeto', 'btnEstimado', 'btnFijo'].forEach(function(id) {
-        document.getElementById(id).classList.toggle('active', id === btnId);
-    });
-}
+(() => {
+    const form = document.getElementById('formCierre');
+    if (!form) return;
+    const porcentaje = document.getElementById('PorcentajeReserva');
+    const money = new Intl.NumberFormat('es-AR', {style:'currency',currency:'ARS'});
+    function recalcular() {
+        const base = Number(form.dataset.baseCentavos);
+        const p = Math.min(10000, Math.max(0, Math.round(Number(porcentaje.value) * 100)));
+        const reserva = Math.round(base*p/10000), ani = Math.round((base-reserva)/2), maxi = base-reserva-ani;
+        document.getElementById('importeReserva').textContent = money.format(reserva/100);
+        document.getElementById('importeAni').textContent = money.format(ani/100);
+        document.getElementById('importeMaxi').textContent = money.format(maxi/100);
+    }
+    porcentaje.addEventListener('input', recalcular); recalcular();
+})();
 </script>
 }

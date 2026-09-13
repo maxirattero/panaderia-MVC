@@ -98,12 +98,16 @@ namespace Panaderia.Services.Implementations
         }
 
         //registrar un cobro parcial o total de un pedido y el Reporte de Caja
-        public async Task RegistrarCobroAsync(int idPedido, decimal monto)
+        public async Task RegistrarCobroAsync(int idPedido, decimal monto, CuentaCaja cuenta = CuentaCaja.Efectivo, DateTime? fecha = null, Guid? clave = null)
         {
+            ReglasCaja.CuentaValida(cuenta, true);
+            ReglasCaja.ImporteValido(monto);
             if (monto <= 0)
                 throw new InvalidOperationException("El cobro debe ser mayor a cero.");
 
             await using var transaction = await IniciarMutacionAsync();
+            if (clave.HasValue && await _context.ReportesCaja.AnyAsync(r => r.ClaveOperacion == clave)) return;
+            await ReglasCaja.PeriodoAbiertoAsync(_context, fecha ?? DateTime.UtcNow);
             var pedido = await _context.Pedidos
                 .Include(p => p.Cliente)
                 .FirstOrDefaultAsync(p => p.Id == idPedido);
@@ -112,19 +116,21 @@ namespace Panaderia.Services.Implementations
                 if (monto > pedido.SaldoPendiente)
                     throw new InvalidOperationException("El cobro no puede superar el saldo pendiente.");
 
-                AplicarCobro(pedido, monto);
+                AplicarCobro(pedido, monto, cuenta, fecha, clave);
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
             }
         }
 
-        private void AplicarCobro(Pedido pedido, decimal monto)
+        private void AplicarCobro(Pedido pedido, decimal monto, CuentaCaja cuenta, DateTime? fecha = null, Guid? clave = null)
         {
             pedido.MontoCobrado += monto;
             pedido.FechaModificacion = DateTime.UtcNow;
             _context.ReportesCaja.Add(new ReporteCaja
             {
-                Fecha = DateTime.UtcNow,
+                Fecha = fecha ?? DateTime.UtcNow,
+                Cuenta = cuenta,
+                ClaveOperacion = clave,
                 Tipo = TipoMovimiento.Ingreso,
                 Categoria = CategoriaMovimiento.Venta,
                 Monto = monto,
@@ -133,8 +139,9 @@ namespace Panaderia.Services.Implementations
             });
         }
 
-        public async Task ActualizarSeleccionAsync(IEnumerable<int> ids, bool cobrar, bool entregar)
+        public async Task ActualizarSeleccionAsync(IEnumerable<int> ids, bool cobrar, bool entregar, CuentaCaja cuenta = CuentaCaja.Efectivo)
         {
+            if (cobrar) ReglasCaja.CuentaValida(cuenta, true);
             var seleccion = ids.Distinct().ToArray();
             if (seleccion.Length == 0 || seleccion.Any(id => id <= 0))
                 throw new InvalidOperationException("Seleccioná al menos un pedido válido.");
@@ -142,6 +149,7 @@ namespace Panaderia.Services.Implementations
                 throw new InvalidOperationException("Elegí cobrar, entregar o ambas acciones.");
 
             await using var transaction = await IniciarMutacionAsync();
+            await ReglasCaja.PeriodoAbiertoAsync(_context, DateTime.UtcNow);
             var pedidos = await _context.Pedidos.Include(p => p.Cliente)
                 .Where(p => seleccion.Contains(p.Id)).OrderBy(p => p.Id).ToListAsync();
             if (pedidos.Count != seleccion.Length)
@@ -152,10 +160,12 @@ namespace Panaderia.Services.Implementations
             foreach (var pedido in pedidos)
             {
                 if (cobrar && pedido.SaldoPendiente > 0)
-                    AplicarCobro(pedido, pedido.SaldoPendiente);
+                    AplicarCobro(pedido, pedido.SaldoPendiente, cuenta);
                 if (entregar && pedido.Estado != EstadoPedido.Entregado)
                 {
                     pedido.Estado = EstadoPedido.Entregado;
+                    pedido.FechaEntregaReal = DateTime.UtcNow;
+                    await CongelarCostoAsync(pedido);
                     pedido.FechaModificacion = DateTime.UtcNow;
                 }
             }
@@ -210,6 +220,7 @@ namespace Panaderia.Services.Implementations
         public async Task UpdateAsync(Pedido pedido)
         {
             await using var transaction = await IniciarMutacionAsync();
+            await ReglasCaja.PedidoEditableAsync(_context, pedido.Id);
             var existing = await _context.Pedidos
                 .Include(p => p.Detalles)
                 .FirstOrDefaultAsync(p => p.Id == pedido.Id);
@@ -262,10 +273,14 @@ namespace Panaderia.Services.Implementations
         public async Task DeleteAsync(int id)
         {
             await using var transaction = await IniciarMutacionAsync();
+            await ReglasCaja.PedidoEditableAsync(_context, id);
             var pedido = await _context.Pedidos
                 .Include(p => p.Detalles)
                 .FirstOrDefaultAsync(p => p.Id == id);
             if (pedido == null) return;
+
+            if (pedido.MontoCobrado > 0 || await _context.ReportesCaja.AnyAsync(r => r.IdPedido == id))
+                throw new InvalidOperationException("El pedido tiene movimientos de caja. Conservá el historial y usá anular después de devolver lo cobrado.");
 
             await RestituirStockReservadoAsync(pedido.Detalles);
             _context.Pedidos.Remove(pedido);
@@ -284,18 +299,18 @@ namespace Panaderia.Services.Implementations
         public async Task AnularAsync(int id)
         {
             await using var transaction = await IniciarMutacionAsync();
+            await ReglasCaja.PedidoEditableAsync(_context, id);
             var pedido = await _context.Pedidos
                 .Include(p => p.Detalles)
                 .FirstOrDefaultAsync(p => p.Id == id);
             if (pedido == null) return;
 
+            if (pedido.MontoCobrado > 0)
+                throw new InvalidOperationException("Primero registrá la devolución de lo cobrado. Anular no borra los movimientos de dinero.");
+
             await RestituirStockReservadoAsync(pedido.Detalles);
             pedido.Anulado = true;
 
-            var reportesVenta = await _context.ReportesCaja
-                .Where(r => r.IdPedido == id && r.Categoria == CategoriaMovimiento.Venta)
-                .ToListAsync();
-            _context.ReportesCaja.RemoveRange(reportesVenta);
 
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
@@ -305,13 +320,17 @@ namespace Panaderia.Services.Implementations
         public async Task MarcarEntregadoAsync(int id)
         {
             await using var transaction = await IniciarMutacionAsync();
+            await ReglasCaja.PeriodoAbiertoAsync(_context, DateTime.UtcNow);
             var pedido = await _context.Pedidos.FirstOrDefaultAsync(p => p.Id == id);
             if (pedido == null) return;
+            if (pedido.Estado == EstadoPedido.Entregado) return;
 
             if (!pedido.EstaPagado)
                 throw new InvalidOperationException("No se puede marcar como entregado: el pedido no está cobrado en su totalidad.");
 
             pedido.Estado = EstadoPedido.Entregado;
+            pedido.FechaEntregaReal = DateTime.UtcNow;
+            await CongelarCostoAsync(pedido);
             pedido.FechaModificacion = DateTime.UtcNow;
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
@@ -319,9 +338,7 @@ namespace Panaderia.Services.Implementations
 
         public async Task<decimal> GetTotalVendidoSemanaAsync()
         {
-            var hoy = DateTime.UtcNow.Date;
-            int diasDesdeDomingo = (int)hoy.DayOfWeek;
-            var inicioSemana = DateTime.SpecifyKind(hoy.AddDays(-diasDesdeDomingo), DateTimeKind.Utc);
+            var inicioSemana = DateTime.SpecifyKind(CalendarioCaja.Lunes(CalendarioCaja.Hoy).ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc);
             var finSemana = inicioSemana.AddDays(7);
 
             return await _context.Pedidos
@@ -851,6 +868,34 @@ namespace Panaderia.Services.Implementations
                         .SetProperty(p => p.Stock, p => p.Stock + cantidad)
                         .SetProperty(p => p.SinStock, p => !p.PorEncargo && p.Stock + cantidad <= 0));
             }
+        }
+
+        private async Task CongelarCostoAsync(Pedido pedido)
+        {
+            await _context.Entry(pedido).Collection(p => p.Detalles).LoadAsync();
+            var costos = await GetPreciosCostoAsync(pedido.Detalles.Select(d => d.IdProducto));
+            foreach (var d in pedido.Detalles)
+            {
+                if (d.FechaCosto.HasValue) continue;
+                d.CostoIngredientes = costos.TryGetValue(d.IdProducto, out var costo) ? costo : null;
+                d.FechaCosto = DateTime.UtcNow;
+            }
+        }
+
+        public async Task RegistrarDevolucionAsync(int idPedido, decimal monto, CuentaCaja cuenta, DateTime fecha, Guid clave, string? motivo)
+        {
+            ReglasCaja.CuentaValida(cuenta, true); ReglasCaja.ImporteValido(monto);
+            if (clave == Guid.Empty || string.IsNullOrWhiteSpace(motivo)) throw new InvalidOperationException("Indicá el motivo de la devolución.");
+            await using var tx = await IniciarMutacionAsync();
+            if (await _context.ReportesCaja.AnyAsync(r => r.ClaveOperacion == clave)) return;
+            await ReglasCaja.PeriodoAbiertoAsync(_context, fecha);
+            var p = await _context.Pedidos.SingleOrDefaultAsync(p => p.Id == idPedido) ?? throw new InvalidOperationException("No se encontró el pedido.");
+            if (monto > p.MontoCobrado) throw new InvalidOperationException("La devolución supera lo cobrado del pedido.");
+            p.MontoCobrado -= monto;
+            p.FechaModificacion = DateTime.UtcNow;
+            _context.ReportesCaja.Add(new() { Fecha = fecha, Cuenta = cuenta, Tipo = TipoMovimiento.Egreso, Categoria = CategoriaMovimiento.Devolucion,
+                IdPedido = idPedido, Monto = monto, ClaveOperacion = clave, Descripcion = $"Devolución pedido #{idPedido} · {motivo.Trim()}" });
+            await _context.SaveChangesAsync(); await tx.CommitAsync();
         }
 
         public async Task<Dictionary<int, decimal>> GetPreciosCostoAsync(IEnumerable<int> idsProductos)

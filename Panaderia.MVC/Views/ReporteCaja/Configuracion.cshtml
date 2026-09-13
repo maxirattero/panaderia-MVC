@@ -1,0 +1,21 @@
+@model Panaderia.MVC.Models.ConfiguracionCajaViewModel
+@{ ViewData["Title"] = "Configuración de caja"; }
+<h1 class="display-6 fw-bold titulo-pagina mb-3">Configuración de caja</h1>
+<partial name="_Avisos" />
+<form method="post" class="card-custom p-4" style="max-width:760px">
+    @Html.AntiForgeryToken()
+    <label asp-for="PorcentajeReserva" class="form-label fw-semibold">Porcentaje para reserva de insumos</label>
+    <div class="input-group mb-3" style="max-width:220px"><input asp-for="PorcentajeReserva" type="number" min="0" max="100" step="0.01" class="form-control" required /><span class="input-group-text">%</span></div>
+    <p class="text-muted">Inicialmente 30 %. El resto se divide por mitades entre Ani y Maxi. Cambiarlo no modifica cierres anteriores.</p>
+    <h2 class="h5 mt-4">Saldos iniciales por cuenta</h2>
+    @if(Model.AperturaGuardada)
+    { <p>Registrados desde @Model.InicioSaldos?.ToString("dd/MM/yyyy HH:mm"). Para corregir diferencias posteriores, registrá un movimiento de ajuste con su motivo.</p> }
+    else
+    {
+        <p>Elegí un momento de inicio e ingresá cuánto dinero había en cada cuenta <strong>antes de los movimientos de ese momento en adelante</strong>. Esos movimientos se sumarán automáticamente. El historial anterior no se vuelve a sumar.</p>
+        <label asp-for="InicioSaldos" class="form-label">Fecha y hora del inicio (Argentina)</label><input asp-for="InicioSaldos" type="datetime-local" class="form-control mb-3" />
+        <div class="row g-3"><div class="col-sm-4"><label asp-for="Efectivo" class="form-label">Efectivo</label><input asp-for="Efectivo" type="number" min="0" step="0.01" class="form-control" /></div><div class="col-sm-4"><label asp-for="Banco" class="form-label">Banco</label><input asp-for="Banco" type="number" min="0" step="0.01" class="form-control" /></div><div class="col-sm-4"><label asp-for="Reserva" class="form-label">Reserva Mercado Pago</label><input asp-for="Reserva" type="number" min="0" step="0.01" class="form-control" /></div></div>
+        <p class="small text-muted mt-3">Podés guardar solo el porcentaje y completar los saldos más adelante. No se asigna un medio de pago supuesto a los movimientos antiguos.</p>
+    }
+    <div class="d-flex gap-2 mt-4"><button class="btn btn-mv-primary">Guardar configuración</button><a asp-action="Index" class="btn btn-mv-secondary">Volver</a></div>
+</form>

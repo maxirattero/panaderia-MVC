@@ -18,6 +18,8 @@ namespace Panaderia.Models.Entities
         public int? IdEmpaque { get; set; }
         public bool LlevaEtiqueta { get; set; } = false;
         public decimal CostoEmpaque { get; set; } = 0m;
+        public decimal? CostoIngredientes { get; set; }
+        public DateTime? FechaCosto { get; set; }
 
         public Pedido Pedido { get; set; } = null!;
         public Producto Producto { get; set; } = null!;

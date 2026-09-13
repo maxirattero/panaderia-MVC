@@ -1,219 +1,38 @@
-@model ReporteCajaIndexViewModel
-@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@model Panaderia.MVC.Models.ReporteCajaIndexViewModel
 @using Panaderia.Models.Enums
-@using Panaderia.Models.Entities
-
-@{
-    ViewData["Title"] = "Caja";
-    var cultura = new System.Globalization.CultureInfo("es-AR");
+@using Panaderia.MVC.Models
+@using Panaderia.Services.Implementations
+@{ ViewData["Title"] = "Caja"; }
+<div class="d-flex flex-wrap justify-content-between gap-3 mb-4"><div><h1 class="display-6 fw-bold titulo-pagina">Caja</h1><p class="text-muted">Cobros, pagos y dinero disponible.</p></div><div class="d-flex flex-wrap gap-2 align-items-start"><a asp-action="CierreSemanal" class="btn btn-mv-primary">Cierre semanal</a><a asp-action="Historial" class="btn btn-mv-secondary">Historial</a><a asp-action="Configuracion" class="btn btn-mv-secondary">Configuración</a></div></div>
+<partial name="_Avisos" />
+@if (Model.SaldosConfigurados)
+{
+    <div class="row g-3 mb-4">@foreach(var s in Model.SaldosCuentas) { <div class="col-sm-4"><div class="card-custom p-4"><div class="text-muted">@CajaUi.Cuenta(s.Cuenta)</div><strong class="fs-3 @(s.Saldo < 0 ? "text-danger" : "")">@CajaUi.Moneda(s.Saldo)</strong></div></div> }</div>
+    <p class="text-muted">Total disponible entre cuentas: <strong>@CajaUi.Moneda(Model.SaldosCuentas.Sum(s=>s.Saldo))</strong> · Saldos actuales, independientes del filtro.</p>
 }
-
-    <div class="row align-items-end mb-4 gy-4">
-        <div class="col-md-7">
-            <h1 class="display-6 fw-bold titulo-pagina mb-1">Reportes de Caja</h1>
-            <p class="text-secondary m-0">Registros de ingresos y egresos de la panadería.</p>
-        </div>
-        <div class="col-12 col-md-5 d-flex justify-content-end flex-wrap gap-2 mt-3 mt-md-0">
-            <a asp-action="CierreSemanal"
-               class="btn btn-outline-secondary d-inline-flex align-items-center gap-2">
-                <span class="material-symbols-outlined">savings</span>Cierre semanal
-            </a>
-            <a asp-action="Create" class="btn btn-mv-primary d-inline-flex align-items-center gap-2 shadow">
-                <span class="material-symbols-outlined">add</span>Nuevo movimiento
-            </a>
-        </div>
-    </div>
-
-    @if (TempData["Success"] != null)
-    {
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            @TempData["Success"]
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    }
-    @if (TempData["Error"] != null)
-    {
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            @TempData["Error"]
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    }
-
-    <div class="d-flex justify-content-end mb-4">
-        <div class="card-custom p-3">
-            <div class="d-flex align-items-center gap-3">
-                <span class="small fw-bold text-muted">Saldo actual</span>
-                <span class="fs-4 fw-bold @(Model.Saldo >= 0 ? "text-success" : "text-danger")">
-                    @Model.Saldo.ToString("C", cultura)
-                </span>
-            </div>
-        </div>
-    </div>
-
-    <div class="card-custom p-3 mb-4">
-        <form method="get" asp-action="Index" id="filtroCaja" class="row g-3 align-items-end">
-            <div class="col-6 col-md-3">
-                <label class="form-label small fw-bold text-muted">Desde</label>
-                <input type="date" name="fechaInicio" class="form-control"
-                       value="@(Model.FechaInicio?.ToString("yyyy-MM-dd"))" />
-            </div>
-            <div class="col-6 col-md-3">
-                <label class="form-label small fw-bold text-muted">Hasta</label>
-                <input type="date" name="fechaFin" class="form-control"
-                       value="@(Model.FechaFin?.ToString("yyyy-MM-dd"))" />
-            </div>
-            <div class="col-12 col-md-3">
-                <label class="form-label small fw-bold text-muted d-block">Tipo</label>
-                <div class="d-flex gap-2 flex-wrap">
-                    <button type="button" id="pilTipoTodos"
-                            class="pill-filtro @(Model.TipoFiltro == null && !Model.SoloTotalesVendidos ? "activo" : "")"
-                            onclick="seleccionarTipo('')">Todos</button>
-                    <button type="button" id="pilTipoIngreso"
-                            class="pill-filtro @(Model.TipoFiltro == TipoMovimiento.Ingreso ? "activo" : "")"
-                            onclick="seleccionarTipo('Ingreso')">Ingreso</button>
-                    <button type="button" id="pilTipoEgreso"
-                            class="pill-filtro @(Model.TipoFiltro == TipoMovimiento.Egreso ? "activo" : "")"
-                            onclick="seleccionarTipo('Egreso')">Egreso</button>
-                    <button type="button" id="pilTotalesVendidos"
-                            class="pill-filtro @(Model.SoloTotalesVendidos ? "activo" : "")"
-                            onclick="seleccionarTotalesVendidos()">Totales vendidos</button>
-                </div>
-                <input type="hidden" name="TipoFiltro" id="tipoFiltroHidden" value="@Model.TipoFiltro" />
-                <input type="hidden" name="soloTotalesVendidos" id="soloTotalesVendidosHidden"
-                       value="@Model.SoloTotalesVendidos.ToString().ToLowerInvariant()" />
-            </div>
-            <div class="col-12 col-md-3 d-flex gap-2">
-                <button type="submit" class="btn btn-mv-primary flex-fill">Filtrar</button>
-                <a asp-action="Index" class="btn btn-mv-secondary flex-fill">Limpiar</a>
-            </div>
-        </form>
-    </div>
-
-    <div class="card-custom overflow-hidden mb-4">
-        <div class="table-responsive">
-            <table class="table table-custom table-hover m-0">
-                <thead>
-                    <tr>
-                        <th class="d-md-none"></th>
-                        <th>Fecha</th>
-                        <th>Tipo</th>
-                        <th class="d-none d-md-table-cell">Categoría</th>
-                        <th class="d-none d-md-table-cell">Descripción</th>
-                        <th>Monto</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @if (!Model.Movimientos.Any())
-                    {
-                        <tr>
-                            <td colspan="6" class="text-center text-muted py-4">No hay movimientos.</td>
-                        </tr>
-                    }
-                    else
-                    {
-                        @foreach (var r in Model.Movimientos)
-                        {
-                            @if (!Model.SoloTotalesVendidos)
-                            {
-                            <tr>
-                                <td class="d-md-none">
-                                    <button class="btn btn-sm btn-outline-secondary" type="button"
-                                            data-bs-toggle="collapse" data-bs-target="#detalle-mov-@r.Id">
-                                        <span class="material-symbols-outlined">expand_more</span>
-                                    </button>
-                                </td>
-                                <td>@r.Fecha.ToString("dd/MM/yyyy")</td>
-                                <td>
-                                    @if (r.Tipo == TipoMovimiento.Ingreso)
-                                    {
-                                        <span class="status-badge status-active">Ingreso</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="status-badge status-pending">Egreso</span>
-                                    }
-                                </td>
-                                <td class="d-none d-md-table-cell">@r.Categoria</td>
-                                <td class="d-none d-md-table-cell">@r.Descripcion</td>
-                                <td class="fw-bold @(r.Tipo == TipoMovimiento.Ingreso ? "text-success" : "text-danger")">
-                                    @r.Monto.ToString("C", cultura)
-                                </td>
-                            </tr>
-                            <tr class="collapse d-md-none" id="detalle-mov-@r.Id">
-                                <td colspan="6" class="bg-light bg-opacity-25">
-                                    <div class="d-flex flex-column gap-1 small">
-                                        <div><span class="fw-bold">Categoría:</span> @r.Categoria</div>
-                                        <div><span class="fw-bold">Descripción:</span> @r.Descripcion</div>
-                                        <div class="d-flex gap-2 mt-2 pt-2 border-top">
-                                            <a asp-action="Edit" asp-route-id="@r.Id"
-                                               class="btn btn-sm btn-outline-success" title="Editar">
-                                                <span class="material-symbols-outlined">edit</span> Editar
-                                            </a>
-                                            <button type="button"
-                                                    class="btn btn-sm btn-outline-danger"
-                                                    title="Eliminar"
-                                                    data-bs-toggle="modal"
-                                                    data-bs-target="#deleteModal"
-                                                    data-id="@r.Id"
-                                                    data-nombre="@(string.IsNullOrWhiteSpace(r.Descripcion) ? $"Movimiento del {r.Fecha.ToString("dd/MM/yyyy")}" : r.Descripcion)"
-                                                    data-delete-url="@Url.Action("Delete", "ReporteCaja", new { id = r.Id })"
-                                                    data-token="@Antiforgery.GetAndStoreTokens(Context).RequestToken">
-                                                <span class="material-symbols-outlined">delete</span> Eliminar
-                                            </button>
-                                        </div>
-                                    </div>
-                                </td>
-                            </tr>
-                            }
-                            @if (r.TotalVendidoInformativo.HasValue)
-                            {
-                                <tr class="table-light">
-                                    <td class="d-md-none">
-                                        <span class="material-symbols-outlined text-secondary">info</span>
-                                    </td>
-                                    <td>
-                                        @r.Fecha.ToString("dd/MM/yyyy")
-                                        <small class="d-md-none d-block text-secondary">Total vendido de la semana</small>
-                                    </td>
-                                    <td><span class="status-badge">Informativo</span></td>
-                                    <td class="d-none d-md-table-cell">Total vendido</td>
-                                    <td class="d-none d-md-table-cell">
-                                        Semana @r.FechaInicioPeriodo?.ToString("dd/MM") - @r.FechaFinPeriodo?.AddDays(-1).ToString("dd/MM/yyyy")
-                                    </td>
-                                    <td class="fw-bold titulo-pagina">@r.TotalVendidoInformativo.Value.ToString("C", cultura)</td>
-                                </tr>
-                            }
-                        }
-                    }
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    @if (!Model.SoloTotalesVendidos)
-    {
-    <div class="d-flex justify-content-end align-items-center gap-4 flex-wrap">
-        <span class="small fw-bold text-muted">
-            Ingresos del período: <span class="text-success">@Model.TotalIngresos.ToString("C", cultura)</span>
-        </span>
-        <span class="small fw-bold text-muted">
-            Egresos del período: <span class="text-danger">@Model.TotalEgresos.ToString("C", cultura)</span>
-        </span>
-    </div>
-    }
-
-@section Scripts {
-    <script>
-        function seleccionarTipo(valor) {
-            document.getElementById('tipoFiltroHidden').value = valor;
-            document.getElementById('soloTotalesVendidosHidden').value = 'false';
-            document.getElementById('filtroCaja').submit();
-        }
-
-        function seleccionarTotalesVendidos() {
-            document.getElementById('tipoFiltroHidden').value = '';
-            document.getElementById('soloTotalesVendidosHidden').value = 'true';
-            document.getElementById('filtroCaja').submit();
-        }
-    </script>
+else
+{ <div class="alert alert-info">Para separar el dinero disponible en efectivo, banco y reserva, <a asp-action="Configuracion">configurá los saldos iniciales</a>. El saldo histórico sin conciliación es @CajaUi.Moneda(Model.Saldo).</div> }
+<div class="d-flex gap-2 mb-3"><a asp-action="Create" class="btn btn-mv-secondary">Nuevo movimiento</a><a asp-action="Transferencia" class="btn btn-mv-secondary">Transferencia entre cuentas</a></div>
+<form method="get" class="card-custom p-3 mb-4"><div class="row g-3 align-items-end">
+    <div class="col-sm-6 col-lg-2"><label for="fechaInicio" class="form-label">Desde</label><input id="fechaInicio" name="fechaInicio" type="date" value="@Model.FechaInicio?.ToString("yyyy-MM-dd")" class="form-control" /></div>
+    <div class="col-sm-6 col-lg-2"><label for="fechaFin" class="form-label">Hasta</label><input id="fechaFin" name="fechaFin" type="date" value="@Model.FechaFin?.ToString("yyyy-MM-dd")" class="form-control" /></div>
+    <div class="col-sm-6 col-lg-3"><label asp-for="CuentaFiltro" class="form-label">Cuenta</label><select asp-for="CuentaFiltro" asp-items="Html.GetEnumSelectList<CuentaCaja>()" class="form-select"><option value="">Todas</option></select></div>
+    <div class="col-sm-6 col-lg-3"><label asp-for="TipoFiltro" class="form-label">Tipo</label><select asp-for="TipoFiltro" asp-items="Html.GetEnumSelectList<TipoMovimiento>()" class="form-select"><option value="">Todos</option></select></div>
+    <div class="col-lg-2"><button class="btn btn-mv-primary">Filtrar</button> <a asp-action="Index">Limpiar</a></div>
+</div></form>
+<div class="card-custom p-3 mb-4"><div class="table-responsive"><table class="table align-middle"><thead><tr><th>Fecha</th><th>Cuenta</th><th>Concepto</th><th class="text-end">Importe</th><th></th></tr></thead><tbody>
+@foreach (var m in Model.Movimientos)
+{
+    <tr><td class="text-nowrap">@CalendarioCaja.Local(m.Fecha).ToString("dd/MM/yyyy")</td><td>@CajaUi.Cuenta(m.Cuenta)</td><td><strong>@m.Categoria</strong><div class="small text-muted">@m.Descripcion</div>@if(m.DescontarDelReparto) { <span class="badge text-bg-warning">Descuenta del reparto</span> }</td><td class="text-end text-nowrap @(m.Tipo == TipoMovimiento.Ingreso ? "text-success" : "text-danger")">@(m.Tipo == TipoMovimiento.Ingreso ? "+" : "−")@CajaUi.Moneda(m.Monto)</td><td><a asp-action="Edit" asp-route-id="@m.Id" class="btn btn-sm btn-mv-secondary">Ver</a></td></tr>
+}
+@if (!Model.Movimientos.Any()) { <tr><td colspan="5" class="text-muted text-center py-4">No hay movimientos para este filtro.</td></tr> }
+</tbody></table></div>
+<p class="small text-muted mb-0">Entradas del período: @CajaUi.Moneda(Model.TotalIngresos) · Salidas: @CajaUi.Moneda(Model.TotalEgresos). Las transferencias internas no suman en estos totales.</p></div>
+@if (Model.TotalPaginas > 1)
+{
+    <nav class="d-flex gap-3 align-items-center" aria-label="Páginas de movimientos">
+        @if(Model.Pagina > 1) { <a asp-route-pagina="@(Model.Pagina-1)" asp-route-fechaInicio="@Model.FechaInicio?.ToString("yyyy-MM-dd")" asp-route-fechaFin="@Model.FechaFin?.ToString("yyyy-MM-dd")" asp-route-cuentaFiltro="@Model.CuentaFiltro" asp-route-tipoFiltro="@Model.TipoFiltro">Anterior</a> }
+        <span>Página @Model.Pagina de @Model.TotalPaginas</span>
+        @if(Model.Pagina < Model.TotalPaginas) { <a asp-route-pagina="@(Model.Pagina+1)" asp-route-fechaInicio="@Model.FechaInicio?.ToString("yyyy-MM-dd")" asp-route-fechaFin="@Model.FechaFin?.ToString("yyyy-MM-dd")" asp-route-cuentaFiltro="@Model.CuentaFiltro" asp-route-tipoFiltro="@Model.TipoFiltro">Siguiente</a> }
+    </nav>
 }

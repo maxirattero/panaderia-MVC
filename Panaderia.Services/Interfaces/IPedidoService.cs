@@ -24,7 +24,8 @@ namespace Panaderia.Services.Interfaces
         Task<IEnumerable<Pedido>> GetByFechaAsync(DateTime fecha);
 
         //registrar un cobro parcial o total de un pedido
-        Task RegistrarCobroAsync(int idPedido, decimal monto);
+        Task RegistrarCobroAsync(int idPedido, decimal monto, CuentaCaja cuenta = CuentaCaja.Efectivo, DateTime? fecha = null, Guid? clave = null);
+        Task RegistrarDevolucionAsync(int idPedido, decimal monto, CuentaCaja cuenta, DateTime fecha, Guid clave, string? motivo);
 
         //Crear un nuevo pedido
         Task CreateAsync(Pedido pedido);
@@ -50,7 +51,7 @@ namespace Panaderia.Services.Interfaces
         // Marcar pedido como entregado
         Task MarcarEntregadoAsync(int id);
         // Completar saldos y/o entregar una selección en una única transacción.
-        Task ActualizarSeleccionAsync(IEnumerable<int> ids, bool cobrar, bool entregar);
+        Task ActualizarSeleccionAsync(IEnumerable<int> ids, bool cobrar, bool entregar, CuentaCaja cuenta = CuentaCaja.Efectivo);
         // Total vendido en la semana actual (domingo a sábado)
         Task<decimal> GetTotalVendidoSemanaAsync();
         // Total vendido por fecha de entrega. Es un dato de pedidos, independiente de caja.

@@ -14,8 +14,24 @@
 
     <form asp-action="Create" method="post">
         @Html.AntiForgeryToken()
+        <input asp-for="ClaveOperacion" type="hidden" />
         <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
 
+        <div class="card card-custom p-4 mb-4">
+            <label for="cuentaCompra" class="form-label fw-semibold">Origen de los fondos</label>
+            <select asp-for="CuentaPago" class="form-select mb-2" id="cuentaCompra">
+                <option value="3">Reserva de insumos · Mercado Pago</option>
+                <option value="1">Efectivo</option>
+                <option value="2">Cuenta bancaria</option>
+            </select>
+            <span asp-validation-for="CuentaPago" class="text-danger"></span>
+            <p class="text-muted small">Las compras pagadas con la reserva reducen ese fondo y no se descuentan del reparto semanal.</p>
+            <div class="form-check" id="opcionGastoCompra">
+                <input asp-for="DescontarDelReparto" class="form-check-input" />
+                <label asp-for="DescontarDelReparto" class="form-check-label">Descontar esta compra del reparto de la semana</label>
+                <div class="small text-muted">Solo para efectivo o banco. Si vas a reponer ese dinero desde la reserva, dejalo desmarcado y registrá la transferencia entre cuentas.</div>
+            </div>
+        </div>
         <div class="card card-custom p-4 mb-4">
             <div class="row g-4">
                 <div class="col-md-6">
@@ -142,6 +158,15 @@
     const tbody           = document.getElementById('detallesBody');
     const tmpl            = document.getElementById('detalleTemplate');
     const btnAgregar      = document.getElementById('btnAgregarItem');
+    const cuentaCompra = document.getElementById('cuentaCompra');
+    function mostrarOrigenCompra() {
+        const reserva = cuentaCompra.value === '3';
+        document.getElementById('opcionGastoCompra').hidden = reserva;
+        const opcion = document.getElementById('DescontarDelReparto');
+        if (reserva) opcion.checked = false;
+    }
+    cuentaCompra.addEventListener('change', mostrarOrigenCompra);
+    mostrarOrigenCompra();
     const totalEl         = document.getElementById('totalGeneral');
     const costoEnvioInput = document.getElementById('costoEnvio');
     const checkboxesDiv   = document.getElementById('checkboxesEnvio');

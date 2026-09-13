@@ -1,0 +1,15 @@
+@model Panaderia.MVC.Models.TransferenciaCajaViewModel
+@using Panaderia.Models.Enums
+@{ ViewData["Title"] = "Transferencia entre cuentas"; var cuentas = Html.GetEnumSelectList<CuentaCaja>().Where(x=>x.Value != "0").ToList(); }
+<h1 class="display-6 fw-bold titulo-pagina mb-3">Transferencia entre cuentas</h1>
+<partial name="_Avisos" />
+<form method="post" class="card-custom p-4" style="max-width:700px">
+    @Html.AntiForgeryToken()<input asp-for="Clave" type="hidden" />
+    <p>Registrá un movimiento que ya realizaste entre tus cuentas. No cambia el ingreso ni el reparto de la semana.</p>
+    <p class="small text-muted">Para enviar la reserva asignada a un cierre, usá “Registrar envío a MP” dentro de ese cierre, así también se actualiza lo pendiente.</p>
+    <label asp-for="Origen" class="form-label">Sale de</label><select asp-for="Origen" asp-items="cuentas" class="form-select mb-3"><option value="">Elegir cuenta</option></select>
+    <label asp-for="Destino" class="form-label">Entra en</label><select asp-for="Destino" asp-items="cuentas" class="form-select mb-3"><option value="">Elegir cuenta</option></select>
+    <label asp-for="Monto" class="form-label">Importe</label><input asp-for="Monto" type="number" min="0.01" step="0.01" class="form-control mb-3" required />
+    <label asp-for="Fecha" class="form-label">Fecha y hora (vacío = ahora)</label><input asp-for="Fecha" type="datetime-local" class="form-control mb-4" />
+    <button class="btn btn-mv-primary">Registrar transferencia realizada</button> <a asp-action="Index" class="btn btn-mv-secondary">Volver</a>
+</form>

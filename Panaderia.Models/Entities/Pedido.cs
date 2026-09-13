@@ -8,6 +8,7 @@ namespace Panaderia.Models.Entities
         public int IdCliente { get; set; }
         public EstadoPedido Estado { get; set; } = EstadoPedido.Pendiente;
         public DateTime? FechaEntrega { get; set; }
+        public DateTime? FechaEntregaReal { get; set; }
         // Descuento sobre el total del pedido, 0 a 100. MontoTotal se guarda YA con el descuento aplicado.
         public decimal DescuentoPorcentaje { get; set; } = 0m;
         public decimal MontoTotal { get; set; }

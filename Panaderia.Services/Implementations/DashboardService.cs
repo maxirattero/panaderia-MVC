@@ -18,18 +18,19 @@ namespace Panaderia.Services.Implementations
         public async Task<DashboardResumen> GetResumenDashboardAsync()
         {
             var now = DateTime.UtcNow;
-            var hoy = new DateTime(now.Year, now.Month, now.Day, 0, 0, 0, DateTimeKind.Utc);
+            var fechaLocal = CalendarioCaja.Hoy;
+            var hoy = DateTime.SpecifyKind(fechaLocal.ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc);
 
             // --- Caja del mes ---
-            var inicioMes = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            var inicioMes = CalendarioCaja.InicioUtc(new DateOnly(fechaLocal.Year, fechaLocal.Month, 1));
             var movimientos = await _context.ReportesCaja
-                .Where(r => r.Fecha >= inicioMes && r.Fecha <= now)
+                .Where(r => r.Fecha >= inicioMes && r.Fecha <= now && r.Categoria != CategoriaMovimiento.Transferencia)
                 .ToListAsync();
 
             var caja = new CajaMesResumen
             {
-                Mes           = now.Month,
-                Anio          = now.Year,
+                Mes           = fechaLocal.Month,
+                Anio          = fechaLocal.Year,
                 TotalIngresos = movimientos.Where(r => r.Tipo == TipoMovimiento.Ingreso).Sum(r => r.Monto),
                 TotalEgresos  = movimientos.Where(r => r.Tipo == TipoMovimiento.Egreso).Sum(r => r.Monto)
             };

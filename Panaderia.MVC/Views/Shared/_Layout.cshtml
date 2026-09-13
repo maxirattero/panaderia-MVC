@@ -86,6 +86,9 @@
         cobrarModal.addEventListener('show.bs.modal', function (e) {
         const btn = e.relatedTarget;        
         document.getElementById('cobrarIdPedido').value = btn.dataset.id;
+        document.getElementById('claveCobro').value = crypto.randomUUID();
+        document.getElementById('cuentaCobro').value = '';
+        document.getElementById('fechaCobro').value = '';
         document.getElementById('cobrarMonto').value = btn.dataset.saldo;
         document.getElementById('cobrarSaldo').textContent = btn.dataset.saldoLabel;
         document.getElementById('cobrarForm').action = btn.dataset.cobrarUrl;        

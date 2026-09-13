@@ -11,4 +11,5 @@ public class SeleccionPedidosViewModel
     [Required]
     [RegularExpression("^(cobrar|entregar|cobrar-entregar)$")]
     public string Accion { get; set; } = "";
+    public Panaderia.Models.Enums.CuentaCaja Cuenta { get; set; }
 }

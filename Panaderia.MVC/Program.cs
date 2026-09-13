@@ -83,6 +83,7 @@ builder.Services.AddScoped<IClienteService, ClienteService>();
 builder.Services.AddScoped<IAccesoTiendaService, AccesoTiendaService>();
 builder.Services.AddScoped<IPedidoService, PedidoService>();
 builder.Services.AddScoped<IReporteCajaService, ReporteCajaService>();
+builder.Services.AddScoped<ICierreCajaService, CierreCajaService>();
 builder.Services.AddScoped<ICategoriaService, CategoriaService>();
 builder.Services.AddScoped<IFormatoService, FormatoService>();
 builder.Services.AddScoped<ITamanoService, TamanoService>();

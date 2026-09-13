@@ -7,6 +7,10 @@ public class CompraViewModel
     public string? NumeroFactura { get; set; }
     public string? Notas { get; set; }
     public List<CompraDetalleViewModel> Detalles { get; set; } = new();
+    [System.ComponentModel.DataAnnotations.Range(1, 3)]
+    public Panaderia.Models.Enums.CuentaCaja CuentaPago { get; set; } = Panaderia.Models.Enums.CuentaCaja.ReservaMercadoPago;
+    public bool DescontarDelReparto { get; set; }
+    public Guid ClaveOperacion { get; set; } = Guid.NewGuid();
 }
 
 public class CompraDetalleViewModel

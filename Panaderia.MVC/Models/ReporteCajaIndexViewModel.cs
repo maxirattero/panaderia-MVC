@@ -13,5 +13,10 @@ namespace Panaderia.MVC.Models
         public DateTime? FechaFin { get; set; }
         public TipoMovimiento? TipoFiltro { get; set; }
         public bool SoloTotalesVendidos { get; set; }
+        public List<Panaderia.Models.DTOs.SaldoCuentaCaja> SaldosCuentas { get; set; } = [];
+        public bool SaldosConfigurados { get; set; }
+        public Panaderia.Models.Enums.CuentaCaja? CuentaFiltro { get; set; }
+        public int Pagina { get; set; } = 1;
+        public int TotalPaginas { get; set; }
     }
 }

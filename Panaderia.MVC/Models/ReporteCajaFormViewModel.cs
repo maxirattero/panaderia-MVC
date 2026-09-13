@@ -14,5 +14,8 @@ namespace Panaderia.MVC.Models
         public int? IdProveedor { get; set; }
         public int? IdPedido { get; set; }
         public SelectList? Proveedores { get; set; }
+        [System.ComponentModel.DataAnnotations.Range(1, 3)] public CuentaCaja Cuenta { get; set; }
+        public bool DescontarDelReparto { get; set; }
+        public bool EsAutomatico { get; set; }
     }
 }

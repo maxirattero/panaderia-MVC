@@ -1,94 +1,61 @@
-@model ReporteCajaFormViewModel
+@model Panaderia.MVC.Models.ReporteCajaFormViewModel
 @using Panaderia.Models.Enums
-
+@using Panaderia.MVC.Models
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 @{
-    ViewData["Title"] = "Editar movimiento";
+    ViewData["Title"] = "Movimiento de caja";
+    var cuentas = Html.GetEnumSelectList<CuentaCaja>().Where(x => x.Value != "0").ToList();
+    var categorias = Html.GetEnumSelectList<CategoriaMovimiento>().Where(x => x.Value == "2" || x.Value == "4" || x.Value == "7");
 }
-
-<div style="max-width: 700px;">
-    <div class="mb-4">
-        <h1 class="display-6 fw-bold titulo-pagina mb-1">Editar movimiento</h1>
-        <p class="text-muted">Modificá los datos del movimiento.</p>
+<h1 class="display-6 fw-bold titulo-pagina mb-3">Movimiento de caja</h1>
+<partial name="_Avisos" />
+@if (Model.EsAutomatico)
+{
+    <div class="card-custom p-4 mb-4" style="max-width:800px">
+        <p class="fw-bold fs-4">@CajaUi.Moneda(Model.Monto)</p><p>@Model.Descripcion</p>
+        <p>@Model.Fecha.ToString("dd/MM/yyyy") · @CajaUi.Cuenta(Model.Cuenta)</p>
+        <p class="text-muted mb-0">Se conserva el movimiento original para mantener la relación con el pedido, compra o cierre.</p>
     </div>
-
+    @if (Model.Cuenta == CuentaCaja.SinClasificar)
+    {
+        <form asp-action="Clasificar" method="post" class="card-custom p-4 mb-4" style="max-width:800px">
+            @Html.AntiForgeryToken()<input type="hidden" name="id" value="@Model.Id" />
+            <label for="cuentaClasificar" class="form-label">Cuenta del movimiento histórico</label>
+            <select id="cuentaClasificar" name="cuenta" class="form-select mb-3" required><option value="">Elegir cuenta</option><option value="1">Efectivo</option><option value="2">Banco</option>@if(Model.Categoria != CategoriaMovimiento.Venta) { <option value="3">Reserva Mercado Pago</option> }</select>
+            <button class="btn btn-mv-secondary">Guardar origen</button>
+        </form>
+    }
     @if (Model.IdPedido.HasValue)
     {
-        <div class="alert alert-info mb-3">
-            Movimiento generado por el Pedido #@Model.IdPedido — podés editarlo, el vínculo se conserva.
-        </div>
+        <details class="card-custom p-4 mb-4" style="max-width:800px"><summary class="fw-semibold">Registrar devolución de dinero del pedido</summary>
+            <form asp-action="Devolucion" method="post" class="mt-3">
+                @Html.AntiForgeryToken()<input type="hidden" name="idPedido" value="@Model.IdPedido" /><input type="hidden" name="clave" value="@Guid.NewGuid()" />
+                <p>Registrá únicamente el dinero que efectivamente devolviste. Se conserva el cobro original y se actualiza lo cobrado del pedido.</p>
+                <label for="montoDevolucion" class="form-label">Importe devuelto</label><input id="montoDevolucion" name="monto" type="number" min="0.01" step="0.01" class="form-control mb-3" required />
+                <label for="cuentaDevolucion" class="form-label">Sale de</label><select id="cuentaDevolucion" name="cuenta" class="form-select mb-3" required><option value="">Elegir cuenta</option><option value="1">Efectivo</option><option value="2">Banco</option></select>
+                <label for="motivoDevolucion" class="form-label">Motivo</label><input id="motivoDevolucion" name="motivo" maxlength="500" class="form-control mb-3" required />
+                <button class="btn btn-mv-primary">Registrar devolución realizada</button>
+            </form>
+        </details>
     }
-
-    <div class="card card-custom p-4 mb-4">
-        <form asp-action="Edit" method="post">
-            @Html.AntiForgeryToken()
-            <input type="hidden" asp-for="Id" />
-            <div asp-validation-summary="All" class="text-danger mb-3"></div>
-
-            <div class="row g-4">
-                <div class="col-md-6">
-                    <label asp-for="Fecha" class="form-label small fw-bold text-muted">Fecha</label>
-                    <input asp-for="Fecha" type="date" class="form-control" />
-                    <span asp-validation-for="Fecha" class="text-danger"></span>
-                </div>
-                <div class="col-md-6">
-                    <label asp-for="Categoria" class="form-label small fw-bold text-muted">Categoría</label>
-                    <select asp-for="Categoria" asp-items="Html.GetEnumSelectList<CategoriaMovimiento>()"
-                            class="form-select" id="categoriaSelect"></select>
-                    <span asp-validation-for="Categoria" class="text-danger"></span>
-                </div>
-                <div class="col-md-6">
-                    <label asp-for="Tipo" class="form-label small fw-bold text-muted">Tipo</label>
-                    <select asp-for="Tipo" asp-items="Html.GetEnumSelectList<TipoMovimiento>()"
-                            class="form-select" id="tipoSelect"></select>
-                    <span asp-validation-for="Tipo" class="text-danger"></span>
-                </div>
-                <div class="col-md-6">
-                    <label asp-for="Monto" class="form-label small fw-bold text-muted">Monto</label>
-                    <input asp-for="Monto" type="number" step="0.01" lang="en" class="form-control" placeholder="0.00" />
-                    <span asp-validation-for="Monto" class="text-danger"></span>
-                </div>
-                <div class="col-12">
-                    <label asp-for="Descripcion" class="form-label small fw-bold text-muted">Descripción</label>
-                    <textarea asp-for="Descripcion" class="form-control" rows="2"></textarea>
-                    <span asp-validation-for="Descripcion" class="text-danger"></span>
-                </div>
-                <div class="col-12" id="proveedorWrapper">
-                    <label asp-for="IdProveedor" class="form-label small fw-bold text-muted">Proveedor</label>
-                    <select asp-for="IdProveedor" asp-items="Model.Proveedores" class="form-select">
-                        <option value="">— Ninguno —</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="d-flex flex-column flex-md-row justify-content-end gap-3 mt-5 pt-4 border-top">
-                <button type="submit" class="btn btn-mv-primary d-flex align-items-center justify-content-center gap-2">
-                    <span class="material-symbols-outlined">save</span>Guardar cambios
-                </button>
-                <a asp-action="Index" class="btn btn-mv-primary">Cancelar</a>
-            </div>
-        </form>
-    </div>
-</div>
-
-@section Scripts {
-    <script>
-        (function () {
-            const catSelect = document.getElementById('categoriaSelect');
-            const tipoSelect = document.getElementById('tipoSelect');
-            const proveedorWrapper = document.getElementById('proveedorWrapper');
-
-            function onCategoriaChange() {
-                const cat = parseInt(catSelect.value);
-                if (cat === 0) {
-                    tipoSelect.value = '0';
-                } else if (cat >= 1 && cat <= 3) {
-                    tipoSelect.value = '1';
-                }
-                proveedorWrapper.style.display = cat === 1 ? '' : 'none';
-            }
-
-            catSelect.addEventListener('change', onCategoriaChange);
-            onCategoriaChange();
-        })();
-    </script>
 }
+else
+{
+    <form method="post" class="card-custom p-4 mb-4" style="max-width:800px">
+        @Html.AntiForgeryToken()<input asp-for="Id" type="hidden" />
+        <div class="row g-3">
+            <div class="col-md-6"><label asp-for="Fecha" class="form-label">Fecha</label><input asp-for="Fecha" type="date" class="form-control" required /></div>
+            <div class="col-md-6"><label asp-for="Cuenta" class="form-label">Cuenta</label><select asp-for="Cuenta" asp-items="cuentas" class="form-select" required><option value="">Elegir cuenta</option></select></div>
+            <div class="col-md-6"><label asp-for="Tipo" class="form-label">Tipo</label><select asp-for="Tipo" asp-items="Html.GetEnumSelectList<TipoMovimiento>()" class="form-select"></select></div>
+            <div class="col-md-6"><label asp-for="Categoria" class="form-label">Concepto</label><select asp-for="Categoria" asp-items="categorias" class="form-select"></select></div>
+            <div class="col-md-6"><label asp-for="Monto" class="form-label">Importe</label><input asp-for="Monto" type="number" step="0.01" min="0.01" class="form-control" required /></div>
+            <div class="col-md-6"><label asp-for="IdProveedor" class="form-label">Proveedor (opcional)</label><select asp-for="IdProveedor" asp-items="Model.Proveedores" class="form-select"><option value="">Ninguno</option></select></div>
+            <div class="col-12"><label asp-for="Descripcion" class="form-label">Motivo</label><textarea asp-for="Descripcion" class="form-control" required></textarea></div>
+            <div class="col-12 form-check ms-2"><input asp-for="DescontarDelReparto" class="form-check-input" /><label asp-for="DescontarDelReparto" class="form-check-label">Descontar este gasto del reparto semanal</label></div>
+        </div><button class="btn btn-mv-primary mt-4">Guardar cambios</button>
+    </form>
+    <button type="button" class="btn btn-outline-danger mb-3" data-bs-toggle="modal" data-bs-target="#deleteModal"
+            data-nombre="este movimiento manual" data-delete-url="@Url.Action("Delete", new { id = Model.Id })"
+            data-token="@Antiforgery.GetAndStoreTokens(Context).RequestToken">Eliminar movimiento manual</button>
+}
+<a asp-action="Index" class="btn btn-mv-secondary">Volver a Caja</a>

@@ -36,7 +36,15 @@ public class CompraService : ICompraService
 
     public async Task CreateAsync(CompraProveedor compra)
     {
+        ReglasCaja.CuentaValida(compra.CuentaPago);
+        if (compra.ClaveOperacion == Guid.Empty || compra.Detalles.Count == 0 || compra.Detalles.Any(d => d.Cantidad <= 0 || d.PrecioUnitario < 0 || d.CostoEnvio < 0))
+            throw new InvalidOperationException("Revisá los importes y cantidades de la compra.");
+        if (compra.CuentaPago == CuentaCaja.ReservaMercadoPago && compra.DescontarDelReparto)
+            throw new InvalidOperationException("Las compras desde la reserva no se descuentan del reparto semanal.");
         compra.Fecha = DateTime.SpecifyKind(compra.Fecha, DateTimeKind.Utc);
+        await using var transaction = await ReglasCaja.IniciarAsync(_context);
+        if (compra.ClaveOperacion.HasValue && await _context.ReportesCaja.AnyAsync(r => r.ClaveOperacion == compra.ClaveOperacion)) return;
+        await ReglasCaja.PeriodoAbiertoAsync(_context, compra.Fecha);
 
         foreach (var detalle in compra.Detalles)
         {
@@ -65,9 +73,14 @@ public class CompraService : ICompraService
             Categoria   = CategoriaMovimiento.Proveedor,
             Monto       = compra.MontoTotal,
             IdProveedor = compra.IdProveedor,
+            Compra = compra,
+            Cuenta = compra.CuentaPago,
+            ClaveOperacion = compra.ClaveOperacion,
+            DescontarDelReparto = compra.DescontarDelReparto,
             Descripcion = $"Compra - {proveedor?.Nombre ?? "Proveedor"}"
         });
 
         await _context.SaveChangesAsync();
+        await transaction.CommitAsync();
     }
 }

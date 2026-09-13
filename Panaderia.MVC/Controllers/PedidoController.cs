@@ -578,14 +578,15 @@ namespace Panaderia.MVC.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> RegistrarCobro(RegistrarCobroViewModel vm)
         {
-            if (!ModelState.IsValid)
-                return RedirectToAction(nameof(Index));
+            if (!ModelState.IsValid || vm.Clave == Guid.Empty)
+            { TempData["Error"] = "Revisá el importe y elegí efectivo o transferencia. Si el formulario quedó abierto, actualizá la página."; return RedirectToAction(nameof(Index)); }
 
             if (!await _pedidoService.ExistsAsync(vm.IdPedido)) return NotFound();
 
             try
             {
-                await _pedidoService.RegistrarCobroAsync(vm.IdPedido, vm.Monto);
+                await _pedidoService.RegistrarCobroAsync(vm.IdPedido, vm.Monto, vm.Cuenta,
+                    vm.Fecha.HasValue ? Panaderia.Services.Implementations.CalendarioCaja.DesdeLocal(vm.Fecha.Value) : null, vm.Clave);
             }
             catch (InvalidOperationException ex)
             {
@@ -608,7 +609,7 @@ namespace Panaderia.MVC.Controllers
             {
                 await _pedidoService.ActualizarSeleccionAsync(vm.Ids,
                     vm.Accion is "cobrar" or "cobrar-entregar",
-                    vm.Accion is "entregar" or "cobrar-entregar");
+                    vm.Accion is "entregar" or "cobrar-entregar", vm.Cuenta);
                 var estado = vm.Accion switch
                 {
                     "cobrar" => "cobrados",
@@ -654,7 +655,8 @@ namespace Panaderia.MVC.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            await _pedidoService.DeleteAsync(id);
+            try { await _pedidoService.DeleteAsync(id); }
+            catch (InvalidOperationException ex) { TempData["Error"] = ex.Message; }
             return RedirectToAction(nameof(Index));
         }
 
@@ -664,7 +666,8 @@ namespace Panaderia.MVC.Controllers
         {
             var pedido = await _pedidoService.GetByIdAsync(id);
             if (pedido == null) return NotFound();
-            await _pedidoService.AnularAsync(id);
+            try { await _pedidoService.AnularAsync(id); }
+            catch (InvalidOperationException ex) { TempData["Error"] = ex.Message; return RedirectToAction(nameof(Index)); }
             TempData["Success"] = "Pedido anulado correctamente.";
             return RedirectToAction(nameof(Index));
         }

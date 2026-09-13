@@ -22,6 +22,10 @@ namespace Panaderia.Models.Data
         public DbSet<Pedido> Pedidos { get; set; }
         public DbSet<DetallePedido> DetallesPedido { get; set; }
         public DbSet<ReporteCaja> ReportesCaja { get; set; }
+        public DbSet<ConfiguracionCaja> ConfiguracionCaja { get; set; }
+        public DbSet<CierreCaja> CierresCaja { get; set; }
+        public DbSet<CierreCajaCosto> CierresCajaCostos { get; set; }
+        public DbSet<CierreCajaSaldo> CierresCajaSaldos { get; set; }
         public DbSet<Insumo> Insumos { get; set; }
         public DbSet<UnidadCompra> UnidadesCompra { get; set; }
         public DbSet<CompraProveedor> ComprasProveedor { get; set; }
@@ -40,6 +44,43 @@ namespace Panaderia.Models.Data
     protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            // Mantener las longitudes de Identity tanto en el host MVC como al generar migraciones.
+            modelBuilder.Entity<Microsoft.AspNetCore.Identity.IdentityUserLogin<string>>().Property(x => x.LoginProvider).HasMaxLength(128);
+            modelBuilder.Entity<Microsoft.AspNetCore.Identity.IdentityUserLogin<string>>().Property(x => x.ProviderKey).HasMaxLength(128);
+            modelBuilder.Entity<Microsoft.AspNetCore.Identity.IdentityUserToken<string>>().Property(x => x.LoginProvider).HasMaxLength(128);
+            modelBuilder.Entity<Microsoft.AspNetCore.Identity.IdentityUserToken<string>>().Property(x => x.Name).HasMaxLength(128);
+            modelBuilder.Entity<ConfiguracionCaja>(e =>
+            {
+                e.Property(x => x.Id).ValueGeneratedNever();
+                e.Property(x => x.PorcentajeReserva).HasPrecision(5, 2);
+                e.ToTable("ConfiguracionCaja", t => {
+                    t.HasCheckConstraint("CK_ConfiguracionCaja_Id", "\"Id\" = 1");
+                    t.HasCheckConstraint("CK_ConfiguracionCaja_Porcentaje", "\"PorcentajeReserva\" BETWEEN 0 AND 100");
+                });
+                e.HasData(new ConfiguracionCaja { Id = 1, PorcentajeReserva = 30m });
+            });
+            modelBuilder.Entity<CierreCaja>(e =>
+            {
+                e.HasIndex(x => x.InicioSemana).IsUnique().HasFilter("NOT \"EsHistorico\"");
+                e.HasIndex(x => x.IdMovimientoHistorico).IsUnique();
+                e.HasMany(x => x.Costos).WithOne(x => x.Cierre).HasForeignKey(x => x.IdCierre).OnDelete(DeleteBehavior.Restrict);
+                e.HasMany(x => x.Saldos).WithOne(x => x.Cierre).HasForeignKey(x => x.IdCierre).OnDelete(DeleteBehavior.Restrict);
+                e.Property(x => x.PorcentajeReserva).HasPrecision(5, 2);
+            });
+            modelBuilder.Entity<ReporteCaja>(e =>
+            {
+                e.HasOne(x => x.Compra).WithMany().HasForeignKey(x => x.IdCompra).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(x => x.Cierre).WithMany().HasForeignKey(x => x.IdCierre).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(x => x.CierreDestino).WithMany().HasForeignKey(x => x.IdCierreDestino).OnDelete(DeleteBehavior.Restrict);
+                e.HasIndex(x => new { x.Cuenta, x.Fecha });
+                e.HasIndex(x => x.Fecha);
+                e.HasIndex(x => x.ClaveOperacion).IsUnique();
+                e.HasIndex(x => new { x.IdTransferencia, x.Tipo }).IsUnique();
+            });
+            modelBuilder.Entity<DetallePedido>().Property(x => x.CostoIngredientes).HasPrecision(18, 4);
+            modelBuilder.Entity<Pedido>().HasIndex(x => new { x.FechaEntregaReal, x.Estado });
+            modelBuilder.Entity<CierreCajaCosto>().Property(x => x.Ingredientes).HasPrecision(18, 4);
+            modelBuilder.Entity<CierreCajaCosto>().Property(x => x.Empaque).HasPrecision(18, 4);
             modelBuilder.Entity<ApplicationUser>()
                 .HasOne<Cliente>().WithMany().HasForeignKey(u => u.IdCliente)
                 .OnDelete(DeleteBehavior.Restrict);

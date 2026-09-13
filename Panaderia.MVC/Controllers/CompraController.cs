@@ -28,7 +28,7 @@ public class CompraController : Controller
     public async Task<IActionResult> Create()
     {
         await CargarDropdowns();
-        var vm = new CompraViewModel { Fecha = DateTime.Today };
+        var vm = new CompraViewModel { Fecha = Panaderia.Services.Implementations.CalendarioCaja.Hoy.ToDateTime(TimeOnly.MinValue) };
         return View(vm);
     }
 
@@ -67,7 +67,10 @@ public class CompraController : Controller
         var compra = new CompraProveedor
         {
             IdProveedor   = vm.IdProveedor,
-            Fecha         = vm.Fecha,
+            Fecha         = Panaderia.Services.Implementations.CalendarioCaja.InicioUtc(DateOnly.FromDateTime(vm.Fecha)),
+            CuentaPago    = vm.CuentaPago,
+            DescontarDelReparto = vm.DescontarDelReparto,
+            ClaveOperacion = vm.ClaveOperacion,
             NumeroFactura = vm.NumeroFactura,
             Notas         = vm.Notas,
             Detalles      = vm.Detalles.Select(d => new CompraDetalle

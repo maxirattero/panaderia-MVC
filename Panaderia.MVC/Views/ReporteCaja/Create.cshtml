@@ -3,6 +3,8 @@
 
 @{
     ViewData["Title"] = "Nuevo movimiento";
+    var categorias = Html.GetEnumSelectList<CategoriaMovimiento>().Where(x => x.Value == "2" || x.Value == "4" || x.Value == "7");
+    var cuentas = Html.GetEnumSelectList<CuentaCaja>().Where(x => x.Value != "0");
 }
 
 <div style="max-width: 700px;">
@@ -23,13 +25,13 @@
                     <span asp-validation-for="Fecha" class="text-danger"></span>
                 </div>
                 <div class="col-md-6">
-                    <label asp-for="Categoria" class="form-label small fw-bold text-muted">Categoría</label>
-                    <select asp-for="Categoria" asp-items="Html.GetEnumSelectList<CategoriaMovimiento>()"
+                    <label for="categoriaSelect" class="form-label small fw-bold text-muted">Categoría</label>
+                    <select asp-for="Categoria" asp-items="categorias"
                             class="form-select" id="categoriaSelect"></select>
                     <span asp-validation-for="Categoria" class="text-danger"></span>
                 </div>
                 <div class="col-md-6">
-                    <label asp-for="Tipo" class="form-label small fw-bold text-muted">Tipo</label>
+                    <label for="tipoSelect" class="form-label small fw-bold text-muted">Tipo</label>
                     <select asp-for="Tipo" asp-items="Html.GetEnumSelectList<TipoMovimiento>()"
                             class="form-select" id="tipoSelect"></select>
                     <span asp-validation-for="Tipo" class="text-danger"></span>
@@ -39,6 +41,8 @@
                     <input asp-for="Monto" type="number" step="0.01" lang="en" class="form-control" placeholder="0.00" />
                     <span asp-validation-for="Monto" class="text-danger"></span>
                 </div>
+                <div class="col-md-6"><label asp-for="Cuenta" class="form-label">Cuenta</label><select asp-for="Cuenta" asp-items="cuentas" class="form-select" required><option value="">Elegir cuenta</option></select></div>
+                <div class="col-md-6"><div class="form-check mt-4"><input asp-for="DescontarDelReparto" class="form-check-input" /><label asp-for="DescontarDelReparto" class="form-check-label">Descontar del reparto semanal</label></div><p class="small text-muted">Solo para gastos en efectivo o banco. No se aplica a la reserva de insumos.</p></div>
                 <div class="col-12">
                     <label asp-for="Descripcion" class="form-label small fw-bold text-muted">Descripción</label>
                     <textarea asp-for="Descripcion" class="form-control" rows="2"></textarea>

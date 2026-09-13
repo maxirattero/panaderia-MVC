@@ -11,5 +11,8 @@ namespace Panaderia.Models.Enums
         Gasto = 2,
         Recaudacion = 3,
         Otro = 4,
+        Transferencia = 5,
+        Devolucion = 6,
+        Ajuste = 7,
     }
 }

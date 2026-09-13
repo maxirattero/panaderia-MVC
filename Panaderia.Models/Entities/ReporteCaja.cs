@@ -18,5 +18,16 @@ namespace Panaderia.Models.Entities
         public DateTime? FechaFinPeriodo { get; set; }
         // Fotografía de ventas al registrar un cierre. No es un movimiento de caja.
         public decimal? TotalVendidoInformativo { get; set; }
+        public CuentaCaja Cuenta { get; set; }
+        public bool DescontarDelReparto { get; set; }
+        public int? IdCompra { get; set; }
+        public CompraProveedor? Compra { get; set; }
+        public Guid? IdTransferencia { get; set; }
+        public Guid? ClaveOperacion { get; set; }
+        public int? IdCierre { get; set; }
+        public CierreCaja? Cierre { get; set; }
+        public int? IdCierreDestino { get; set; }
+        public CierreCaja? CierreDestino { get; set; }
+        public DestinoCierre? Destino { get; set; }
     }
 }
