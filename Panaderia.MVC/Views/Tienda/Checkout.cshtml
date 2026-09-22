@@ -90,11 +90,11 @@
         <span class="checkout-label">¿Cómo pagás?</span>
 
         <label class="entrega-opt">
-            <input type="radio" asp-for="MedioPago" value="efectivo" onchange="toggleAlias()" />
+            <input type="radio" asp-for="MedioPago" value="efectivo" onchange="toggleAlias()" disabled="@(Model.Entrega == "retiro")" />
             <span class="material-symbols-outlined">payments</span>
             <span class="eo-texto">
                 <b>Efectivo</b>
-                <small>Pagás al recibir o retirar tu pedido</small>
+                <small>Disponible solo para delivery. Pagás al recibir tu pedido.</small>
             </span>
         </label>
         <label class="entrega-opt">
@@ -106,10 +106,13 @@
             </span>
         </label>
 
+        <span asp-validation-for="MedioPago" class="text-danger small"></span>
+        <p id="avisoPagoRetiro" class="td-nota" hidden="@(Model.Entrega != "retiro")">Para retirar en el kiosco, el pago es únicamente por transferencia.</p>
+
         <div id="aliasAviso" class="entrega-banner" style="margin-top: 4px;">
             <span class="material-symbols-outlined">account_balance</span>
             <div>
-                <b style="text-transform: none;">Alias para transferir: masa.viva.pan</b>
+                <partial name="_AliasTransferencia" />
                 <small>Envianos el comprobante por WhatsApp al confirmar.</small>
             </div>
         </div>
@@ -141,10 +144,18 @@
 </div>
 
 @section Scripts {
+    <script src="~/js/alias-transferencia.js" asp-append-version="true"></script>
     <script>
         function toggleDireccion() {
             const esDelivery = document.querySelector('input[name="Entrega"]:checked')?.value === 'delivery';
             document.getElementById('campoDireccion').style.display = esDelivery ? '' : 'none';
+            const esRetiro = document.querySelector('input[name="Entrega"]:checked')?.value === 'retiro';
+            document.querySelector('input[name="MedioPago"][value="efectivo"]').disabled = esRetiro;
+            if (esRetiro) {
+                document.querySelector('input[name="MedioPago"][value="transferencia"]').checked = true;
+            }
+            document.getElementById('avisoPagoRetiro').hidden = !esRetiro;
+            toggleAlias();
         }
         function toggleAlias() {
             const esTransferencia = document.querySelector('input[name="MedioPago"]:checked')?.value === 'transferencia';

@@ -85,8 +85,25 @@ var deliveryController = Controller();
 Check(await deliveryController.Confirmar(Order()) is RedirectToActionResult && writes == 2,
     "Delivery still works while pickup is closed and minimum is zero");
 settings.RetiroHabilitado = true;
+var cashPickup = Controller();
+var beforeRejectedNotifications = notifications;
+Check(await cashPickup.Confirmar(Order("retiro")) is ViewResult && writes == 2
+    && notifications == beforeRejectedNotifications && cashPickup.ModelState.ContainsKey("MedioPago"),
+    "Pickup with cash rejected server-side without saving or notifying");
+var unknownPayment = Controller();
+var invalidPaymentOrder = Order();
+invalidPaymentOrder.MedioPago = "inventado";
+Check(await unknownPayment.Confirmar(invalidPaymentOrder) is ViewResult && writes == 2
+    && notifications == beforeRejectedNotifications, "Unknown payment method rejected without side effects");
 var pickup = Controller();
-Check(await pickup.Confirmar(Order("retiro")) is RedirectToActionResult && writes == 3, "Re-enabled pickup works");
+var pickupOrder = Order("retiro");
+pickupOrder.MedioPago = "transferencia";
+Check(await pickup.Confirmar(pickupOrder) is RedirectToActionResult && writes == 3
+    && lastOrder!.Notas!.Contains("Transferencia (alias masa.viva.pan)"), "Pickup with transfer works and saves correct payment alias");
+var rememberedCashPickup = Controller(remembered: "{\"Nombre\":\"Prueba\",\"Telefono\":\"123456\",\"Entrega\":\"retiro\",\"MedioPago\":\"efectivo\"}");
+var pickupCheckout = (CheckoutViewModel)((ViewResult)await rememberedCashPickup.Checkout()).Model!;
+Check(pickupCheckout.Entrega == "retiro" && pickupCheckout.MedioPago == "transferencia",
+    "Remembered pickup with cash now defaults to transfer");
 
 settings.RetiroHabilitado = false;
 var remembered = Controller(remembered: "{\"Nombre\":\"Prueba\",\"Telefono\":\"123456\",\"Entrega\":\"retiro\"}");

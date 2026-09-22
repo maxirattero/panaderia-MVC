@@ -309,6 +309,8 @@ namespace Panaderia.MVC.Controllers
                 vm.Direccion = clienteVinculado.Direccion;
                 vm.DatosRecordados = false;
             }
+            if (vm.Entrega == "retiro")
+                vm.MedioPago = "transferencia";
             return View(vm);
         }
 
@@ -350,6 +352,11 @@ namespace Panaderia.MVC.Controllers
             var esDelivery = model.Entrega == "delivery";
             if (esDelivery && string.IsNullOrWhiteSpace(model.Direccion))
                 ModelState.AddModelError(nameof(model.Direccion), "Indicanos la dirección para el delivery.");
+
+            if (model.MedioPago != "efectivo" && model.MedioPago != "transferencia")
+                ModelState.AddModelError(nameof(model.MedioPago), "Elegí un medio de pago válido.");
+            else if (model.Entrega == "retiro" && model.MedioPago != "transferencia")
+                ModelState.AddModelError(nameof(model.MedioPago), "Para retirar en el kiosco, el pago es únicamente por transferencia.");
 
             if (!ModelState.IsValid)
             {

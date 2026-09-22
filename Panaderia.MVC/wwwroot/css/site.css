@@ -1385,6 +1385,39 @@ a.pill-filtro.activo {
     cursor: pointer;
 }
 
+.entrega-opt:has(input:disabled) {
+    opacity: .55;
+    cursor: not-allowed;
+}
+
+.alias-transferencia-fila {
+    display: flex;
+    align-items: center;
+    gap: 8px 12px;
+    flex-wrap: wrap;
+}
+
+.alias-copiar {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: .8rem;
+    padding: 8px 12px;
+    min-height: 44px;
+}
+
+.entrega-banner .alias-copiar .material-symbols-outlined {
+    font-size: 18px;
+}
+
+.alias-estado {
+    display: block;
+}
+
+.alias-estado:empty {
+    display: none;
+}
+
 .entrega-opt:has(input:checked) {
     border-color: var(--mv-primary-dark);
     background-color: var(--mv-surface-low);

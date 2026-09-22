@@ -39,7 +39,7 @@
         <div class="entrega-banner" style="margin: 14px 0; text-align: left;">
             <span class="material-symbols-outlined">account_balance</span>
             <div>
-                <b style="text-transform: none;">Alias para transferir: masa.viva.pan</b>
+                <partial name="_AliasTransferencia" />
                 <small>Envianos el comprobante por WhatsApp.</small>
             </div>
         </div>
@@ -62,6 +62,7 @@
 </div>
 
 @section Scripts {
+    <script src="~/js/alias-transferencia.js" asp-append-version="true"></script>
     <script>
         // Abrir en la misma pestaña para no depender de ventanas emergentes.
         (function () {
