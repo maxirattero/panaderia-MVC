@@ -16,7 +16,7 @@ namespace Panaderia.MVC.Models
         [Required]
         public string Entrega { get; set; } = "delivery";
 
-        // "efectivo" o "transferencia" (alias masaviva.pan)
+        // "efectivo" o "transferencia" (alias masa.viva.pan)
         [Required]
         public string MedioPago { get; set; } = "efectivo";
 

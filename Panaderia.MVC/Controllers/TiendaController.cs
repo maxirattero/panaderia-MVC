@@ -384,7 +384,7 @@ namespace Panaderia.MVC.Controllers
                 : "Retiro en Kiosco Suyay (San Martín 888)";
 
             var pagoTexto = model.MedioPago == "transferencia"
-                ? "Transferencia (alias masaviva.pan)"
+                ? "Transferencia (alias masa.viva.pan)"
                 : "Efectivo";
 
             var notas = $"[Tienda] {entregaTexto} · Pago: {pagoTexto}";
