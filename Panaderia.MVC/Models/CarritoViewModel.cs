@@ -6,6 +6,7 @@ namespace Panaderia.MVC.Models
     {
         public Producto Producto { get; set; } = null!;
         public int Cantidad { get; set; }
+        public bool BloqueadoPorCierreSemanal { get; set; }
         public decimal PrecioUnitario { get; set; }
         public decimal Subtotal => PrecioUnitario * Cantidad;
     }
@@ -16,6 +17,7 @@ namespace Panaderia.MVC.Models
         public decimal FaltaParaMinimo => Math.Max(0m, Configuracion.MontoMinimoPedido - Total);
         public List<CarritoItemViewModel> Items { get; set; } = new();
         public decimal Total => Items.Sum(i => i.Subtotal);
+        public bool TieneProductosBloqueados => Items.Any(i => i.BloqueadoPorCierreSemanal);
         public int CantidadTotal => Items.Sum(i => i.Cantidad);
     }
 }

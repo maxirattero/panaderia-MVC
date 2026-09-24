@@ -13,6 +13,7 @@ namespace Panaderia.MVC.Models
         public List<Etiqueta> Etiquetas { get; set; } = new();
         public int? EtiquetaSeleccionada { get; set; }
         public bool EsRevendedor { get; set; }
+        public bool PedidosSemanalesCerrados { get; set; }
         public Dictionary<int, int> CantidadesEnCarrito { get; set; } = new();
     }
 }

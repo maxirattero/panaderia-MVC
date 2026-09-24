@@ -67,6 +67,7 @@ namespace Panaderia.Services.Implementations
             existe.PrecioReventa = producto.PrecioReventa;
             existe.Stock = producto.Stock;
             existe.PorEncargo = producto.PorEncargo;
+            existe.TieneDisponibilidadSemanal = producto.TieneDisponibilidadSemanal;
             existe.DescripcionTienda = producto.DescripcionTienda;
             existe.Ingredientes = producto.Ingredientes;
             existe.ImagenURL = producto.ImagenURL;
@@ -107,6 +108,7 @@ namespace Panaderia.Services.Implementations
                 Stock = 0,
                 OcultoEnTienda = true,
                 PorEncargo = origen.PorEncargo,
+                TieneDisponibilidadSemanal = origen.TieneDisponibilidadSemanal,
                 DescripcionTienda = origen.DescripcionTienda,
                 Ingredientes = origen.Ingredientes,
                 ObservacionesElaboracion = origen.ObservacionesElaboracion,

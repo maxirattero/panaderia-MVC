@@ -19,6 +19,7 @@ builder.Services.AddControllersWithViews(options =>
 });
 builder.Services.AddAntiforgery(options => options.HeaderName = "X-CSRF-TOKEN");
 builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 builder.Services.AddHttpClient();
 
 string? connectionString;

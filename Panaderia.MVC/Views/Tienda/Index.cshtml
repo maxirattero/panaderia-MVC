@@ -1,3 +1,4 @@
+@using Panaderia.Services.Implementations
 @model TiendaIndexViewModel
 @{
     Layout = "_TiendaLayout";
@@ -21,7 +22,7 @@
 
 <aside class="tienda-aviso-pedidos" role="note">
     <span class="material-symbols-outlined">schedule</span>
-    <span>Tomamos pedidos de panes hasta los jueves a las 24 hs.</span>
+    <span>@(Model.PedidosSemanalesCerrados ? "Pedidos de pan cerrados momentáneamente. Volvemos a tomar pedidos el sábado a las 12:00 (hora de Argentina)." : "Tomamos pedidos de panes hasta los jueves a las 24 hs.")</span>
 </aside>
 
 <!-- Categorías -->
@@ -66,6 +67,7 @@
     {
         var precio = ((Dictionary<int, decimal>?)ViewBag.Costos)?.TryGetValue(p.Id, out var costo) == true ? costo : (Model.EsRevendedor ? p.PrecioReventa : p.PrecioFinal);
         Model.CantidadesEnCarrito.TryGetValue(p.Id, out var cantidadEnCarrito);
+        var bloqueado = p.TieneDisponibilidadSemanal && Model.PedidosSemanalesCerrados;
         var maximoSeleccion = p.PorEncargo ? 50 : Math.Max(0, p.Stock - cantidadEnCarrito);
         <div class="tienda-card @(p.EstaSinStockEnTienda ? "agotado" : "")">
             <a class="tc-link" asp-controller="Tienda" asp-action="Detalle" asp-route-id="@p.Id">
@@ -78,7 +80,11 @@
                     {
                         <span class="material-symbols-outlined tc-placeholder">bakery_dining</span>
                     }
-                    @if (p.EstaSinStockEnTienda)
+                    @if (bloqueado)
+                    {
+                        <span class="tc-tag">Pedidos cerrados</span>
+                    }
+                    else if (p.EstaSinStockEnTienda)
                     {
                         <span class="tc-tag agotado">Sin stock</span>
                     }
@@ -99,7 +105,11 @@
                     <div class="tc-price">$@precio.ToString("N0", ar)</div>
                 </div>
             </a>
-            @if (!p.EstaSinStockEnTienda && maximoSeleccion > 0)
+            @if (bloqueado)
+            {
+                <p class="td-nota px-3" role="status">@DisponibilidadSemanal.MensajeCierre</p>
+            }
+            else if (!p.EstaSinStockEnTienda && maximoSeleccion > 0)
             {
                 <div class="tc-agregar">
                     @if (p.AvisoUltimasUnidades is string aviso)

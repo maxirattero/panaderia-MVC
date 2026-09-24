@@ -105,7 +105,15 @@
                 <div class="form-check form-switch mb-2">
                     <input asp-for="PorEncargo" class="form-check-input" />
                     <label asp-for="PorEncargo" class="form-check-label fw-semibold">Producto por encargo</label>
-                    <div class="form-text">No se bloquea en la tienda aunque el stock sea 0.</div>
+                    <div class="form-text">Se puede pedir sin stock, respetando el cierre semanal si está activado.</div>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <div class="form-check form-switch mb-2">
+                    <input asp-for="TieneDisponibilidadSemanal" class="form-check-input" />
+                    <label asp-for="TieneDisponibilidadSemanal" class="form-check-label fw-semibold">Aplicar cierre semanal (panes)</label>
+                    <div class="form-text">Pedidos desde el sábado a las 12:00 hasta el jueves a las 24:00, hora de Argentina.</div>
                 </div>
             </div>
 

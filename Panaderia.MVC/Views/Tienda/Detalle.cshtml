@@ -1,5 +1,7 @@
+@using Panaderia.Services.Implementations
 @model Panaderia.Models.Entities.Producto
 @{
+    var bloqueado = ViewBag.BloqueadoPorCierreSemanal is true;
     Layout = "_TiendaLayout";
     ViewData["Title"] = Model.NombreVisible;
     var ar = new System.Globalization.CultureInfo("es-AR");
@@ -53,7 +55,11 @@
                         <span class="material-symbols-outlined">@etiqueta.Icono</span> @etiqueta.Nombre
                     </a>
                 }
-                @if (Model.EstaSinStockEnTienda)
+                @if (bloqueado)
+                {
+                    <span class="badge-tienda">Pedidos cerrados</span>
+                }
+                else if (Model.EstaSinStockEnTienda)
                 {
                     <span class="badge-tienda agotado"><span class="material-symbols-outlined">block</span> Sin stock</span>
                 }
@@ -83,7 +89,11 @@
                 </section>
             }
 
-            @if (Model.EstaSinStockEnTienda)
+            @if (bloqueado)
+            {
+                <p class="td-nota" role="status">@DisponibilidadSemanal.MensajeCierre</p>
+            }
+            else if (Model.EstaSinStockEnTienda)
             {
                 <p class="td-nota">Este producto está temporalmente sin stock. Volvé a mirar en unos días o consultanos cuándo vuelve.</p>
             }

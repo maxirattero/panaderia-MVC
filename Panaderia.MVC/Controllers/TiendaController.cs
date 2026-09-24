@@ -1,3 +1,4 @@
+using Panaderia.Services.Implementations;
 using System.Globalization;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
@@ -15,6 +16,7 @@ namespace Panaderia.MVC.Controllers
         private const string CookieDatosCliente = "mv_datos_cliente";
 
         private readonly IProductoService _productoService;
+        private readonly TimeProvider _reloj;
         private readonly IClienteService _clienteService;
         private readonly IPedidoService _pedidoService;
         private readonly IPushNotificationService _pushNotificationService;
@@ -29,9 +31,11 @@ namespace Panaderia.MVC.Controllers
             IPushNotificationService pushNotificationService,
             IConfiguration configuration,
             IConfiguracionTiendaService configuracionTiendaService,
-            IAccesoTiendaService accesoTiendaService)
+            IAccesoTiendaService accesoTiendaService,
+            TimeProvider? reloj = null)
         {
             _productoService = productoService;
+            _reloj = reloj ?? TimeProvider.System;
             _clienteService = clienteService;
             _pedidoService = pedidoService;
             _pushNotificationService = pushNotificationService;
@@ -97,6 +101,7 @@ namespace Panaderia.MVC.Controllers
                 Etiquetas = etiquetas,
                 EtiquetaSeleccionada = etiqueta,
                 EsRevendedor = EsRevendedor(),
+                PedidosSemanalesCerrados = DisponibilidadSemanal.EstaCerrada(_reloj.GetUtcNow()),
                 CantidadesEnCarrito = LeerCarrito()
             };
 
@@ -109,6 +114,7 @@ namespace Panaderia.MVC.Controllers
             var producto = await _productoService.GetByIdAsync(id);
             if (producto == null || producto.OcultoEnTienda) return NotFound();
 
+            ViewBag.BloqueadoPorCierreSemanal = DisponibilidadSemanal.EstaBloqueado(producto, _reloj.GetUtcNow());
             ViewBag.EsRevendedor = EsRevendedor();
             ViewBag.Costos = await CostosClienteAsync(new[] { producto.Id });
             var carrito = LeerCarrito();
@@ -137,6 +143,12 @@ namespace Panaderia.MVC.Controllers
         {
             var producto = await _productoService.GetByIdAsync(id);
             if (producto == null || producto.OcultoEnTienda) return NotFound();
+
+            if (DisponibilidadSemanal.EstaBloqueado(producto, _reloj.GetUtcNow()))
+            {
+                TempData["TiendaMsg"] = DisponibilidadSemanal.MensajeCierre;
+                return RedirectToAction(nameof(Detalle), new { id });
+            }
 
             if (producto.EstaSinStockEnTienda)
             {
@@ -191,6 +203,12 @@ namespace Panaderia.MVC.Controllers
                 .ToDictionary(p => p.Id);
             var carrito = LeerCarrito();
             var cantidadAgregada = 0;
+            var ahora = _reloj.GetUtcNow();
+            if (seleccion.Any(x => productos.TryGetValue(x.Key, out var p) && DisponibilidadSemanal.EstaBloqueado(p, ahora)))
+            {
+                TempData["TiendaMsg"] = DisponibilidadSemanal.MensajeCierre + " Revisá tu selección.";
+                return RedirectToAction(nameof(Index));
+            }
 
             foreach (var (idProducto, cantidad) in seleccion)
             {
@@ -239,6 +257,12 @@ namespace Panaderia.MVC.Controllers
                 {
                     carrito.Remove(id);
                 }
+                else if (DisponibilidadSemanal.EstaBloqueado(producto, _reloj.GetUtcNow())
+                    && cantidad > carrito.GetValueOrDefault(id))
+                {
+                    TempData["TiendaMsg"] = DisponibilidadSemanal.MensajeCarrito;
+                    return RedirectToAction(nameof(Carrito));
+                }
                 else
                 {
                     var maximo = producto.PorEncargo ? 50 : producto.Stock;
@@ -266,6 +290,11 @@ namespace Panaderia.MVC.Controllers
         {
             var carrito = await ArmarCarritoAsync();
             if (!carrito.Items.Any()) return RedirectToAction(nameof(Carrito));
+            if (carrito.TieneProductosBloqueados)
+            {
+                TempData["TiendaMsg"] = DisponibilidadSemanal.MensajeCarrito;
+                return RedirectToAction(nameof(Carrito));
+            }
 
             var vm = new CheckoutViewModel
             {
@@ -330,6 +359,11 @@ namespace Panaderia.MVC.Controllers
         {
             var carrito = await ArmarCarritoAsync();
             if (!carrito.Items.Any()) return RedirectToAction(nameof(Carrito));
+            if (carrito.TieneProductosBloqueados)
+            {
+                TempData["TiendaMsg"] = DisponibilidadSemanal.MensajeCarrito;
+                return RedirectToAction(nameof(Carrito));
+            }
 
             // Nunca confiar en importes ni opciones enviados por el navegador.
             model.Carrito = carrito;
@@ -420,6 +454,11 @@ namespace Panaderia.MVC.Controllers
             }
             catch (InvalidOperationException ex)
             {
+                if (carrito.Items.Any(i => DisponibilidadSemanal.EstaBloqueado(i.Producto, _reloj.GetUtcNow())))
+                {
+                    TempData["TiendaMsg"] = DisponibilidadSemanal.MensajeCarrito;
+                    return RedirectToAction(nameof(Carrito));
+                }
                 ModelState.AddModelError("", ex.Message);
                 model.Carrito = carrito;
                 model.FechaEntrega = ProximoSabado();
@@ -647,6 +686,7 @@ namespace Panaderia.MVC.Controllers
                     {
                         Producto = producto,
                         Cantidad = cantidadSegura,
+                        BloqueadoPorCierreSemanal = DisponibilidadSemanal.EstaBloqueado(producto, _reloj.GetUtcNow()),
                         PrecioUnitario = costos.TryGetValue(producto.Id, out var costo) ? costo : ObtenerPrecio(producto)
                     });
                 }

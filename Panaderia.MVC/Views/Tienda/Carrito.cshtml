@@ -1,3 +1,4 @@
+@using Panaderia.Services.Implementations
 @model CarritoViewModel
 @{
     Layout = "_TiendaLayout";
@@ -30,6 +31,10 @@
     }
     else
     {
+        @if (Model.TieneProductosBloqueados)
+        {
+            <p class="tienda-aviso-pedidos" role="alert">@DisponibilidadSemanal.MensajeCarrito</p>
+        }
         <div class="carrito-lista">
             @foreach (var item in Model.Items)
             {
@@ -46,6 +51,15 @@
                     </div>
                     <div class="ci-info">
                         <div class="ci-nombre">@item.Producto.NombreVisible</div>
+                        @if (item.BloqueadoPorCierreSemanal)
+                        {
+                            <p class="td-nota">@DisponibilidadSemanal.MensajeCierre</p>
+                            <form asp-controller="Tienda" asp-action="Quitar" method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@item.Producto.Id" />
+                                <button type="submit" class="btn-mv-secondary">Quitar del carrito</button>
+                            </form>
+                        }
                         <div class="ci-precio">$@item.PrecioUnitario.ToString("N0", ar) c/u</div>
                     </div>
                     <div class="ci-derecha">
@@ -65,7 +79,7 @@
                                 <input type="hidden" name="id" value="@item.Producto.Id" />
                                 <input type="hidden" name="cantidad" value="@(item.Cantidad + 1)" />
                                 <button type="submit" aria-label="Sumar" title="Sumar uno"
-                                        disabled="@(!item.Producto.PorEncargo && item.Cantidad >= item.Producto.Stock)">
+                                        disabled="@(item.BloqueadoPorCierreSemanal || (!item.Producto.PorEncargo && item.Cantidad >= item.Producto.Stock))">
                                     <span class="material-symbols-outlined">add</span>
                                 </button>
                             </form>
@@ -91,7 +105,7 @@
         </div>
 
         <partial name="_MinimoPedido" model="Model" />
-        @if (Model.FaltaParaMinimo > 0)
+        @if (Model.TieneProductosBloqueados || Model.FaltaParaMinimo > 0)
         {
             <button type="button" class="btn-mv-primary carrito-cta" disabled>Continuar</button>
         }

@@ -10,10 +10,12 @@ namespace Panaderia.Services.Implementations
     public class PedidoService : IPedidoService
     {
         private readonly PanaderiaContext _context;
+        private readonly TimeProvider _reloj;
 
-        public PedidoService(PanaderiaContext context)
+        public PedidoService(PanaderiaContext context, TimeProvider? reloj = null)
         {
             _context = context;
+            _reloj = reloj ?? TimeProvider.System;
         }
 
         // Serializa las escrituras de pedidos/producción para no perder ampliaciones.
@@ -190,6 +192,10 @@ namespace Panaderia.Services.Implementations
             if (pedido.Detalles.Count == 0 || pedido.Detalles.Any(d => d.Cantidad <= 0))
                 throw new InvalidOperationException("Agregá productos al pedido.");
             await using var transaction = await IniciarMutacionAsync();
+            // Releer la bandera persistida dentro de la transacción; no confiar en el carrito.
+            var ids = pedido.Detalles.Select(d => d.IdProducto).Distinct().ToArray();
+            var productos = await _context.Productos.AsNoTracking().Where(p => ids.Contains(p.Id)).ToListAsync();
+            DisponibilidadSemanal.ValidarPedido(productos, _reloj.GetUtcNow());
             Pedido? existente = null;
             if (pedido.FechaEntrega is DateTime entrega && entrega.DayOfWeek == DayOfWeek.Saturday)
             {
@@ -209,6 +215,8 @@ namespace Panaderia.Services.Implementations
                 existente = null;
             await AplicarCostoEmpaqueAsync(pedido.Detalles);
             await ReservarStockAsync(pedido.Detalles);
+            // También cubrir una solicitud que atraviese el horario de cierre.
+            DisponibilidadSemanal.ValidarPedido(productos, _reloj.GetUtcNow());
             if (existente == null) _context.Pedidos.Add(pedido);
             else UnificacionPedido.Agregar(existente, pedido);
             await _context.SaveChangesAsync();
