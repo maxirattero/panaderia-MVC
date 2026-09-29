@@ -1,4 +1,3 @@
-@using Panaderia.Services.Implementations
 @model TiendaIndexViewModel
 @{
     Layout = "_TiendaLayout";
@@ -22,7 +21,7 @@
 
 <aside class="tienda-aviso-pedidos" role="note">
     <span class="material-symbols-outlined">schedule</span>
-    <span>@(Model.PedidosSemanalesCerrados ? "Pedidos de pan cerrados momentáneamente. Volvemos a tomar pedidos el sábado a las 12:00 (hora de Argentina)." : "Tomamos pedidos de panes hasta los jueves a las 24 hs.")</span>
+    <span>@(Model.PedidosSemanalesCerrados ? "Cerramos la toma de pedidos de panes por esta semana. Volvemos a tomar pedidos el sábado a las 12:00 (hora de Argentina)." : "Tomamos pedidos de panes hasta los jueves a las 23:59 hs.")</span>
 </aside>
 
 <!-- Categorías -->
@@ -62,14 +61,18 @@
 
 <form asp-controller="Tienda" asp-action="AgregarVarios" method="post" class="tienda-seleccion-form">
     @Html.AntiForgeryToken()
-<div class="tienda-grid">
-    @foreach (var p in Model.Productos)
+@foreach (var grupo in Model.Productos.GroupBy(p => TiendaIndexViewModel.SeccionCategoria(p.Categoria?.Nombre)))
+{
+<section class="tienda-categoria">
+    <h3 class="tienda-section-title font-literata">@grupo.Key</h3>
+    <div class="tienda-grid">
+    @foreach (var p in grupo)
     {
         var precio = ((Dictionary<int, decimal>?)ViewBag.Costos)?.TryGetValue(p.Id, out var costo) == true ? costo : (Model.EsRevendedor ? p.PrecioReventa : p.PrecioFinal);
         Model.CantidadesEnCarrito.TryGetValue(p.Id, out var cantidadEnCarrito);
         var bloqueado = p.TieneDisponibilidadSemanal && Model.PedidosSemanalesCerrados;
         var maximoSeleccion = p.PorEncargo ? 50 : Math.Max(0, p.Stock - cantidadEnCarrito);
-        <div class="tienda-card @(p.EstaSinStockEnTienda ? "agotado" : "")">
+        <div class="tienda-card @(bloqueado || p.EstaSinStockEnTienda ? "agotado" : "")">
             <a class="tc-link" asp-controller="Tienda" asp-action="Detalle" asp-route-id="@p.Id">
                 <div class="tc-img">
                     @if (!string.IsNullOrEmpty(p.ImagenURL))
@@ -82,7 +85,7 @@
                     }
                     @if (bloqueado)
                     {
-                        <span class="tc-tag">Pedidos cerrados</span>
+                        <span class="tc-tag agotado">No disponible</span>
                     }
                     else if (p.EstaSinStockEnTienda)
                     {
@@ -105,11 +108,7 @@
                     <div class="tc-price">$@precio.ToString("N0", ar)</div>
                 </div>
             </a>
-            @if (bloqueado)
-            {
-                <p class="td-nota px-3" role="status">@DisponibilidadSemanal.MensajeCierre</p>
-            }
-            else if (!p.EstaSinStockEnTienda && maximoSeleccion > 0)
+            @if (!bloqueado && !p.EstaSinStockEnTienda && maximoSeleccion > 0)
             {
                 <div class="tc-agregar">
                     @if (p.AvisoUltimasUnidades is string aviso)
@@ -130,6 +129,8 @@
         </div>
     }
 </div>
+</section>
+}
     <div id="finSeleccionTienda" aria-hidden="true"></div>
     <div class="tienda-confirmar-seleccion">
         <span id="seleccionResumen">0 productos seleccionados</span>

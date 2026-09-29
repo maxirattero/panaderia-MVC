@@ -74,6 +74,10 @@ var push = Stub.Make<IPushNotificationService>((_, _) => { notifications++; retu
 var settings = Stub.Make<IConfiguracionTiendaService>((_, _) => Task.FromResult(new ConfiguracionTienda()));
 if (args.Contains("--preview"))
 {
+    pan.Categoria = new() { Nombre = "Panes" };
+    pizza.Categoria = new() { Nombre = "Pizzas" };
+    fixture.Insert(0, new Producto { Id = 3, Nombre = "Crackers", Categoria = new() { Nombre = "Crackers" }, Stock = 1, PrecioFinal = 75 });
+    fixture.Insert(0, new Producto { Id = 4, Nombre = "Hummus", Categoria = new() { Nombre = "Untables" }, Stock = 5, PrecioFinal = 60 });
     await PreviewHost.RunAsync(reloj, products, clients, orders, push, settings);
     return;
 }

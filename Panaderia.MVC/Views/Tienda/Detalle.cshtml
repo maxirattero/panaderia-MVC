@@ -1,4 +1,3 @@
-@using Panaderia.Services.Implementations
 @model Panaderia.Models.Entities.Producto
 @{
     var bloqueado = ViewBag.BloqueadoPorCierreSemanal is true;
@@ -45,7 +44,7 @@
             <div class="td-price">$@precio.ToString("N0", ar)</div>
 
             <div class="td-badges">
-                @if (Model.AvisoUltimasUnidades is string aviso)
+                @if (!bloqueado && Model.AvisoUltimasUnidades is string aviso)
                 {
                     <span class="badge-tienda ultimas-unidades">@aviso</span>
                 }
@@ -57,7 +56,7 @@
                 }
                 @if (bloqueado)
                 {
-                    <span class="badge-tienda">Pedidos cerrados</span>
+                    <span class="badge-tienda agotado"><span class="material-symbols-outlined">block</span> No disponible</span>
                 }
                 else if (Model.EstaSinStockEnTienda)
                 {
@@ -89,15 +88,11 @@
                 </section>
             }
 
-            @if (bloqueado)
-            {
-                <p class="td-nota" role="status">@DisponibilidadSemanal.MensajeCierre</p>
-            }
-            else if (Model.EstaSinStockEnTienda)
+            @if (!bloqueado && Model.EstaSinStockEnTienda)
             {
                 <p class="td-nota">Este producto está temporalmente sin stock. Volvé a mirar en unos días o consultanos cuándo vuelve.</p>
             }
-            else
+            else if (!bloqueado)
             {
                 var maximoAgregar = (int)(ViewBag.MaxCantidadAgregar ?? 50);
                 <form asp-controller="Tienda" asp-action="Agregar" method="post" class="td-agregar">

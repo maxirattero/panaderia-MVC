@@ -642,6 +642,10 @@ a.pill-filtro.activo {
     scroll-margin-top: 80px;
 }
 
+.tienda-categoria {
+    margin-bottom: 28px;
+}
+
 .tienda-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);

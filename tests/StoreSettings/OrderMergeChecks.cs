@@ -69,12 +69,12 @@ static class OrderMergeChecks
         foreach (var stock in new[] { -1, 0, 1, 2, 5, 6 })
         {
             var product = new Producto { Stock = stock };
-            Check((product.AvisoUltimasUnidades != null) == (stock >= 1 && stock <= 5), $"Low stock threshold: {stock}");
+            Check((product.AvisoUltimasUnidades != null) == (stock == 1), $"Last unit notice: {stock}");
             product.PorEncargo = true;
             Check(product.AvisoUltimasUnidades == null, $"Made-to-order never shows scarcity: {stock}");
         }
         Check(new Producto { Stock = 1 }.AvisoUltimasUnidades == "Última unidad", "Singular stock wording");
-        Check(new Producto { Stock = 5 }.AvisoUltimasUnidades == "Últimas 5 unidades", "Plural stock wording");
+        Check(new Producto { Stock = 5 }.AvisoUltimasUnidades == null, "Multiple units do not show scarcity");
         Console.WriteLine($"{count} order merge and stock notice checks passed.");
     }
 }

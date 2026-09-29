@@ -4,6 +4,22 @@ namespace Panaderia.MVC.Models
 {
     public class TiendaIndexViewModel
     {
+        public static string SeccionCategoria(string? categoria) => categoria?.Trim().ToLowerInvariant() switch
+        {
+            "pan" or "panes" => "Panes",
+            "cracker" or "crackers" => "Crackers",
+            "pizza" or "pizzas" => "Pizzas",
+            _ => "Otros"
+        };
+
+        public static int OrdenCategoria(string? categoria) => SeccionCategoria(categoria) switch
+        {
+            "Panes" => 0,
+            "Crackers" => 1,
+            "Pizzas" => 2,
+            _ => 3
+        };
+
         public List<Producto> Productos { get; set; } = new();
         public List<string> Categorias { get; set; } = new();
         public string? CategoriaSeleccionada { get; set; }

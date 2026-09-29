@@ -58,7 +58,8 @@ namespace Panaderia.MVC.Controllers
                 .Where(p => p.Categoria != null)
                 .Select(p => p.Categoria!.Nombre)
                 .Distinct(comparer)
-                .OrderBy(n => n, comparer)
+                .OrderBy(TiendaIndexViewModel.OrdenCategoria)
+                .ThenBy(n => n, comparer)
                 .ToList();
 
             // Etiquetas disponibles (solo las asignadas a algún producto visible)
@@ -94,7 +95,10 @@ namespace Panaderia.MVC.Controllers
             ViewBag.Costos = await CostosClienteAsync(productos.Select(p => p.Id));
             var vm = new TiendaIndexViewModel
             {
-                Productos = productos,
+                Productos = productos
+                    .OrderBy(p => TiendaIndexViewModel.OrdenCategoria(p.Categoria?.Nombre))
+                    .ThenBy(p => p.NombreVisible, comparer)
+                    .ToList(),
                 Categorias = categorias,
                 CategoriaSeleccionada = categoria,
                 Busqueda = q,
