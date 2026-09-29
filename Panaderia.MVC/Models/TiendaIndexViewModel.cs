@@ -8,7 +8,7 @@ namespace Panaderia.MVC.Models
         {
             "pan" or "panes" => "Panes",
             "cracker" or "crackers" => "Crackers",
-            "pizza" or "pizzas" => "Pizzas",
+            "pizza" or "pizzas" or "prepizza" or "prepizzas" => "Pizzas",
             _ => "Otros"
         };
 
