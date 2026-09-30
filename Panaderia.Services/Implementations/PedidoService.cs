@@ -426,9 +426,8 @@ namespace Panaderia.Services.Implementations
                     .FirstOrDefaultAsync(r => r.IdProducto == grupo.Key);
 
                 if (receta != null) await GrafoSubRecetas.CompletarAsync(_context, [receta]);
-                decimal costoUnitario = receta != null && receta.TamanioLote > 0
-                    ? receta.CostoIngredientesPorUnidad
-                    : 0m;
+                decimal costoUnitario = receta?.CostoIngredientesPorUnidad
+                    ?? primerDetalle.Producto.CostoManual ?? 0m;
 
                 detalles.Add(new CostoProductoItem
                 {
@@ -897,8 +896,15 @@ namespace Panaderia.Services.Implementations
                     .ThenInclude(sr => sr!.Detalles).ThenInclude(d => d.Insumo)
                 .Where(r => ids.Contains(r.IdProducto)).ToListAsync();
             await GrafoSubRecetas.CompletarAsync(_context, recetas);
-            return recetas.Where(r => r.CostoIngredientesPorUnidad > 0)
+            var costos = recetas.Where(r => r.CostoIngredientesPorUnidad > 0)
                 .ToDictionary(r => r.IdProducto, r => Math.Round(r.CostoIngredientesPorUnidad, 4, MidpointRounding.AwayFromZero));
+            var idsConReceta = recetas.Select(r => r.IdProducto).ToList();
+            var manuales = await _context.Productos.AsNoTracking()
+                .Where(p => ids.Contains(p.Id) && !idsConReceta.Contains(p.Id) && p.CostoManual > 0)
+                .Select(p => new { p.Id, p.CostoManual }).ToListAsync();
+            foreach (var producto in manuales)
+                costos[producto.Id] = Math.Round(producto.CostoManual!.Value, 4, MidpointRounding.AwayFromZero);
+            return costos;
         }
 
         private async Task AplicarPrecioDeCostoAsync(Pedido pedido)
@@ -909,7 +915,7 @@ namespace Panaderia.Services.Implementations
             foreach (var detalle in pedido.Detalles)
             {
                 if (!costos.TryGetValue(detalle.IdProducto, out var costo))
-                    throw new InvalidOperationException("No se puede cobrar a precio de costo: hay un producto sin receta o sin costo de ingredientes. Revisá su receta.");
+                    throw new InvalidOperationException("No se puede cobrar a precio de costo: hay un producto sin costo. Revisá su receta o cargá un costo por unidad si es un producto sin receta.");
                 detalle.PrecioUnitario = costo;
             }
             pedido.DescuentoPorcentaje = 0m;

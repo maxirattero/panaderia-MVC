@@ -1,0 +1,12 @@
+@model Panaderia.Models.Entities.Producto
+
+<div class="col-md-6">
+    <label asp-for="CostoManual" class="form-label small fw-bold text-muted">Costo por unidad (opcional)</label>
+    <div class="input-group">
+        <span class="input-group-text">$</span>
+        <input asp-for="CostoManual" class="form-control" type="number" lang="en" step="0.0001" min="0"
+               max="99999999999999.9999" placeholder="Sin costo cargado" aria-describedby="ayudaCostoManual" />
+    </div>
+    <span asp-validation-for="CostoManual" class="text-danger"></span>
+    <div id="ayudaCostoManual" class="form-text">Costo de compra de una unidad, sin empaque adicional. Se usa en productos sin receta, como hummus o pasta de maní. Si tiene receta, se usa el costo calculado de ella.</div>
+</div>

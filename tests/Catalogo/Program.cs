@@ -100,6 +100,7 @@ try
     // El resumen también debe descontar unidades producidas de pedidos ampliados.
     await db.DetallesPedido.Where(d => d.IdProducto == 101).ExecuteUpdateAsync(s => s.SetProperty(d => d.CantidadProducida, d => d.Cantidad));
     Check((await pedidoService.GetResumenProduccionAsync()).PorProducto.All(p => p.Formato != "Molde"), "Unidades registradas como producidas no cuentan en formatos");
+    await CostoManualChecks.RunAsync(db, Check);
     Console.WriteLine($"{checks} comprobaciones aprobadas.");
     if (args.Contains("--preview")) await Preview.RunAsync(connection);
 }

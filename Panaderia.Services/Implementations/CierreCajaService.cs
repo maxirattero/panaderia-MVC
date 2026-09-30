@@ -104,8 +104,9 @@ public class CierreCajaService(PanaderiaContext db) : ICierreCajaService
         cierre.TotalVendido = pedidos.Sum(p => p.MontoTotal);
         foreach (var grupo in detalles.GroupBy(d => d.IdProducto))
         {
-            var fallback = recetas.GetValueOrDefault(grupo.Key)?.CostoIngredientesPorUnidad;
             var lineas = grupo.ToList();
+            var fallback = recetas.GetValueOrDefault(grupo.Key)?.CostoIngredientesPorUnidad
+                ?? lineas[0].Producto.CostoManual;
             cierre.Costos.Add(new CierreCajaCosto {
                 IdProducto = grupo.Key, Producto = lineas[0].Producto.NombreVisible, Cantidad = lineas.Sum(d => d.Cantidad),
                 Ingredientes = lineas.Sum(d => d.Cantidad * (d.CostoIngredientes ?? fallback ?? 0m)),

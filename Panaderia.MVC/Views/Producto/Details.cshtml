@@ -46,6 +46,10 @@
             <p class="mb-0">$@Model.PrecioReventa.ToString("N0", new System.Globalization.CultureInfo("es-AR"))</p>
         </div>
         <div class="col-md-6">
+            <p class="small fw-bold text-muted mb-1">Costo por unidad (manual, para productos sin receta)</p>
+            <p class="mb-0">@(Model.CostoManual.HasValue ? "$" + Model.CostoManual.Value.ToString("N2", new System.Globalization.CultureInfo("es-AR")) : "Sin costo cargado")</p>
+        </div>
+        <div class="col-md-6">
             <p class="small fw-bold text-muted mb-1">Stock</p>
             <p class="mb-0">@Model.Stock</p>
         </div>

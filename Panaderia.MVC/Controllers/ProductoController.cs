@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Panaderia.Models.Entities;
 using Panaderia.Services.Interfaces;
@@ -74,7 +74,7 @@ namespace Panaderia.MVC.Controllers
         public async Task<IActionResult> Create()
         {
             await CargarDropdowns();
-            ViewBag.CostoUnidad = 0m;
+            ViewBag.CostoReceta = null;
             return View();
         }
 
@@ -96,7 +96,7 @@ namespace Panaderia.MVC.Controllers
                 return RedirectToAction(nameof(Index));
             }
             await CargarDropdowns(producto, idsEtiquetas);
-            ViewBag.CostoUnidad = 0m;
+            ViewBag.CostoReceta = null;
             return View(producto);
         }
 
@@ -115,7 +115,7 @@ namespace Panaderia.MVC.Controllers
             }
             await CargarDropdowns(producto);
             var receta = await _recetaService.GetByProductoIdAsync(producto.Id);
-            ViewBag.CostoUnidad = receta?.CostoPorUnidad ?? 0m;
+            ViewBag.CostoReceta = receta?.CostoPorUnidad;
             return View(producto);
         }
 
@@ -143,7 +143,7 @@ namespace Panaderia.MVC.Controllers
             }
             await CargarDropdowns(producto, idsEtiquetas);
             var recetaEdit = await _recetaService.GetByProductoIdAsync(producto.Id);
-            ViewBag.CostoUnidad = recetaEdit?.CostoPorUnidad ?? 0m;
+            ViewBag.CostoReceta = recetaEdit?.CostoPorUnidad;
             return View(producto);
         }
 

@@ -186,7 +186,7 @@
                         ? parseFloat(opt.dataset.reventa)
                         : parseFloat(opt.dataset.final);
                 }
-                prodSelect.setCustomValidity(clienteACosto() && opt?.value && !(precio > 0) ? 'Este producto no tiene costo de ingredientes. Revisá su receta.' : '');
+                prodSelect.setCustomValidity(clienteACosto() && opt?.value && !(precio > 0) ? 'Este producto no tiene costo. Revisá su receta o cargá un costo por unidad si no tiene receta.' : '');
                 const cant = parseInt(cantInput.value) || 0;
                 subtotalCell.textContent = '$' + (precio * cant).toFixed(0);
                 recalcularTotales();

@@ -40,6 +40,11 @@ namespace Panaderia.Models.Entities
 
         public decimal PrecioFinal { get; set; }
         public decimal PrecioReventa { get; set; }
+
+        [Range(typeof(decimal), "0", "99999999999999.9999", ParseLimitsInInvariantCulture = true,
+            ErrorMessage = "El costo debe ser un monto válido mayor o igual a cero.")]
+        public decimal? CostoManual { get; set; }
+
         public int Stock { get; set; }
         public string? ImagenURL { get; set; }
         public bool OcultoEnTienda { get; set; }

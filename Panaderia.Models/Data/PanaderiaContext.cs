@@ -98,6 +98,9 @@ namespace Panaderia.Models.Data
             });
             // Configuración de relaciones y restricciones            
             // Producto -> CategoriaProducto
+            modelBuilder.Entity<Producto>().Property(p => p.CostoManual).HasPrecision(18, 4);
+            modelBuilder.Entity<Producto>().ToTable("Productos", t =>
+                t.HasCheckConstraint("CK_Productos_CostoManual", "\"CostoManual\" >= 0"));
             modelBuilder.Entity<Producto>()
                 .HasOne(p => p.Categoria)
                 .WithMany()

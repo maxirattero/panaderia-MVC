@@ -46,6 +46,7 @@ namespace Panaderia.Services.Implementations
         //Crear nuevo Producto
         public async Task CreateAsync(Producto producto)
         {
+            producto.OcultoEnTienda = true;
             AplicarEstadoStock(producto);
             await _context.Productos.AddAsync(producto);
             await _context.SaveChangesAsync();
@@ -65,6 +66,7 @@ namespace Panaderia.Services.Implementations
             existe.Nombre = producto.Nombre;
             existe.PrecioFinal = producto.PrecioFinal;
             existe.PrecioReventa = producto.PrecioReventa;
+            existe.CostoManual = producto.CostoManual;
             existe.Stock = producto.Stock;
             existe.PorEncargo = producto.PorEncargo;
             existe.TieneDisponibilidadSemanal = producto.TieneDisponibilidadSemanal;
@@ -107,6 +109,7 @@ namespace Panaderia.Services.Implementations
                 Nombre = $"{origen.NombreVisible} (copia)",
                 PrecioFinal = origen.PrecioFinal,
                 PrecioReventa = origen.PrecioReventa,
+                CostoManual = origen.CostoManual,
                 Stock = 0,
                 OcultoEnTienda = true,
                 PorEncargo = origen.PorEncargo,
