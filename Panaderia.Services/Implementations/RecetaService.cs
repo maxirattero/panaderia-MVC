@@ -21,7 +21,7 @@ public class RecetaService : IRecetaService
 
     public async Task<Receta?> GetByProductoIdAsync(int idProducto)
     {
-        return await _context.Recetas
+        var receta = await _context.Recetas
             .Include(r => r.Detalles)
                 .ThenInclude(d => d.Insumo)
             .Include(r => r.Detalles)
@@ -33,6 +33,8 @@ public class RecetaService : IRecetaService
             .Include(r => r.Producto)
                 .ThenInclude(p => p.Formato)
             .FirstOrDefaultAsync(r => r.IdProducto == idProducto);
+        if (receta != null) await GrafoSubRecetas.CompletarAsync(_context, [receta]);
+        return receta;
     }
 
     public async Task UpsertAsync(Receta receta)

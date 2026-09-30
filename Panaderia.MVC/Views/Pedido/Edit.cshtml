@@ -117,6 +117,7 @@
 <partial name="_ProductoPedidoTemplate" />
 
 @section Scripts {
+    <script src="~/js/pedido-empaque.js" asp-append-version="true"></script>
     <script>
         const initialDetalles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Detalles,
             new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
@@ -261,7 +262,7 @@
                 reindexar();
                 recalcularFila(tr);
 
-                tr.querySelector('.prod-select').addEventListener('change', () => recalcularFila(tr));
+                tr.querySelector('.prod-select').addEventListener('change', () => { aplicarEmpaquePredeterminado(tr); recalcularFila(tr); });
                 tr.querySelector('.cant-input').addEventListener('input', () => recalcularFila(tr));
                 tr.querySelector('.btnQuitar').addEventListener('click', () => {
                     tr.remove();

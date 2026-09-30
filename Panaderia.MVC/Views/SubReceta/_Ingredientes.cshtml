@@ -1,0 +1,43 @@
+@model Panaderia.Models.Entities.SubReceta
+@using Panaderia.Models.Entities
+@using System.Text.Json
+<div class="card card-custom p-4 mb-4" id="editorSubReceta"
+     data-detalles="@JsonSerializer.Serialize(Model.Detalles.Select(d => new { d.IdInsumo, d.IdSubRecetaIngrediente, d.PorcentajePanadero, d.CantidadFija }))">
+    <h6 class="fw-semibold mb-3">Ingredientes y sub-recetas</h6>
+    <div class="table-responsive mb-2">
+        <table class="table table-sm align-middle mb-0">
+            <thead><tr><th style="min-width:220px">Ingrediente</th><th>Tipo</th><th>Cantidad</th><th></th></tr></thead>
+            <tbody id="detallesBody"></tbody>
+        </table>
+    </div>
+    <button type="button" id="btnAgregar" class="btn btn-sm btn-outline-secondary">Agregar ingrediente o sub-receta</button>
+</div>
+<template id="filaTemplate">
+    <tr>
+        <td>
+            <select class="form-select form-select-sm sel-ingrediente" required aria-label="Ingrediente o sub-receta">
+                <option value="">— Seleccionar —</option>
+                <optgroup label="Insumos">
+                    @foreach (var ins in (IEnumerable<Insumo>)ViewBag.InsumosLista)
+                    {
+                        <option value="i-@ins.Id" data-unidad="@((int)ins.UnidadBase)">@ins.Nombre</option>
+                    }
+                </optgroup>
+                <optgroup label="Sub-recetas">
+                    @foreach (var sr in (IEnumerable<SubReceta>)ViewBag.SubRecetasLista)
+                    {
+                        <option value="s-@sr.Id" data-unidad="0">@sr.Nombre</option>
+                    }
+                </optgroup>
+            </select>
+            <input type="hidden" class="id-insumo" />
+            <input type="hidden" class="id-subreceta" />
+        </td>
+        <td class="tipo-label small text-muted"></td>
+        <td>
+            <input type="number" class="form-control form-control-sm inp-pct" step="0.0001" min="0.0001" required aria-label="Porcentaje panadero" />
+            <input type="number" class="form-control form-control-sm inp-fija" step="0.0001" min="0.0001" required aria-label="Cantidad fija" hidden disabled />
+        </td>
+        <td><button type="button" class="btn btn-sm btn-outline-danger btn-quitar" aria-label="Quitar ingrediente">✕</button></td>
+    </tr>
+</template>

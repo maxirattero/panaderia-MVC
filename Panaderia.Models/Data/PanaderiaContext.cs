@@ -102,6 +102,8 @@ namespace Panaderia.Models.Data
                 .HasOne(p => p.Categoria)
                 .WithMany()
                 .HasForeignKey(p => p.IdCategoria);
+            modelBuilder.Entity<Producto>().HasOne(p => p.EmpaquePredeterminado).WithMany()
+                .HasForeignKey(p => p.IdEmpaquePredeterminado).OnDelete(DeleteBehavior.Restrict);
             // Producto -> Tamano (opcional)
             modelBuilder.Entity<Producto>()
                 .HasOne(p => p.Tamano)
@@ -207,6 +209,14 @@ namespace Panaderia.Models.Data
                 .WithMany()
                 .HasForeignKey(d => d.IdInsumo)
                 .OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<SubRecetaDetalle>()
+                .HasOne(d => d.SubRecetaIngrediente).WithMany()
+                .HasForeignKey(d => d.IdSubRecetaIngrediente).OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<SubRecetaDetalle>().ToTable("SubRecetaDetalles", t =>
+            {
+                t.HasCheckConstraint("CK_SubRecetaDetalle_Ingrediente", "(\"IdInsumo\" IS NOT NULL) <> (\"IdSubRecetaIngrediente\" IS NOT NULL)");
+                t.HasCheckConstraint("CK_SubRecetaDetalle_NoAutoReferencia", "\"IdSubRecetaIngrediente\" IS NULL OR \"IdSubRecetaIngrediente\" <> \"IdSubReceta\"");
+            });
             // CompraProveedor -> Proveedor (restrict)
             modelBuilder.Entity<CompraProveedor>()
                 .HasOne(c => c.Proveedor)

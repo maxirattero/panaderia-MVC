@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Panaderia.Models.Data;
 using Panaderia.Models.DTOs;
 using Panaderia.Models.Entities;
@@ -196,6 +196,12 @@ namespace Panaderia.Services.Implementations
             var ids = pedido.Detalles.Select(d => d.IdProducto).Distinct().ToArray();
             var productos = await _context.Productos.AsNoTracking().Where(p => ids.Contains(p.Id)).ToListAsync();
             DisponibilidadSemanal.ValidarPedido(productos, _reloj.GetUtcNow());
+            foreach (var detalle in pedido.Detalles)
+            {
+                var producto = productos.Single(p => p.Id == detalle.IdProducto);
+                detalle.IdEmpaque = producto.IdEmpaquePredeterminado;
+                detalle.LlevaEtiqueta = producto.EtiquetaPredeterminada;
+            }
             Pedido? existente = null;
             if (pedido.FechaEntrega is DateTime entrega && entrega.DayOfWeek == DayOfWeek.Saturday)
             {
@@ -419,6 +425,7 @@ namespace Panaderia.Services.Implementations
                         .ThenInclude(sr => sr!.Detalles).ThenInclude(sd => sd.Insumo)
                     .FirstOrDefaultAsync(r => r.IdProducto == grupo.Key);
 
+                if (receta != null) await GrafoSubRecetas.CompletarAsync(_context, [receta]);
                 decimal costoUnitario = receta != null && receta.TamanioLote > 0
                     ? receta.CostoIngredientesPorUnidad
                     : 0m;
@@ -471,6 +478,7 @@ namespace Panaderia.Services.Implementations
                 }
 
                 decimal vecesReceta = item.CantidadAProducir / receta.TamanioLote;
+                await GrafoSubRecetas.CompletarAsync(_context, [receta]);
 
                 foreach (var d in receta.Detalles)
                 {
@@ -486,9 +494,13 @@ namespace Panaderia.Services.Implementations
                         cantidadNecesaria = d.CantidadFija!.Value * receta.TamanioLote * vecesReceta;
                     }
 
-                    if (!d.IdInsumo.HasValue || d.IdInsumo.Value <= 0) continue;
-                    necesidades.TryGetValue(d.IdInsumo.Value, out var acumulada);
-                    necesidades[d.IdInsumo.Value] = acumulada + cantidadNecesaria;
+                    if (d.SubReceta != null)
+                    {
+                        foreach (var ingrediente in d.SubReceta.Desglosar(cantidadNecesaria, item.CantidadAProducir))
+                            necesidades[ingrediente.Insumo.Id] = necesidades.GetValueOrDefault(ingrediente.Insumo.Id) + ingrediente.Cantidad;
+                    }
+                    else if (d.IdInsumo is int insumoId)
+                        necesidades[insumoId] = necesidades.GetValueOrDefault(insumoId) + cantidadNecesaria;
                 }
 
                 producciones.Add((item, receta));
@@ -664,7 +676,7 @@ namespace Panaderia.Services.Implementations
         {
             var combinada = await GetProduccionCombinadaAsync(productosExcluidos);
             return combinada
-                .Select(x => new ResumenProductoItem(x.IdProducto, x.Producto.NombreVisible, x.Cantidad))
+                .Select(x => new ResumenProductoItem(x.IdProducto, x.Producto.NombreVisible, x.Cantidad) { Formato = x.Producto.Formato?.Descripcion })
                 .ToList();
         }
 
@@ -695,7 +707,7 @@ namespace Panaderia.Services.Implementations
                 })
                 .OrderBy(x => x.Producto.Categoria?.Nombre)
                 .ThenBy(x => x.Producto.Masa)
-                .Select(x => new ResumenProductoItem(x.IdProducto, x.Producto.NombreVisible, x.Cantidad))
+                .Select(x => new ResumenProductoItem(x.IdProducto, x.Producto.NombreVisible, x.Cantidad) { Formato = x.Producto.Formato?.Descripcion })
                 .ToList();
 
             // El tipo de bolsa sale del empaque elegido: los marcados como "bolsa de papel"
@@ -766,54 +778,24 @@ namespace Panaderia.Services.Implementations
                 }
             }
 
-            // Build ingredient breakdown for each sub-receta
+            // Desglosar todos los niveles: las rutas muestran de qué base proviene cada insumo.
+            var grafoSubRecetas = await GrafoSubRecetas.CargarAsync(_context);
             foreach (var srItem in porSubReceta)
             {
-                var subReceta = await _context.SubRecetas
-                    .Include(s => s.Detalles).ThenInclude(d => d.Insumo)
-                    .FirstOrDefaultAsync(s => s.Id == srItem.IdSubReceta);
-
-                if (subReceta == null) continue;
-
-                var sumaPctSub = subReceta.Detalles
-                    .Where(d => d.PorcentajePanadero.HasValue)
-                    .Sum(d => d.PorcentajePanadero!.Value);
-
-                if (sumaPctSub == 0) continue;
-
-                foreach (var sd in subReceta.Detalles)
-                {
-                    if (sd.Insumo == null) continue;
-
-                    decimal cantidad;
-                    string unidad;
-
-                    if (sd.PorcentajePanadero.HasValue)
-                    {
-                        cantidad = srItem.TotalGramos / sumaPctSub * sd.PorcentajePanadero.Value;
-                        unidad = sd.Insumo.UnidadBase switch
-                        {
-                            Panaderia.Models.Enums.UnidadMedida.Mililitros => "ml",
-                            Panaderia.Models.Enums.UnidadMedida.Unidades => "u",
-                            _ => "g"
-                        };
-                    }
-                    else if (sd.CantidadFija.HasValue)
-                    {
-                        cantidad = sd.CantidadFija.Value * (srItem.TotalGramos / 100m);
-                        unidad = "u";
-                    }
-                    else continue;
-
+                if (!grafoSubRecetas.TryGetValue(srItem.IdSubReceta, out var subReceta)) continue;
+                foreach (var ingrediente in subReceta.Desglosar(srItem.TotalGramos, srItem.TotalGramos / 100m))
                     srItem.Ingredientes.Add(new ResumenSubRecetaIngrediente
                     {
-                        NombreInsumo = sd.Insumo.Nombre,
-                        Cantidad = cantidad,
-                        Unidad = unidad
+                        NombreInsumo = ingrediente.Nombre,
+                        Cantidad = ingrediente.Cantidad,
+                        Unidad = ingrediente.Insumo.UnidadBase switch
+                        {
+                            UnidadMedida.Mililitros => "ml",
+                            UnidadMedida.Unidades => "u",
+                            _ => "g"
+                        }
                     });
-                }
             }
-
             return (porProducto, porBolsa, porSubReceta, totalAgua);
         }
 
@@ -914,6 +896,7 @@ namespace Panaderia.Services.Implementations
                 .Include(r => r.Detalles).ThenInclude(d => d.SubReceta)
                     .ThenInclude(sr => sr!.Detalles).ThenInclude(d => d.Insumo)
                 .Where(r => ids.Contains(r.IdProducto)).ToListAsync();
+            await GrafoSubRecetas.CompletarAsync(_context, recetas);
             return recetas.Where(r => r.CostoIngredientesPorUnidad > 0)
                 .ToDictionary(r => r.IdProducto, r => Math.Round(r.CostoIngredientesPorUnidad, 4, MidpointRounding.AwayFromZero));
         }

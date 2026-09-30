@@ -87,7 +87,10 @@
 <partial name="_ProductoPedidoTemplate" />
 
 @section Scripts {
+    <script src="~/js/pedido-empaque.js" asp-append-version="true"></script>
     <script>
+        const initialDetalles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Detalles,
+            new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
         (function () {
             const tbody = document.getElementById('detallesBody');
             const template = document.getElementById('filaTemplate');
@@ -208,12 +211,19 @@
                 });
             }
 
-            function agregarFila() {
+            function agregarFila(data = null) {
                 const tr = template.content.cloneNode(true).querySelector('.pedido-item');
+                if (data) {
+                    tr.querySelector('.prod-select').value = data.idProducto;
+                    tr.querySelector('.cant-input').value = data.cantidad;
+                    tr.querySelector('.empaque-select').value = data.idEmpaque || '';
+                    tr.querySelector('.pedido-etiqueta-check').checked = !!data.llevaEtiqueta;
+                }
                 tbody.appendChild(tr);
                 reindexar();
+                recalcularFila(tr);
 
-                tr.querySelector('.prod-select').addEventListener('change', () => recalcularFila(tr));
+                tr.querySelector('.prod-select').addEventListener('change', () => { aplicarEmpaquePredeterminado(tr); recalcularFila(tr); });
                 tr.querySelector('.cant-input').addEventListener('input', () => recalcularFila(tr));
                 tr.querySelector('.btnQuitar').addEventListener('click', () => {
                     tr.remove();
@@ -223,7 +233,7 @@
                 });
             }
 
-            btnAgregar.addEventListener('click', agregarFila);
+            btnAgregar.addEventListener('click', () => agregarFila());
 
             // Al elegir cliente, se trae su descuento habitual (vacío si no tiene). Se puede pisar a mano.
             function aplicarDescuentoDelCliente() {
@@ -240,7 +250,8 @@
 
             descuentoInput.addEventListener('input', recalcularTotales);
 
-            agregarFila();
+            if (initialDetalles?.length) initialDetalles.forEach(agregarFila);
+            else agregarFila();
             recalcularTotales();
         })();
     </script>

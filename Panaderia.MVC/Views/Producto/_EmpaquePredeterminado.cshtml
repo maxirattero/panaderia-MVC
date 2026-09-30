@@ -1,0 +1,14 @@
+@model Panaderia.Models.Entities.Producto
+<div class="col-md-6">
+    <label asp-for="IdEmpaquePredeterminado" class="form-label small fw-bold text-muted">Bolsa predeterminada</label>
+    <select asp-for="IdEmpaquePredeterminado" asp-items="ViewBag.Empaques" class="form-select">
+        <option value="">-- Sin empaque --</option>
+    </select>
+    <p class="small text-muted mt-1">Se aplica en la tienda y se precarga en los pedidos de admin.</p>
+</div>
+<div class="col-md-6 d-flex align-items-center">
+    <label class="form-check">
+        <input asp-for="EtiquetaPredeterminada" class="form-check-input" />
+        <span class="form-check-label">Incluir etiqueta por defecto</span>
+    </label>
+</div>

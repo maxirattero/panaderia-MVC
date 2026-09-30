@@ -16,13 +16,14 @@ public class SubRecetaController : Controller
         _insumoService    = insumoService;
     }
 
-    private async Task CargarDropdowns()
+    private async Task CargarDropdowns(int? idActual = null)
     {
         // Los consumibles (film, limpieza, guantes...) no entran en una sub-receta.
         // Empaque y Etiqueta siguen listándose como hasta ahora para no cambiar sub-recetas ya cargadas.
         ViewBag.InsumosLista = (await _insumoService.GetAllAsync())
             .Where(i => i.Activo && i.TipoInsumo != TipoInsumo.Consumible)
             .ToList();
+        ViewBag.SubRecetasLista = (await _subRecetaService.GetAllAsync()).Where(s => s.Id != idActual).ToList();
     }
 
     public async Task<IActionResult> Index()
@@ -41,16 +42,19 @@ public class SubRecetaController : Controller
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(SubReceta subReceta)
     {
-        foreach (var key in ModelState.Keys.Where(k => k.StartsWith("Detalles[")).ToList())
-            ModelState.Remove(key);
-
         if (!ModelState.IsValid)
         {
             await CargarDropdowns();
             return View(subReceta);
         }
 
-        await _subRecetaService.CreateAsync(subReceta);
+        try { await _subRecetaService.CreateAsync(subReceta); }
+        catch (InvalidOperationException ex)
+        {
+            ModelState.AddModelError("", ex.Message);
+            await CargarDropdowns();
+            return View(subReceta);
+        }
         TempData["Success"] = "Sub-receta creada correctamente.";
         return RedirectToAction(nameof(Index));
     }
@@ -60,7 +64,7 @@ public class SubRecetaController : Controller
     {
         var subReceta = await _subRecetaService.GetByIdAsync(id);
         if (subReceta == null) return NotFound();
-        await CargarDropdowns();
+        await CargarDropdowns(id);
         return View(subReceta);
     }
 
@@ -69,16 +73,19 @@ public class SubRecetaController : Controller
     {
         if (id != subReceta.Id) return NotFound();
 
-        foreach (var key in ModelState.Keys.Where(k => k.StartsWith("Detalles[")).ToList())
-            ModelState.Remove(key);
-
         if (!ModelState.IsValid)
         {
-            await CargarDropdowns();
+            await CargarDropdowns(id);
             return View(subReceta);
         }
 
-        await _subRecetaService.UpdateAsync(subReceta);
+        try { await _subRecetaService.UpdateAsync(subReceta); }
+        catch (InvalidOperationException ex)
+        {
+            ModelState.AddModelError("", ex.Message);
+            await CargarDropdowns(id);
+            return View(subReceta);
+        }
         TempData["Success"] = "Sub-receta actualizada correctamente.";
         return RedirectToAction(nameof(Index));
     }
@@ -86,7 +93,12 @@ public class SubRecetaController : Controller
     [HttpPost, ActionName("Delete"), ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteConfirmed(int id)
     {
-        await _subRecetaService.DeleteAsync(id);
+        try { await _subRecetaService.DeleteAsync(id); }
+        catch (InvalidOperationException ex)
+        {
+            TempData["Error"] = ex.Message;
+            return RedirectToAction(nameof(Index));
+        }
         TempData["Success"] = "Sub-receta eliminada correctamente.";
         return RedirectToAction(nameof(Index));
     }

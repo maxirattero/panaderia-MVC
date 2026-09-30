@@ -100,6 +100,7 @@ public class CierreCajaService(PanaderiaContext db) : ICierreCajaService
         var recetas = await db.Recetas.AsNoTracking().Include(r => r.Detalles).ThenInclude(d => d.Insumo)
             .Include(r => r.Detalles).ThenInclude(d => d.SubReceta).ThenInclude(s => s!.Detalles).ThenInclude(d => d.Insumo)
             .Where(r => ids.Contains(r.IdProducto)).ToDictionaryAsync(r => r.IdProducto);
+        await GrafoSubRecetas.CompletarAsync(db, recetas.Values);
         cierre.TotalVendido = pedidos.Sum(p => p.MontoTotal);
         foreach (var grupo in detalles.GroupBy(d => d.IdProducto))
         {

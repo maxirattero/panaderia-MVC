@@ -54,17 +54,7 @@ public class Receta
             {
                 if (SumaPorcentajes == 0) return 0m;
                 var gramosSubReceta = PesoMasaTotal / SumaPorcentajes * d.PorcentajePanadero.Value;
-                var sumaPctSub = d.SubReceta.Detalles?
-                    .Where(sd => sd.PorcentajePanadero.HasValue)
-                    .Sum(sd => sd.PorcentajePanadero!.Value) ?? 0m;
-                if (sumaPctSub == 0) return 0m;
-                return d.SubReceta.Detalles?.Sum(sd =>
-                    sd.Insumo is null || (soloIngredientes && sd.Insumo.TipoInsumo != Panaderia.Models.Enums.TipoInsumo.Ingrediente) ? 0m :
-                    sd.PorcentajePanadero.HasValue
-                        ? sd.Insumo.CostoPorUnidadBase
-                          * (gramosSubReceta / sumaPctSub * sd.PorcentajePanadero.Value)
-                        : sd.Insumo.CostoPorUnidadBase * (sd.CantidadFija ?? 0m) * TamanioLote
-                ) ?? 0m;
+                return d.SubReceta.CalcularCosto(gramosSubReceta, TamanioLote, soloIngredientes);
             }
 
             return 0m;

@@ -46,6 +46,11 @@ namespace Panaderia.Models.Entities
         public bool SinStock { get; set; }
         public bool PorEncargo { get; set; }
         public bool TieneDisponibilidadSemanal { get; set; }
+        public int? IdEmpaquePredeterminado { get; set; }
+        public bool EtiquetaPredeterminada { get; set; }
+
+        [ValidateNever]
+        public Insumo? EmpaquePredeterminado { get; set; }
 
         [MaxLength(1000)]
         public string? DescripcionTienda { get; set; }

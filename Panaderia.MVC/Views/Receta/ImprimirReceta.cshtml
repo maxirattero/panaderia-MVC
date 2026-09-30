@@ -56,12 +56,12 @@
         <tbody>
             @foreach (var det in Model.Receta.Detalles)
             {
-                var unidadStr = det.Insumo.UnidadBase switch
+                var unidadStr = det.Insumo?.UnidadBase switch
                 {
                     UnidadMedida.Gramos     => "g",
                     UnidadMedida.Mililitros => "ml",
                     UnidadMedida.Unidades   => "u",
-                    _                       => det.Insumo.UnidadBase.ToString()
+                    _                       => "g"
                 };
                 decimal cantidadDet = 0m;
                 if (det.PorcentajePanadero.HasValue && Model.Receta.SumaPorcentajes > 0)
@@ -71,7 +71,7 @@
                 else if (det.CantidadFija.HasValue)
                     cantidadDet = det.CantidadFija.Value * Model.CantidadUnidades;
                 <tr>
-                    <td>@det.Insumo.Nombre</td>
+                    <td>@(det.Insumo?.Nombre ?? det.SubReceta?.Nombre)</td>
                     <td>@unidadStr</td>
                     <td>@cantidadDet.ToString("0.###", CultureInfo.InvariantCulture)</td>
                 </tr>

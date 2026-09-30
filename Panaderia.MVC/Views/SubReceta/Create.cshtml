@@ -13,7 +13,7 @@
 
     <form asp-action="Create" method="post">
         @Html.AntiForgeryToken()
-        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+        <div asp-validation-summary="All" class="text-danger mb-3"></div>
 
         <div class="card card-custom p-4 mb-4">
             <div class="row g-4">
@@ -35,27 +35,7 @@
             </div>
         </div>
 
-        <div class="card card-custom p-4 mb-4">
-            <h6 class="fw-semibold mb-3">Ingredientes</h6>
-            <div class="table-responsive mb-2">
-                <table class="table table-sm align-middle mb-0">
-                    <thead style="background-color: #cebaac; color: #281714;">
-                        <tr>
-                            <th style="min-width:200px;">Insumo</th>
-                            <th style="width:110px;">Tipo</th>
-                            <th style="width:150px;">Porcentaje / Cantidad</th>
-                            <th style="width:50px;"></th>
-                        </tr>
-                    </thead>
-                    <tbody id="detallesBody"></tbody>
-                </table>
-            </div>
-            <button type="button" id="btnAgregar"
-                    class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1">
-                <span class="material-symbols-outlined" style="font-size:1rem">add</span>
-                Agregar ingrediente
-            </button>
-        </div>
+        <partial name="_Ingredientes" model="Model" />
 
         <div class="d-flex gap-2">
             <button type="submit" class="btn btn-mv-primary">Guardar</button>
@@ -64,82 +44,8 @@
     </form>
 </div>
 
-<template id="filaTemplate">
-    <tr>
-        <td>
-            <select name="__INSUMO__" class="form-select form-select-sm sel-insumo">
-                <option value="">— Insumo —</option>
-                @foreach (var ins in insumosLista)
-                {
-                    <option value="@ins.Id" data-unidad-base="@((int)ins.UnidadBase)">@ins.Nombre</option>
-                }
-            </select>
-        </td>
-        <td><span class="tipo-label text-muted small">—</span></td>
-        <td>
-            <input type="number" name="__PCT__"
-                   class="form-control form-control-sm inp-pct"
-                   lang="en" step="0.01" min="0" placeholder="%" />
-            <input type="number" name="__FIJA__"
-                   class="form-control form-control-sm inp-fija"
-                   lang="en" step="0.001" min="0" placeholder="cant."
-                   style="display:none;" />
-        </td>
-        <td>
-            <button type="button" class="btn btn-sm btn-outline-danger btn-quitar" title="Quitar">✕</button>
-        </td>
-    </tr>
-</template>
+
 
 @section Scripts {
-<script>
-(function () {
-    const tbody      = document.getElementById('detallesBody');
-    const tmpl       = document.getElementById('filaTemplate');
-    const btnAgregar = document.getElementById('btnAgregar');
-
-    function reindexar() {
-        tbody.querySelectorAll('tr').forEach((tr, i) => {
-            tr.querySelector('.sel-insumo').name = `Detalles[${i}].IdInsumo`;
-            tr.querySelector('.inp-pct').name    = `Detalles[${i}].PorcentajePanadero`;
-            tr.querySelector('.inp-fija').name   = `Detalles[${i}].CantidadFija`;
-        });
-    }
-
-    function adaptarFila(tr, unidadBase) {
-        const esFija = (unidadBase === 2);
-        const pct    = tr.querySelector('.inp-pct');
-        const fija   = tr.querySelector('.inp-fija');
-        pct.style.display  = esFija ? 'none' : '';
-        pct.disabled       = esFija;
-        fija.style.display = esFija ? '' : 'none';
-        fija.disabled      = !esFija;
-        tr.querySelector('.tipo-label').textContent = esFija ? 'Cant. fija' : '% Panadero';
-    }
-
-    function bindFila(tr) {
-        tr.querySelector('.sel-insumo').addEventListener('change', () => {
-            const opt = tr.querySelector('.sel-insumo').options[tr.querySelector('.sel-insumo').selectedIndex];
-            const ub  = parseInt(opt?.dataset?.unidadBase ?? '-1');
-            adaptarFila(tr, ub);
-            tr.querySelector('.inp-pct').value  = '';
-            tr.querySelector('.inp-fija').value = '';
-        });
-        tr.querySelector('.btn-quitar').addEventListener('click', () => {
-            tr.remove();
-            reindexar();
-        });
-    }
-
-    function agregarFila() {
-        const frag = tmpl.content.cloneNode(true);
-        const tr   = frag.querySelector('tr');
-        bindFila(tr);
-        tbody.appendChild(frag);
-        reindexar();
-    }
-
-    btnAgregar.addEventListener('click', agregarFila);
-})();
-</script>
+    <script src="~/js/subreceta-editor.js" asp-append-version="true"></script>
 }

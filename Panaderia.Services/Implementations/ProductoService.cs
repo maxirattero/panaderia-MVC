@@ -68,6 +68,8 @@ namespace Panaderia.Services.Implementations
             existe.Stock = producto.Stock;
             existe.PorEncargo = producto.PorEncargo;
             existe.TieneDisponibilidadSemanal = producto.TieneDisponibilidadSemanal;
+            existe.IdEmpaquePredeterminado = producto.IdEmpaquePredeterminado;
+            existe.EtiquetaPredeterminada = producto.EtiquetaPredeterminada;
             existe.DescripcionTienda = producto.DescripcionTienda;
             existe.Ingredientes = producto.Ingredientes;
             existe.ImagenURL = producto.ImagenURL;
@@ -109,6 +111,8 @@ namespace Panaderia.Services.Implementations
                 OcultoEnTienda = true,
                 PorEncargo = origen.PorEncargo,
                 TieneDisponibilidadSemanal = origen.TieneDisponibilidadSemanal,
+                IdEmpaquePredeterminado = origen.IdEmpaquePredeterminado,
+                EtiquetaPredeterminada = origen.EtiquetaPredeterminada,
                 DescripcionTienda = origen.DescripcionTienda,
                 Ingredientes = origen.Ingredientes,
                 ObservacionesElaboracion = origen.ObservacionesElaboracion,

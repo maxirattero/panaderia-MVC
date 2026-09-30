@@ -9,20 +9,7 @@
 }
 
 @functions {
-    decimal ComputarCostoPorGramo(SubReceta sr)
-    {
-        var sumaPct = sr.Detalles?
-            .Where(d => d.PorcentajePanadero.HasValue)
-            .Sum(d => d.PorcentajePanadero!.Value) ?? 0m;
-        if (sumaPct == 0) return 0m;
-        var costo = sr.Detalles?.Sum(d =>
-            d.Insumo is null ? 0m :
-            d.PorcentajePanadero.HasValue
-                ? d.Insumo.CostoPorUnidadBase * (100m / sumaPct * d.PorcentajePanadero.Value)
-                : 0m
-        ) ?? 0m;
-        return costo / 100m;
-    }
+    decimal ComputarCostoPorGramo(SubReceta sr) => sr.CalcularCosto(1m, 0m);
 }
     <div class="card card-custom overflow-hidden" style="max-width: 820px;">
 
@@ -314,7 +301,8 @@
         subRecetasLista.Select(sr => new {
             id            = sr.Id,
             nombre        = sr.Nombre,
-            costoPorGramo = ComputarCostoPorGramo(sr)
+            costoPorGramo = ComputarCostoPorGramo(sr),
+            costoFijoPorUnidad = sr.CalcularCosto(0m, 1m)
         })
     ));
 
@@ -350,7 +338,7 @@
             const pesoMasa   = getPesoMasa();
             const sumaPct    = getSumaPct();
             const gramos     = sumaPct > 0 ? (pesoMasa / sumaPct * pct) : 0;
-            const costoLinea = srData ? srData.costoPorGramo * gramos : 0;
+            const costoLinea = srData ? srData.costoPorGramo * gramos + srData.costoFijoPorUnidad * (parseFloat(loteInput.value) || 1) : 0;
             tr.querySelector('.resultado-label').textContent = gramos.toFixed(1) + ' g';
             tr.querySelector('.costo-linea').textContent     = '$' + costoLinea.toFixed(2);
             return;

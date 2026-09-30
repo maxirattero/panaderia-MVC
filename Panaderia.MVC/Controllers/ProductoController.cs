@@ -13,6 +13,7 @@ namespace Panaderia.MVC.Controllers
         private readonly ITamanoService _tamanoService;
         private readonly IRecetaService _recetaService;
         private readonly IEtiquetaService _etiquetaService;
+        private readonly IInsumoService? _insumoService;
 
         public ProductoController(
             IProductoService productoService,
@@ -20,7 +21,8 @@ namespace Panaderia.MVC.Controllers
             IFormatoService formatoService,
             ITamanoService tamanoService,
             IRecetaService recetaService,
-            IEtiquetaService etiquetaService)
+            IEtiquetaService etiquetaService,
+            IInsumoService? insumoService = null)
         {
             _productoService = productoService;
             _categoriaService = categoriaService;
@@ -28,6 +30,7 @@ namespace Panaderia.MVC.Controllers
             _tamanoService = tamanoService;
             _recetaService = recetaService;
             _etiquetaService = etiquetaService;
+            _insumoService = insumoService;
         }
 
         private async Task CargarDropdowns(Producto? producto = null, IEnumerable<int>? etiquetasSeleccionadas = null)
@@ -35,6 +38,7 @@ namespace Panaderia.MVC.Controllers
             ViewBag.Categorias = new SelectList(await _categoriaService.GetAllAsync(), "Id", "Nombre", producto?.IdCategoria);
             ViewBag.Formatos = new SelectList(await _formatoService.GetAllAsync(), "Id", "Descripcion", producto?.IdFormato);
             ViewBag.Tamanos = new SelectList(await _tamanoService.GetAllAsync(), "Id", "Descripcion", producto?.IdTamano);
+            ViewBag.Empaques = new SelectList(_insumoService == null ? [] : await _insumoService.GetEmpaquesAsync(), "Id", "Nombre", producto?.IdEmpaquePredeterminado);
 
             ViewBag.Etiquetas = await _etiquetaService.GetAllAsync();
             ViewBag.EtiquetasSeleccionadas = etiquetasSeleccionadas?.ToList()

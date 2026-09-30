@@ -2,7 +2,10 @@ using Panaderia.Models.Enums;
 
 namespace Panaderia.Models.DTOs
 {
-    public record ResumenProductoItem(int IdProducto, string NombreProducto, int CantidadTotal);
+    public record ResumenProductoItem(int IdProducto, string NombreProducto, int CantidadTotal)
+    {
+        public string? Formato { get; init; }
+    }
     public record ResumenBolsaItem(TipoBolsa Bolsa, int CantidadTotal);
 
     public class ItemProduccionSeleccionable

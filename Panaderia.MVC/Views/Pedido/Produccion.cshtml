@@ -99,6 +99,20 @@
         </div>
     </div>
 
+    <div class="card card-custom p-4 mt-4">
+        <h5 class="fw-bold mb-3">Totales por Formato</h5>
+        <table class="table table-sm align-middle mb-0">
+            <thead><tr><th>Formato</th><th class="text-end">Cantidad a producir</th></tr></thead>
+            <tbody>
+                @foreach (var formato in new[] { "Molde", "Campo" })
+                {
+                    var cantidad = Model.PorProducto.Where(p => string.Equals(p.Formato?.Trim(), formato, StringComparison.OrdinalIgnoreCase)).Sum(p => p.CantidadTotal);
+                    <tr><td>@(formato == "Molde" ? "Moldes" : "Campos")</td><td class="text-end fw-bold">@cantidad</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
     @if (Model.PorSubReceta.Any() || Model.TotalAgua > 0)
     {
         <div class="row g-4 mt-0">
