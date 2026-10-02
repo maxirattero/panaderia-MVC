@@ -61,7 +61,9 @@
 
 <form asp-controller="Tienda" asp-action="AgregarVarios" method="post" class="tienda-seleccion-form">
     @Html.AntiForgeryToken()
-@foreach (var grupo in Model.Productos.GroupBy(p => TiendaIndexViewModel.SeccionCategoria(p.Categoria?.Nombre)))
+@foreach (var grupo in Model.Productos
+    .GroupBy(p => TiendaIndexViewModel.SeccionCategoria(p.Categoria?.Nombre))
+    .OrderBy(g => g.Key == "Panes" && Model.PedidosSemanalesCerrados ? 1 : 0))
 {
 <section class="tienda-categoria">
     <h3 class="tienda-section-title font-literata">@grupo.Key</h3>
