@@ -42,7 +42,7 @@ namespace Panaderia.Services.Interfaces
         Task<bool> ExistsAsync(int id);
         // Anular pedido
         Task AnularAsync(int id);
-        // Resumen de producción (pedidos no entregados).
+        // Resumen de producción (pedidos pendientes con entrega esta semana, lunes a domingo).
         // productosExcluidos: ids destildados en el dashboard de Producción; quedan fuera
         // de los totales, de las sub-recetas y del agua.
         Task<(List<ResumenProductoItem> PorProducto, List<ResumenBolsaItem> PorBolsa, List<ResumenSubRecetaItem> PorSubReceta, decimal TotalAgua)> GetResumenProduccionAsync(IEnumerable<int>? productosExcluidos = null);

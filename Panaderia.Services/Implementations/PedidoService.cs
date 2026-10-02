@@ -449,11 +449,29 @@ namespace Panaderia.Services.Implementations
             };
         }
 
+        private IQueryable<Pedido> PedidosPendientesDeLaSemana()
+        {
+            var hoy = DateOnly.FromDateTime(CalendarioCaja.Local(_reloj.GetUtcNow().UtcDateTime));
+            // FechaEntrega guarda la fecha calendario como UTC, sin desplazarla por huso horario.
+            var inicio = DateTime.SpecifyKind(CalendarioCaja.Lunes(hoy).ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc);
+            var fin = inicio.AddDays(7);
+            return _context.Pedidos.Where(p => p.Estado == EstadoPedido.Pendiente
+                && p.FechaEntrega >= inicio && p.FechaEntrega < fin);
+        }
+
+        private IQueryable<DetallePedido> DetallesPendientesDeLaSemana()
+        {
+            var pedidos = PedidosPendientesDeLaSemana().Select(p => p.Id);
+            return _context.DetallesPedido.Where(d => pedidos.Contains(d.IdPedido)
+                && d.Cantidad > d.CantidadProducida);
+        }
+
         // Confirmar producción y descontar stock de insumos.
         // Los items marcados como stock (EsStock) suman Producto.Stock y limpian su fila del buffer.
         public async Task<List<string>> ConfirmarProduccionAsync(List<ItemProduccionSeleccionable> items)
         {
             await using var transaction = await IniciarMutacionAsync();
+            var pedidosDeLaSemana = PedidosPendientesDeLaSemana();
             var warnings = new List<string>();
             var bufferIdsAEliminar = new List<int>();
             var producciones = new List<(ItemProduccionSeleccionable Item, Receta Receta)>();
@@ -547,7 +565,7 @@ namespace Panaderia.Services.Implementations
             // Cuando se confirma el lote completo de pedidos pendientes, estos salen de
             // la próxima planificación pero permanecen disponibles para la entrega.
             var pendientesPorProducto = await _context.DetallesPedido
-                .Where(d => d.Pedido.Estado == EstadoPedido.Pendiente && d.Cantidad > d.CantidadProducida)
+                .Where(d => pedidosDeLaSemana.Select(p => p.Id).Contains(d.IdPedido) && d.Cantidad > d.CantidadProducida)
                 .GroupBy(d => d.IdProducto)
                 .Select(g => new { IdProducto = g.Key, Cantidad = g.Sum(d => d.Cantidad - d.CantidadProducida) })
                 .ToListAsync();
@@ -560,9 +578,8 @@ namespace Panaderia.Services.Implementations
                 && pendientesPorProducto.All(p => confirmadosPorProducto.TryGetValue(p.IdProducto, out var cantidad)
                                              && cantidad >= p.Cantidad))
             {
-                var pedidosPendientes = await _context.Pedidos
+                var pedidosPendientes = await pedidosDeLaSemana
                     .Include(p => p.Detalles)
-                    .Where(p => p.Estado == EstadoPedido.Pendiente)
                     .ToListAsync();
                 foreach (var pedidoPendiente in pedidosPendientes)
                 {
@@ -633,10 +650,9 @@ namespace Panaderia.Services.Implementations
         private async Task<List<(int IdProducto, Producto Producto, int Cantidad)>> GetProduccionCombinadaAsync(IEnumerable<int>? productosExcluidos = null)
         {
             var excluidos = productosExcluidos?.ToHashSet() ?? new HashSet<int>();
-            var detalles = await _context.DetallesPedido
+            var detalles = await DetallesPendientesDeLaSemana()
                 .Include(d => d.Producto).ThenInclude(p => p.Categoria)
                 .Include(d => d.Producto).ThenInclude(p => p.Formato)
-                .Where(d => d.Pedido.Estado == EstadoPedido.Pendiente && d.Cantidad > d.CantidadProducida)
                 .ToListAsync();
 
             var acumulado = new Dictionary<int, (Producto Producto, int Cantidad)>();
@@ -679,19 +695,18 @@ namespace Panaderia.Services.Implementations
                 .ToList();
         }
 
-        // Resumen de producción (pedidos no entregados, anulados excluidos por query filter).
+        // Resumen de producción (entregas pendientes de la semana, anulados excluidos por query filter).
         // PorProducto y PorBolsa son solo de pedidos; sub-recetas y agua reflejan produccion completa (pedidos + stock).
         public async Task<(List<ResumenProductoItem> PorProducto, List<ResumenBolsaItem> PorBolsa, List<ResumenSubRecetaItem> PorSubReceta, decimal TotalAgua)> GetResumenProduccionAsync(IEnumerable<int>? productosExcluidos = null)
         {
             var excluidos = productosExcluidos?.ToHashSet() ?? new HashSet<int>();
 
-            var detalles = (await _context.DetallesPedido
+            var detalles = (await DetallesPendientesDeLaSemana()
                 .Include(d => d.Producto)
                     .ThenInclude(p => p.Categoria)
                 .Include(d => d.Producto)
                     .ThenInclude(p => p.Formato)
                 .Include(d => d.Empaque)
-                .Where(d => d.Pedido.Estado == EstadoPedido.Pendiente && d.Cantidad > d.CantidadProducida)
                 .ToListAsync())
                 .Where(d => !excluidos.Contains(d.IdProducto))
                 .ToList();
