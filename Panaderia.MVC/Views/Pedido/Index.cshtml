@@ -233,6 +233,7 @@
                                         <tr>
                                             <th>Producto</th>
                                             <th>Cantidad</th>
+                                            <th>Bolsa</th>
                                             <th>Precio unit.</th>
                                             <th>Subtotal</th>
                                         </tr>
@@ -243,6 +244,7 @@
                                             <tr>
                                                 <td>@d.Producto.NombreVisible</td>
                                                 <td>@d.Cantidad</td>
+                                                <td>@(d.Empaque?.Nombre ?? "Sin bolsa")</td>
                                                 <td>$@(d.PrecioUnitario.ToString("N0", new System.Globalization.CultureInfo("es-AR")))</td>
                                                 <td>$@((d.Cantidad * d.PrecioUnitario).ToString("N0", new System.Globalization.CultureInfo("es-AR")))</td>
                                             </tr>
@@ -326,7 +328,10 @@
                         @foreach (var d in p.Detalles)
                         {
                             <div class="pedido-card-detail-row">
-                                <span class="pedido-card-detail-name">@d.Cantidad× @d.Producto.NombreVisible</span>
+                                <span class="pedido-card-detail-name">
+                                    @d.Cantidad× @d.Producto.NombreVisible
+                                    <span class="d-block small text-muted">Bolsa: @(d.Empaque?.Nombre ?? "Sin bolsa")</span>
+                                </span>
                                 <span class="pedido-card-detail-price">$@((d.Cantidad * d.PrecioUnitario).ToString("N0", new System.Globalization.CultureInfo("es-AR")))</span>
                             </div>
                         }

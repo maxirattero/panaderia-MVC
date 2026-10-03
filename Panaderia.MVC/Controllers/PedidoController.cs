@@ -181,7 +181,7 @@ namespace Panaderia.MVC.Controllers
 
         public async Task<IActionResult> Imprimir(bool conDetalles = false)
         {
-            var pedidos = await _pedidoService.GetByEstadoAsync(EstadoPedido.Pendiente);
+            var pedidos = await _pedidoService.GetPendientesSemanaAsync();
             ViewBag.ConDetalles = conDetalles;
             return View(pedidos);
         }

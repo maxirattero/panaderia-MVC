@@ -1,9 +1,11 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Mvc;
 using Npgsql;
 using Panaderia.Models.Data;
 using Panaderia.Models.Entities;
 using Panaderia.Models.Enums;
 using Panaderia.Services.Implementations;
+using Panaderia.MVC.Controllers;
 
 // Solo PostgreSQL local y tablas temporales: no lee configuración ni datos de producción.
 var port = int.Parse(Environment.GetEnvironmentVariable("PEDIDOS_TEST_PORT") ?? "55439");
@@ -41,11 +43,33 @@ Pedido Order(DateTime date, int quantity, EstadoPedido state = EstadoPedido.Pend
 var current = new[] { Order(monday, 2), Order(monday.AddDays(5), 5, produced: 2), Order(monday.AddDays(7).AddTicks(-10), 4) };
 var outside = new[] { Order(monday.AddTicks(-10), 11), Order(monday.AddDays(7), 20), Order(monday.AddDays(12), 30),
     Order(monday.AddDays(7), 7, product: futureOnlyProduct) };
+var withoutDate = Order(monday, 100);
+withoutDate.FechaEntrega = null;
 db.Add(recipe);
 db.AddRange(current);
 db.AddRange(outside);
+db.Add(withoutDate);
 db.AddRange(Order(monday, 100, EstadoPedido.Entregado), Order(monday, 100, EstadoPedido.EnProduccion), Order(monday, 100, cancelled: true));
 await db.SaveChangesAsync();
+
+async Task<List<Pedido>> Printed(bool details)
+{
+    // Otro contexto evita que el tracking del fixture oculte un Include faltante.
+    await using var readDb = new PanaderiaContext(new DbContextOptionsBuilder<PanaderiaContext>().UseNpgsql(connection).Options);
+    var controller = new PedidoController(new PedidoService(readDb, clock), null!, null!, null!, null!);
+    var result = (ViewResult)await controller.Imprimir(details);
+    Check((bool)controller.ViewBag.ConDetalles == details, "Impresión conserva la opción de detalle de productos");
+    return ((IEnumerable<Pedido>)result.Model!).ToList();
+}
+foreach (var details in new[] { false, true })
+{
+    var printed = await Printed(details);
+    Check(printed.Select(p => p.Id).SequenceEqual(current.Select(p => p.Id)),
+        "Impresión solo incluye pendientes con entrega esta semana; excluye futuros, anteriores, sin fecha, entregados y anulados");
+    Check(printed.All(p => p.Detalles.Single().Empaque?.Nombre == bag.Nombre), "Impresión carga la bolsa asignada a cada producto");
+}
+Check((await service.GetByEstadoAsync(EstadoPedido.Pendiente)).Any(p => p.Id == outside[1].Id),
+    "El listado del admin sigue mostrando pedidos futuros");
 await service.AgregarProduccionStockAsync(bread.Id, 1);
 var summary = await service.GetResumenProduccionAsync();
 Check(summary.PorProducto.Single().CantidadTotal == 9, "Solo entregas de lunes a domingo, descontando unidades ya producidas");
@@ -57,8 +81,10 @@ Check(ingredients.CantidadUnidades == 10 && ingredients.PesoMasaTotal == 1000, "
 Check((await service.GetResumenProduccionAsync([bread.Id])).PorProducto.Count == 0
     && (await service.GetIngredientesProduccionAsync([bread.Id])).Count == 0, "Se conserva la exclusión manual de productos");
 clock.Now = DateTimeOffset.Parse("2026-10-05T02:59:59Z");
+Check((await Printed(false)).Select(p => p.Id).SequenceEqual(current.Select(p => p.Id)), "Impresión conserva la semana durante el domingo argentino");
 Check((await service.GetResumenProduccionAsync()).PorProducto.Single().CantidadTotal == 9, "Domingo argentino sigue en la semana actual aunque sea lunes UTC");
 clock.Now = DateTimeOffset.Parse("2026-10-05T03:00:00Z");
+Check((await Printed(true)).Select(p => p.Id).ToHashSet().SetEquals(outside.Skip(1).Select(p => p.Id)), "Impresión cambia de semana al comenzar el lunes argentino");
 summary = await service.GetResumenProduccionAsync();
 Check(summary.PorProducto.Sum(p => p.CantidadTotal) == 57 && summary.PorProducto.Count == 2, "Al comenzar el lunes argentino aparecen los pedidos de la nueva semana");
 clock.Now = DateTimeOffset.Parse("2026-10-02T12:00:00-03:00");

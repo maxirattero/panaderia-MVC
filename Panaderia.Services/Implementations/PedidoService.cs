@@ -70,9 +70,15 @@ namespace Panaderia.Services.Implementations
         }
 
         //obtener pedidos por estado
-        public async Task<IEnumerable<Pedido>> GetByEstadoAsync(EstadoPedido estado)
+        public Task<IEnumerable<Pedido>> GetByEstadoAsync(EstadoPedido estado) =>
+            CargarListadoAsync(_context.Pedidos.Where(p => p.Estado == estado));
+
+        public Task<IEnumerable<Pedido>> GetPendientesSemanaAsync() =>
+            CargarListadoAsync(PedidosPendientesDeLaSemana());
+
+        private static async Task<IEnumerable<Pedido>> CargarListadoAsync(IQueryable<Pedido> pedidos)
         {
-            return await _context.Pedidos
+            return await pedidos
                 .Include(p => p.Cliente)
                 .Include(p => p.Detalles)
                     .ThenInclude(d => d.Producto)
@@ -80,11 +86,11 @@ namespace Panaderia.Services.Implementations
                 .Include(p => p.Detalles)
                     .ThenInclude(d => d.Producto)
                         .ThenInclude(p => p.Formato)
-                // El empaque define si el renglón va en bolsa de papel o sellada:
-                // lo usa la impresión con detalles.
+                // Bolsa elegida en el pedido, para el detalle y la impresión.
                 .Include(p => p.Detalles)
                     .ThenInclude(d => d.Empaque)
-                .Where(p => p.Estado == estado)
+                .OrderBy(p => p.FechaEntrega)
+                .ThenBy(p => p.Id)
                 .ToListAsync();
         }
 

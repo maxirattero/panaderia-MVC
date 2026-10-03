@@ -76,7 +76,9 @@ try
     var pedidoService = new PedidoService(db);
     Check((await pedidoService.GetPreciosCostoAsync([101]))[101] == 150, "Precio de costo utiliza todos los niveles");
     Check((await new RecetaService(db).GetByProductoIdAsync(101))!.CostoTotal == 150, "Ficha de receta calcula costo anidado");
-    Pedido Pedido(params DetallePedido[] detalles) => new() { IdCliente = client.Id, FechaCreacion = now, Estado = EstadoPedido.Pendiente, Detalles = detalles.ToList(), MontoTotal = detalles.Sum(d => d.PrecioUnitario * d.Cantidad) };
+    Pedido Pedido(params DetallePedido[] detalles) => new() { IdCliente = client.Id, FechaCreacion = now,
+        FechaEntrega = DateTime.SpecifyKind(CalendarioCaja.Hoy.ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc),
+        Estado = EstadoPedido.Pendiente, Detalles = detalles.ToList(), MontoTotal = detalles.Sum(d => d.PrecioUnitario * d.Cantidad) };
     var tienda = Pedido(new DetallePedido { IdProducto = 101, Cantidad = 3, PrecioUnitario = 100 }, new() { IdProducto = 103, Cantidad = 2, PrecioUnitario = 100 }, new() { IdProducto = 104, Cantidad = 1, PrecioUnitario = 100 });
     await pedidoService.CrearOAmpliarDesdeTiendaAsync(tienda);
     Check(tienda.Detalles.Single(d => d.IdProducto == 101).CostoEmpaque == 20 && !tienda.Detalles.Single(d => d.IdProducto == 101).LlevaEtiqueta, "Tienda aplica papel sin etiqueta antes de calcular costo");
