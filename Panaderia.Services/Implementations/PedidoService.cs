@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
+using System.Text.Json;
 using Panaderia.Models.Data;
 using Panaderia.Models.DTOs;
 using Panaderia.Models.Entities;
@@ -472,22 +474,75 @@ namespace Panaderia.Services.Implementations
                 && d.Cantidad > d.CantidadProducida);
         }
 
+        private static string RevisionPedidos(IEnumerable<DetallePedido> detalles) =>
+            Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(detalles.OrderBy(d => d.Id)
+                .Select(d => new { d.Id, d.Cantidad, d.CantidadProducida, FechaEntrega = d.Pedido.FechaEntrega?.Ticks / 10 }))));
+
+        private static string RevisionStock(ProduccionStock stock) =>
+            Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new { stock.Id, stock.IdProducto, stock.Cantidad, Fecha = stock.Fecha.Ticks / 10 })));
+
+        public async Task PrepararConfirmacionAsync(List<ItemProduccionSeleccionable> items)
+        {
+            var ids = items.Select(i => i.IdProducto).Distinct().ToList();
+            var detalles = await DetallesPendientesDeLaSemana().AsNoTracking()
+                .Include(d => d.Pedido).Where(d => ids.Contains(d.IdProducto)).ToListAsync();
+            var stockIds = items.Where(i => i.EsStock).Select(i => i.IdProduccionStock).ToList();
+            var stocks = await _context.ProduccionStock.AsNoTracking().Where(s => stockIds.Contains(s.Id)).ToDictionaryAsync(s => s.Id);
+            foreach (var item in items)
+            {
+                var pendientes = detalles.Where(d => d.IdProducto == item.IdProducto).ToList();
+                item.Revision = item.EsStock
+                    ? stocks.TryGetValue(item.IdProduccionStock, out var stock) ? RevisionStock(stock) : string.Empty
+                    : RevisionPedidos(pendientes);
+                var cantidadActual = item.EsStock
+                    ? stocks.GetValueOrDefault(item.IdProduccionStock)?.Cantidad ?? 0
+                    : pendientes.Sum(d => d.Cantidad - d.CantidadProducida);
+                if (item.CantidadSugerida > 0 && item.CantidadSugerida != cantidadActual) item.Revision = string.Empty;
+            }
+        }
+
         // Confirmar producción y descontar stock de insumos.
         // Los items marcados como stock (EsStock) suman Producto.Stock y limpian su fila del buffer.
         public async Task<List<string>> ConfirmarProduccionAsync(List<ItemProduccionSeleccionable> items)
         {
             await using var transaction = await IniciarMutacionAsync();
             var pedidosDeLaSemana = PedidosPendientesDeLaSemana();
+            var seleccionados = items.Where(i => i.Seleccionado).ToList();
+            if (seleccionados.Count == 0) return ["No seleccionaste ningún producto para producir."];
+            if (seleccionados.GroupBy(i => (i.IdProducto, i.EsStock)).Any(g => g.Count() > 1))
+                return ["Hay productos repetidos en la confirmación. Volvé a abrir Producción."];
+
+            // Se consulta y valida dentro del mismo bloqueo que protege el descuento.
+            var pedidos = await pedidosDeLaSemana.Include(p => p.Detalles).ToListAsync();
+            var detalles = pedidos.SelectMany(p => p.Detalles).Where(d => d.Cantidad > d.CantidadProducida).ToList();
+            var stockIds = seleccionados.Where(i => i.EsStock).Select(i => i.IdProduccionStock).ToList();
+            var stocks = await _context.ProduccionStock.Where(s => stockIds.Contains(s.Id)).ToDictionaryAsync(s => s.Id);
             var warnings = new List<string>();
             var bufferIdsAEliminar = new List<int>();
             var producciones = new List<(ItemProduccionSeleccionable Item, Receta Receta)>();
             var necesidades = new Dictionary<int, decimal>();
 
-            foreach (var item in items.Where(i => i.Seleccionado))
+            foreach (var item in seleccionados)
             {
+                var pendientes = detalles.Where(d => d.IdProducto == item.IdProducto).ToList();
+                var cantidadPendiente = pendientes.Sum(d => d.Cantidad - d.CantidadProducida);
+                var revisionActual = RevisionPedidos(pendientes);
+                if (item.EsStock)
+                {
+                    if (!stocks.TryGetValue(item.IdProduccionStock, out var stock) || stock.IdProducto != item.IdProducto)
+                        return ["Esta producción ya fue confirmada o cambió. Volvé a abrir Producción."];
+                    cantidadPendiente = stock.Cantidad;
+                    revisionActual = RevisionStock(stock);
+                }
+                if (cantidadPendiente == 0 || string.IsNullOrEmpty(item.Revision) || item.Revision != revisionActual)
+                    return ["Esta producción ya fue confirmada o cambió. Volvé a abrir Producción antes de confirmar."];
+                if (item.CantidadAProducir <= 0 || item.CantidadAProducir != decimal.Truncate(item.CantidadAProducir)
+                    || item.CantidadAProducir > cantidadPendiente)
+                    return ["La cantidad a producir debe ser un entero positivo y no superar lo pendiente. Para unidades adicionales, agregá producción para stock."];
+
                 var receta = await _context.Recetas
                     .Include(r => r.Detalles).ThenInclude(d => d.Insumo)
-                    .FirstOrDefaultAsync(r => r.Id == item.IdReceta);
+                    .FirstOrDefaultAsync(r => r.Id == item.IdReceta && r.IdProducto == item.IdProducto);
 
                 if (receta == null)
                 {
@@ -563,36 +618,30 @@ namespace Panaderia.Services.Implementations
                         producto.SinStock = !producto.PorEncargo && producto.Stock <= 0;
                     }
 
-                    if (item.IdProduccionStock > 0)
+                    var fila = stocks[item.IdProduccionStock];
+                    fila.Cantidad -= (int)item.CantidadAProducir;
+                    if (fila.Cantidad == 0)
                         bufferIdsAEliminar.Add(item.IdProduccionStock);
                 }
-            }
-
-            // Cuando se confirma el lote completo de pedidos pendientes, estos salen de
-            // la próxima planificación pero permanecen disponibles para la entrega.
-            var pendientesPorProducto = await _context.DetallesPedido
-                .Where(d => pedidosDeLaSemana.Select(p => p.Id).Contains(d.IdPedido) && d.Cantidad > d.CantidadProducida)
-                .GroupBy(d => d.IdProducto)
-                .Select(g => new { IdProducto = g.Key, Cantidad = g.Sum(d => d.Cantidad - d.CantidadProducida) })
-                .ToListAsync();
-            var confirmadosPorProducto = producciones
-                .Where(p => !p.Item.EsStock)
-                .GroupBy(p => p.Item.IdProducto)
-                .ToDictionary(g => g.Key, g => g.Sum(p => p.Item.CantidadAProducir));
-
-            if (pendientesPorProducto.Any()
-                && pendientesPorProducto.All(p => confirmadosPorProducto.TryGetValue(p.IdProducto, out var cantidad)
-                                             && cantidad >= p.Cantidad))
-            {
-                var pedidosPendientes = await pedidosDeLaSemana
-                    .Include(p => p.Detalles)
-                    .ToListAsync();
-                foreach (var pedidoPendiente in pedidosPendientes)
+                else
                 {
-                    foreach (var detalle in pedidoPendiente.Detalles) detalle.CantidadProducida = detalle.Cantidad;
-                    pedidoPendiente.Estado = EstadoPedido.EnProduccion;
+                    var restantes = (int)item.CantidadAProducir;
+                    foreach (var detalle in detalles.Where(d => d.IdProducto == item.IdProducto)
+                        .OrderBy(d => d.Pedido.FechaEntrega).ThenBy(d => d.IdPedido).ThenBy(d => d.Id))
+                    {
+                        var cantidad = Math.Min(restantes, detalle.Cantidad - detalle.CantidadProducida);
+                        detalle.CantidadProducida += cantidad;
+                        restantes -= cantidad;
+                        if (restantes == 0) break;
+                    }
                 }
             }
+
+            // Un pedido mixto sigue pendiente hasta producir todos sus productos.
+            var productosConfirmados = producciones.Where(p => !p.Item.EsStock).Select(p => p.Item.IdProducto).ToHashSet();
+            foreach (var pedido in pedidos.Where(p => p.Detalles.Any(d => productosConfirmados.Contains(d.IdProducto))
+                && p.Detalles.All(d => d.CantidadProducida >= d.Cantidad)))
+                pedido.Estado = EstadoPedido.EnProduccion;
 
             if (bufferIdsAEliminar.Any())
             {
@@ -612,6 +661,7 @@ namespace Panaderia.Services.Implementations
         public async Task AgregarProduccionStockAsync(int idProducto, int cantidad)
         {
             if (cantidad < 1) return;
+            await using var transaction = await IniciarMutacionAsync();
 
             var existente = await _context.ProduccionStock
                 .FirstOrDefaultAsync(s => s.IdProducto == idProducto);
@@ -619,6 +669,7 @@ namespace Panaderia.Services.Implementations
             if (existente != null)
             {
                 existente.Cantidad += cantidad;
+                existente.Fecha = DateTime.UtcNow;
             }
             else
             {
@@ -631,6 +682,7 @@ namespace Panaderia.Services.Implementations
             }
 
             await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
         }
 
         public async Task<List<ProduccionStock>> GetProduccionStockAsync()
@@ -644,11 +696,13 @@ namespace Panaderia.Services.Implementations
 
         public async Task QuitarProduccionStockAsync(int id)
         {
+            await using var transaction = await IniciarMutacionAsync();
             var fila = await _context.ProduccionStock.FindAsync(id);
             if (fila == null) return;
 
             _context.ProduccionStock.Remove(fila);
             await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
         }
 
         // Producción combinada: pedidos pendientes + buffer de stock, sumado por producto.

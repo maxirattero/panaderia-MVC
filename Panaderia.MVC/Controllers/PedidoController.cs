@@ -147,6 +147,7 @@ namespace Panaderia.MVC.Controllers
                 .ToList();
 
             GuardarProductosExcluidos(excluidos);
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest") return Ok();
             return RedirectToAction(nameof(Produccion));
         }
 
@@ -163,6 +164,11 @@ namespace Panaderia.MVC.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ConfirmarProduccion(ProduccionViewModel vm)
         {
+            if (!ModelState.IsValid)
+            {
+                TempData["Error"] = "Revisá las cantidades antes de confirmar la producción.";
+                return RedirectToAction(nameof(Produccion));
+            }
             var itemsSeleccionados = vm.ItemsSeleccionables.Where(i => i.Seleccionado).ToList();
             if (!itemsSeleccionados.Any())
             {
@@ -200,7 +206,7 @@ namespace Panaderia.MVC.Controllers
         {
             var excluidos = LeerProductosExcluidos();
             var productos = await _pedidoService.GetIngredientesProduccionAsync(excluidos);
-            var (_, _, porSubReceta, _) = await _pedidoService.GetResumenProduccionAsync(excluidos);
+            var (porProducto, _, porSubReceta, _) = await _pedidoService.GetResumenProduccionAsync(excluidos);
             ViewBag.CantidadExcluidos = excluidos.Count;
             var jsonOptions = new JsonSerializerOptions
             {
@@ -208,25 +214,31 @@ namespace Panaderia.MVC.Controllers
             };
             ViewBag.ProductosJson = JsonSerializer.Serialize(productos, jsonOptions);
             ViewBag.SubRecetasJson = JsonSerializer.Serialize(porSubReceta, jsonOptions);
-            return View();
+            var items = await CrearItemsProduccionAsync(porProducto, new HashSet<int>(excluidos));
+            // Si ingresaron pedidos mientras se armaba la página, no confirmar cantidades diferentes del plan visible.
+            foreach (var grupo in items.Where(i => i.Seleccionado).GroupBy(i => i.IdProducto))
+                if (productos.SingleOrDefault(p => p.IdProducto == grupo.Key)?.CantidadUnidades != grupo.Sum(i => i.CantidadAProducir))
+                    foreach (var item in grupo) item.Revision = string.Empty;
+            return View(new ProduccionViewModel { ItemsSeleccionables = items.Where(i => i.Seleccionado).ToList() });
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ConfirmarPlanificacion()
+        public async Task<IActionResult> ConfirmarPlanificacion(ProduccionViewModel vm)
         {
+            if (!ModelState.IsValid)
+                return Json(new { success = false, error = "Revisá las cantidades antes de confirmar la producción." });
             var excluidos = LeerProductosExcluidos();
-            if (excluidos.Any())
+            var items = vm.ItemsSeleccionables.Where(i => i.Seleccionado).ToList();
+            if (items.Any(i => excluidos.Contains(i.IdProducto)))
             {
                 return Json(new
                 {
                     success = false,
-                    error = "Para confirmar desde el planificador, incluí todos los productos. Si necesitás producir solo una parte, usá el Dashboard de Producción."
+                    error = "Cambió la selección de productos. Volvé a abrir el planificador desde Producción."
                 });
             }
 
-            var (porProducto, _, _, _) = await _pedidoService.GetResumenProduccionAsync();
-            var items = await CrearItemsProduccionAsync(porProducto, new HashSet<int>());
             if (!items.Any())
             {
                 return Json(new { success = false, error = "No hay producción pendiente para confirmar." });
@@ -337,6 +349,7 @@ namespace Panaderia.MVC.Controllers
                 });
             }
 
+            await _pedidoService.PrepararConfirmacionAsync(items);
             return items;
         }
 

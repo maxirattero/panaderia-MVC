@@ -88,13 +88,17 @@ Check((await Printed(true)).Select(p => p.Id).ToHashSet().SetEquals(outside.Skip
 summary = await service.GetResumenProduccionAsync();
 Check(summary.PorProducto.Sum(p => p.CantidadTotal) == 57 && summary.PorProducto.Count == 2, "Al comenzar el lunes argentino aparecen los pedidos de la nueva semana");
 clock.Now = DateTimeOffset.Parse("2026-10-02T12:00:00-03:00");
-var warnings = await service.ConfirmarProduccionAsync([new() { IdProducto = bread.Id, IdReceta = recipe.Id, CantidadAProducir = 9 }]);
+var confirmacion = new List<Panaderia.Models.DTOs.ItemProduccionSeleccionable> { new() { IdProducto = bread.Id, IdReceta = recipe.Id, CantidadAProducir = 9 } };
+await service.PrepararConfirmacionAsync(confirmacion);
+var warnings = await service.ConfirmarProduccionAsync(confirmacion);
 Check(warnings.Count == 0, "Se puede confirmar la semana sin producir pedidos futuros");
 Check(current.All(p => p.Estado == EstadoPedido.EnProduccion && p.Detalles.All(d => d.CantidadProducida == d.Cantidad)), "Confirmación completa solo los pedidos de esta semana");
 Check(outside.All(p => p.Estado == EstadoPedido.Pendiente && p.Detalles.All(d => d.CantidadProducida == 0)), "Entregas pasadas y futuras permanecen pendientes e intactas");
 Check(water.StockActual == 99550 && flour.StockActual == 99550, "Descuento de insumos corresponde a las nueve unidades confirmadas");
 Check((await service.GetResumenProduccionAsync()).PorProducto.Count == 0
     && (await service.GetProduccionCombinadaResumenAsync()).Single().CantidadTotal == 1, "Al confirmar desaparecen pedidos actuales y se conserva el stock adicional");
+await ConfirmacionChecks.RunAsync(db, service, clock, monday, bread, recipe, customer, water, Check);
+await ConfirmacionConcurrente.RunAsync(port, Check, args.Contains("--preview"));
 Console.WriteLine($"{checks} verificaciones de producción semanal correctas.");
 
 sealed class TestClock(DateTimeOffset now) : TimeProvider

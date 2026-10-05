@@ -51,6 +51,7 @@ namespace Panaderia.Services.Interfaces
         Task<(List<ResumenProductoItem> PorProducto, List<ResumenBolsaItem> PorBolsa, List<ResumenSubRecetaItem> PorSubReceta, decimal TotalAgua)> GetResumenProduccionAsync(IEnumerable<int>? productosExcluidos = null);
         // Confirmar producción y descontar stock
         Task<List<string>> ConfirmarProduccionAsync(List<ItemProduccionSeleccionable> items);
+        Task PrepararConfirmacionAsync(List<ItemProduccionSeleccionable> items);
         // Marcar pedido como entregado
         Task MarcarEntregadoAsync(int id);
         // Completar saldos y/o entregar una selección en una única transacción.

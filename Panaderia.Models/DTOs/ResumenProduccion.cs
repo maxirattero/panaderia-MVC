@@ -18,6 +18,8 @@ namespace Panaderia.Models.DTOs
         public bool Seleccionado { get; set; } = true;
         public bool EsStock { get; set; }
         public int IdProduccionStock { get; set; }
+        // Estado de los pendientes al abrir el formulario; evita confirmar un plan desactualizado.
+        public string Revision { get; set; } = string.Empty;
     }
 
     public class ResumenSubRecetaItem

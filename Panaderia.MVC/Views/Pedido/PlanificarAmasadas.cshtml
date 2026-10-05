@@ -1,3 +1,5 @@
+@model Panaderia.MVC.Models.ProduccionViewModel
+@using System.Globalization
 @{
     ViewData["Title"] = "Planificador de Amasadas";
 }
@@ -8,15 +10,9 @@
         <button onclick="resetear()" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2">
             <span class="material-symbols-outlined">restart_alt</span>Resetear
         </button>
-        <button onclick="imprimirSinConfirmar()" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2">
+        <button id="imprimirPlanBtn" onclick="solicitarImpresion()" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2">
             <span class="material-symbols-outlined">print</span>Imprimir plan
         </button>
-        @if ((int)(ViewBag.CantidadExcluidos ?? 0) == 0)
-        {
-            <button onclick="confirmarEImprimir()" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2">
-                <span class="material-symbols-outlined">check</span>Confirmar producción e imprimir
-            </button>
-        }
         <a asp-action="Produccion" class="btn btn-mv-primary">Volver</a>
     </div>
 </div>
@@ -46,7 +42,41 @@
 
 <form id="confirmarPlanificacionForm" asp-action="ConfirmarPlanificacion" method="post">
     @Html.AntiForgeryToken()
+    @for (int i = 0; i < Model.ItemsSeleccionables.Count; i++)
+    {
+        var item = Model.ItemsSeleccionables[i];
+        <input type="hidden" name="ItemsSeleccionables[@i].IdProducto" value="@item.IdProducto" />
+        <input type="hidden" name="ItemsSeleccionables[@i].IdReceta" value="@item.IdReceta" />
+        <input type="hidden" name="ItemsSeleccionables[@i].NombreProducto" value="@item.NombreProducto" />
+        <input type="hidden" name="ItemsSeleccionables[@i].CantidadAProducir" value="@item.CantidadAProducir.ToString(CultureInfo.InvariantCulture)" />
+        <input type="hidden" name="ItemsSeleccionables[@i].EsStock" value="@item.EsStock.ToString().ToLowerInvariant()" />
+        <input type="hidden" name="ItemsSeleccionables[@i].IdProduccionStock" value="@item.IdProduccionStock" />
+        <input type="hidden" name="ItemsSeleccionables[@i].Revision" value="@item.Revision" />
+        <input type="hidden" name="ItemsSeleccionables[@i].Seleccionado" value="true" />
+    }
 </form>
+
+<div id="produccionConfirmada" class="alert alert-success no-print" style="display:none;" role="status">
+    Producción confirmada. Los productos se retiraron de los pendientes y los insumos se descontaron una sola vez.
+    Podés volver a imprimir este plan sin descontar insumos nuevamente.
+</div>
+<div class="modal fade no-print" id="confirmarImpresionModal" tabindex="-1" aria-labelledby="confirmarImpresionTitulo" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title" id="confirmarImpresionTitulo">¿Confirmar la producción de este plan?</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+            <p>Se confirmarán únicamente los productos de este plan seleccionados en Producción. Se descontarán sus insumos y dejarán de aparecer como pendientes.</p>
+            <p class="mb-0">Si solo querés revisar o imprimir el plan, elegí «Solo imprimir».</p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-mv-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="button" class="btn btn-mv-secondary" onclick="soloImprimir()">Solo imprimir</button>
+            <button type="button" class="btn btn-mv-primary" onclick="confirmarEImprimir()">Confirmar e imprimir</button>
+        </div>
+    </div></div>
+</div>
 
 <!-- Hidden container for print layout -->
 <div id="print-area" style="display:none;"></div>
@@ -307,21 +337,45 @@
     }
 
     // ─── Print ──────────────────────────────────────────
-    async function confirmarEImprimir() {
-        if (!confirm('¿Confirmar la producción y actualizar el stock antes de imprimir? Esta acción quitará estos pedidos de la próxima planificación.')) return;
-
-        const form = document.getElementById('confirmarPlanificacionForm');
-        const response = await fetch(form.action, {
-            method: 'POST',
-            body: new FormData(form)
-        });
-        const resultado = await response.json();
-        if (!resultado.success) {
-            alert(resultado.error || 'No se pudo confirmar la producción.');
+    let confirmandoProduccion = false;
+    let produccionConfirmada = false;
+    function solicitarImpresion() {
+        if (confirmandoProduccion) return;
+        if (produccionConfirmada || !productosOriginales.length) {
+            imprimirSinConfirmar();
             return;
         }
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('confirmarImpresionModal')).show();
+    }
 
+    function soloImprimir() {
+        if (confirmandoProduccion) return;
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('confirmarImpresionModal')).hide();
         imprimirSinConfirmar();
+    }
+
+    async function confirmarEImprimir() {
+        if (confirmandoProduccion) return;
+        if (produccionConfirmada) { imprimirSinConfirmar(); return; }
+        confirmandoProduccion = true;
+        const buttons = document.querySelectorAll('#confirmarImpresionModal button, #imprimirPlanBtn');
+        buttons.forEach(button => button.disabled = true);
+        try {
+            const form = document.getElementById('confirmarPlanificacionForm');
+            const response = await fetch(form.action, { method: 'POST', body: new FormData(form) });
+            if (!response.ok || response.redirected) throw new Error('No se pudo confirmar la producción. Recargá Producción para comprobar el estado antes de reintentar.');
+            const resultado = await response.json();
+            if (!resultado.success) throw new Error(resultado.error || 'No se pudo confirmar la producción.');
+            produccionConfirmada = true;
+            document.getElementById('produccionConfirmada').style.display = '';
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('confirmarImpresionModal')).hide();
+            imprimirSinConfirmar();
+        } catch (error) {
+            alert(error.message || 'No se pudo comprobar la confirmación. Volvé a Producción para revisar el estado.');
+        } finally {
+            confirmandoProduccion = false;
+            buttons.forEach(button => button.disabled = false);
+        }
     }
 
     function imprimirSinConfirmar() {

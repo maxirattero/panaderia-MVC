@@ -241,7 +241,7 @@
             }
         </div>
 
-        <form asp-action="ConfirmarProduccion" method="post">
+        <form id="produccionForm" asp-action="ConfirmarProduccion" method="post" data-seleccion-url="@Url.Action("AplicarSeleccionProduccion", "Pedido")">
             @Html.AntiForgeryToken()
             <div class="table-responsive mb-3">
                 <table class="table table-sm align-middle mb-0">
@@ -259,6 +259,7 @@
                             <tr class="@(item.Seleccionado ? "" : "fila-excluida")">
                                 <td>
                                     <input type="hidden" name="ItemsSeleccionables[@i].IdProducto" value="@item.IdProducto" />
+                                    <input type="hidden" name="ItemsSeleccionables[@i].Revision" value="@item.Revision" />
                                     <input type="hidden" name="ItemsSeleccionables[@i].IdReceta" value="@item.IdReceta" />
                                     <input type="hidden" name="ItemsSeleccionables[@i].NombreProducto" value="@item.NombreProducto" />
                                     <input type="hidden" name="ItemsSeleccionables[@i].CantidadSugerida"
@@ -337,6 +338,9 @@
 
 @section Scripts {
     <script>
+        window.addEventListener('pageshow', event => {
+            if (event.persisted) window.location.reload();
+        });
         // Marca visualmente la fila al tildar/destildar, antes de recargar
         document.querySelectorAll('input[type="checkbox"][name$=".Seleccionado"]').forEach(function (chk) {
             chk.addEventListener('change', function () {
@@ -345,7 +349,12 @@
             });
         });
 
-        function imprimirPlan(e, planificar = false) {
+        let abriendoPlan = false;
+        async function imprimirPlan(e, planificar = false) {
+            e.preventDefault();
+            if (abriendoPlan) return false;
+            abriendoPlan = true;
+            const ventana = planificar ? null : window.open('', '_blank');
             const params = [];
             document.querySelectorAll('.sr-card').forEach(card => {
                 const idSub = card.dataset.sr;
@@ -356,15 +365,25 @@
                 }
             });
 
-            if (params.length) {
-                e.preventDefault();
+            try {
+                const form = document.getElementById('produccionForm');
+                const response = await fetch(form.dataset.seleccionUrl, {
+                    method: 'POST', body: new FormData(form),
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                if (!response.ok || response.redirected) throw new Error('No se pudo guardar la selección. Recargá Producción e intentá nuevamente.');
                 const base = planificar ? '@Url.Action("PlanificarAmasadas", "Pedido")' : '@Url.Action("ImprimirProduccion", "Pedido")';
-                const url = base + '?anteriores=' + encodeURIComponent(params.join(','));
+                const url = base + (params.length ? '?anteriores=' + encodeURIComponent(params.join(',')) : '');
                 if (planificar) window.location.href = url;
-                else window.open(url, '_blank');
-                return false;
+                else if (ventana) ventana.location.href = url;
+                else window.location.href = url;
+            } catch (error) {
+                if (ventana) ventana.close();
+                alert(error.message || 'No se pudo abrir el plan. Intentá nuevamente.');
+            } finally {
+                abriendoPlan = false;
             }
-            return true;
+            return false;
         }
 
         function recalcSubReceta(input) {

@@ -96,7 +96,9 @@ try
     Check(filtrado.PorProducto.All(p => p.Formato != "Molde"), "Exclusiones se reflejan en formatos");
     var srResumen = resumen.PorSubReceta.Single();
     Check(srResumen.Ingredientes.Where(i => i.NombreInsumo.EndsWith("Harina")).Sum(i => i.Cantidad) == 225, "Producción desglosa harina de todos los niveles");
-    await pedidoService.ConfirmarProduccionAsync([new() { IdProducto = 101, IdReceta = receta.Id, NombreProducto = "Pan molde", CantidadAProducir = 3, Seleccionado = true }]);
+    var produccion = new List<Panaderia.Models.DTOs.ItemProduccionSeleccionable> { new() { IdProducto = 101, IdReceta = receta.Id, NombreProducto = "Pan molde", CantidadAProducir = 3, Seleccionado = true } };
+    await pedidoService.PrepararConfirmacionAsync(produccion);
+    await pedidoService.ConfirmarProduccionAsync(produccion);
     db.ChangeTracker.Clear();
     Check((await db.Insumos.FindAsync(105))!.StockActual == 9775 && (await db.Insumos.FindAsync(106))!.StockActual == 9925, "Producción descuenta insumos anidados una sola vez");
     // El resumen también debe descontar unidades producidas de pedidos ampliados.

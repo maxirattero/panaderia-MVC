@@ -7,5 +7,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../Panaderia.MVC/Panaderia.MVC.csproj" />
+    <Compile Include="../Catalogo/Preview.cs" Link="Preview.cs" />
   </ItemGroup>
 </Project>

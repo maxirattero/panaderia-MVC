@@ -75,6 +75,7 @@ namespace Panaderia.Services.Implementations
                 .Include(d => d.Producto)
                     .ThenInclude(p => p.Formato)
                 .Where(d => d.Pedido.Estado == EstadoPedido.Pendiente
+                         && d.Cantidad > d.CantidadProducida
                          && d.Pedido.FechaEntrega >= lunesActual
                          && d.Pedido.FechaEntrega < finSemana)
                 .ToListAsync();
@@ -84,7 +85,7 @@ namespace Panaderia.Services.Implementations
                 .Select(g => new ResumenProductoItem(
                     g.Key,
                     g.First().Producto.NombreVisible,
-                    g.Sum(d => d.Cantidad)))
+                    g.Sum(d => d.Cantidad - d.CantidadProducida)))
                 .OrderByDescending(x => x.CantidadTotal)
                 .ToList();
 
