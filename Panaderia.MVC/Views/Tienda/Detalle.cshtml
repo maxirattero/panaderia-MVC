@@ -1,5 +1,7 @@
 @model Panaderia.Models.Entities.Producto
 @{
+    var porEncargo = Model.EsPorEncargoPara(ViewBag.EsRevendedor is true);
+    var sinStock = Model.SinStockPara(ViewBag.EsRevendedor is true);
     var bloqueado = ViewBag.BloqueadoPorCierreSemanal is true;
     Layout = "_TiendaLayout";
     ViewData["Title"] = Model.NombreVisible;
@@ -44,7 +46,7 @@
             <div class="td-price">$@precio.ToString("N0", ar)</div>
 
             <div class="td-badges">
-                @if (!bloqueado && Model.AvisoUltimasUnidades is string aviso)
+                @if (!bloqueado && !porEncargo && Model.AvisoUltimasUnidades is string aviso)
                 {
                     <span class="badge-tienda ultimas-unidades">@aviso</span>
                 }
@@ -58,11 +60,11 @@
                 {
                     <span class="badge-tienda agotado"><span class="material-symbols-outlined">block</span> No disponible</span>
                 }
-                else if (Model.EstaSinStockEnTienda)
+                else if (sinStock)
                 {
                     <span class="badge-tienda agotado"><span class="material-symbols-outlined">block</span> Sin stock</span>
                 }
-                else if (Model.PorEncargo)
+                else if (porEncargo)
                 {
                     <span class="badge-tienda"><span class="material-symbols-outlined">schedule</span> Por encargo</span>
                 }
@@ -88,7 +90,7 @@
                 </section>
             }
 
-            @if (!bloqueado && Model.EstaSinStockEnTienda)
+            @if (!bloqueado && sinStock)
             {
                 <p class="td-nota">Este producto está temporalmente sin stock. Volvé a mirar en unos días o consultanos cuándo vuelve.</p>
             }
@@ -118,7 +120,14 @@
                 {
                     <p class="td-nota">Ya agregaste todas las unidades disponibles de este producto.</p>
                 }
-                <p class="td-nota">Entrega los sábados de 10:30 a 12:30 hs — delivery sin cargo o retiro en el punto de entrega.</p>
+                @if (ViewBag.EsRevendedor is true)
+                {
+                    <p class="td-nota">Coordinamos la entrega con vos.</p>
+                }
+                else
+                {
+                    <p class="td-nota">Entrega los sábados de 10:30 a 12:30 hs — delivery sin cargo o retiro en el punto de entrega.</p>
+                }
             }
         </div>
     </div>

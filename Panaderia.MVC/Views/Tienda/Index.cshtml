@@ -16,7 +16,14 @@
 <section class="tienda-hero con-foto">
     <p class="tienda-hero-destacado">Panificados artesanales de masa madre y fermentación lenta.</p>
     <p>Materia prima de calidad, sin aditivos ni conservantes.</p>
-    <p class="tienda-hero-entrega">Armá tu pedido en la tienda y recibilo en tu casa el sábado sin costo. 🚚</p>
+    @if (Model.EsRevendedor)
+    {
+        <p class="tienda-hero-entrega">Armá tu pedido a precios de reventa. Coordinamos la entrega con vos.</p>
+    }
+    else
+    {
+        <p class="tienda-hero-entrega">Armá tu pedido en la tienda y recibilo en tu casa el sábado sin costo. 🚚</p>
+    }
 </section>
 
 <aside class="tienda-aviso-pedidos" role="note">
@@ -73,8 +80,10 @@
         var precio = ((Dictionary<int, decimal>?)ViewBag.Costos)?.TryGetValue(p.Id, out var costo) == true ? costo : (Model.EsRevendedor ? p.PrecioReventa : p.PrecioFinal);
         Model.CantidadesEnCarrito.TryGetValue(p.Id, out var cantidadEnCarrito);
         var bloqueado = p.TieneDisponibilidadSemanal && Model.PedidosSemanalesCerrados;
-        var maximoSeleccion = p.PorEncargo ? 50 : Math.Max(0, p.Stock - cantidadEnCarrito);
-        <div class="tienda-card @(bloqueado || p.EstaSinStockEnTienda ? "agotado" : "")">
+        var porEncargo = p.EsPorEncargoPara(Model.EsRevendedor);
+        var sinStock = p.SinStockPara(Model.EsRevendedor);
+        var maximoSeleccion = porEncargo ? Math.Max(0, 50 - cantidadEnCarrito) : Math.Max(0, p.Stock - cantidadEnCarrito);
+        <div class="tienda-card @(bloqueado || sinStock ? "agotado" : "")">
             <a class="tc-link" asp-controller="Tienda" asp-action="Detalle" asp-route-id="@p.Id">
                 <div class="tc-img">
                     @if (!string.IsNullOrEmpty(p.ImagenURL))
@@ -89,11 +98,11 @@
                     {
                         <span class="tc-tag agotado">No disponible</span>
                     }
-                    else if (p.EstaSinStockEnTienda)
+                    else if (sinStock)
                     {
                         <span class="tc-tag agotado">Sin stock</span>
                     }
-                    else if (p.PorEncargo)
+                    else if (porEncargo)
                     {
                         <span class="tc-tag">Por encargo</span>
                     }
@@ -110,10 +119,10 @@
                     <div class="tc-price">$@precio.ToString("N0", ar)</div>
                 </div>
             </a>
-            @if (!bloqueado && !p.EstaSinStockEnTienda && maximoSeleccion > 0)
+            @if (!bloqueado && !sinStock && maximoSeleccion > 0)
             {
                 <div class="tc-agregar">
-                    @if (p.AvisoUltimasUnidades is string aviso)
+                    @if (!porEncargo && p.AvisoUltimasUnidades is string aviso)
                     {
                         <span class="tc-ultimas-unidades">@aviso</span>
                     }

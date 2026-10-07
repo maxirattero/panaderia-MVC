@@ -13,8 +13,9 @@ namespace Panaderia.MVC.Models
 
     public class CarritoViewModel
     {
+        public bool EsRevendedor { get; set; }
         public ConfiguracionTienda Configuracion { get; set; } = new();
-        public decimal FaltaParaMinimo => Math.Max(0m, Configuracion.MontoMinimoPedido - Total);
+        public decimal FaltaParaMinimo => EsRevendedor ? 0m : Math.Max(0m, Configuracion.MontoMinimoPedido - Total);
         public List<CarritoItemViewModel> Items { get; set; } = new();
         public decimal Total => Items.Sum(i => i.Subtotal);
         public bool TieneProductosBloqueados => Items.Any(i => i.BloqueadoPorCierreSemanal);

@@ -123,8 +123,8 @@ namespace Panaderia.MVC.Controllers
             ViewBag.Costos = await CostosClienteAsync(new[] { producto.Id });
             var carrito = LeerCarrito();
             carrito.TryGetValue(id, out var cantidadEnCarrito);
-            ViewBag.MaxCantidadAgregar = producto.PorEncargo
-                ? 50
+            ViewBag.MaxCantidadAgregar = producto.EsPorEncargoPara(EsRevendedor())
+                ? Math.Max(0, 50 - cantidadEnCarrito)
                 : Math.Max(0, producto.Stock - cantidadEnCarrito);
             return View(producto);
         }
@@ -154,7 +154,7 @@ namespace Panaderia.MVC.Controllers
                 return RedirectToAction(nameof(Detalle), new { id });
             }
 
-            if (producto.EstaSinStockEnTienda)
+            if (producto.SinStockPara(EsRevendedor()))
             {
                 TempData["TiendaMsg"] = $"{producto.NombreVisible} está sin stock por el momento.";
                 return RedirectToAction(nameof(Detalle), new { id });
@@ -165,7 +165,7 @@ namespace Panaderia.MVC.Controllers
 
             var carrito = LeerCarrito();
             carrito.TryGetValue(id, out var actual);
-            var maximo = producto.PorEncargo ? 50 : producto.Stock;
+            var maximo = producto.EsPorEncargoPara(EsRevendedor()) ? 50 : producto.Stock;
             var nuevaCantidad = Math.Min(actual + cantidad, maximo);
             if (nuevaCantidad <= actual)
             {
@@ -203,7 +203,7 @@ namespace Panaderia.MVC.Controllers
             }
 
             var productos = (await _productoService.GetAllAsync())
-                .Where(p => !p.OcultoEnTienda && !p.EstaSinStockEnTienda)
+                .Where(p => !p.OcultoEnTienda && !p.SinStockPara(EsRevendedor()))
                 .ToDictionary(p => p.Id);
             var carrito = LeerCarrito();
             var cantidadAgregada = 0;
@@ -219,9 +219,9 @@ namespace Panaderia.MVC.Controllers
                 if (!productos.ContainsKey(idProducto)) continue;
 
                 var producto = productos[idProducto];
-                var cantidadSegura = Math.Min(cantidad, producto.PorEncargo ? 50 : producto.Stock);
+                var cantidadSegura = Math.Min(cantidad, producto.EsPorEncargoPara(EsRevendedor()) ? 50 : producto.Stock);
                 carrito.TryGetValue(idProducto, out var actual);
-                var maximo = producto.PorEncargo ? 50 : producto.Stock;
+                var maximo = producto.EsPorEncargoPara(EsRevendedor()) ? 50 : producto.Stock;
                 var nuevaCantidad = Math.Min(actual + cantidadSegura, maximo);
                 cantidadAgregada += nuevaCantidad - actual;
                 carrito[idProducto] = nuevaCantidad;
@@ -257,7 +257,7 @@ namespace Panaderia.MVC.Controllers
             else
             {
                 var producto = await _productoService.GetByIdAsync(id);
-                if (producto == null || producto.OcultoEnTienda || producto.EstaSinStockEnTienda)
+                if (producto == null || producto.OcultoEnTienda || producto.SinStockPara(EsRevendedor()))
                 {
                     carrito.Remove(id);
                 }
@@ -269,7 +269,7 @@ namespace Panaderia.MVC.Controllers
                 }
                 else
                 {
-                    var maximo = producto.PorEncargo ? 50 : producto.Stock;
+                    var maximo = producto.EsPorEncargoPara(EsRevendedor()) ? 50 : producto.Stock;
                     carrito[id] = Math.Min(cantidad, maximo);
                 }
             }
@@ -292,6 +292,7 @@ namespace Panaderia.MVC.Controllers
         // GET: /Tienda/Checkout
         public async Task<IActionResult> Checkout()
         {
+            if (EsRevendedor()) return RedirectToAction(nameof(Carrito));
             var carrito = await ArmarCarritoAsync();
             if (!carrito.Items.Any()) return RedirectToAction(nameof(Carrito));
             if (carrito.TieneProductosBloqueados)
@@ -361,6 +362,7 @@ namespace Panaderia.MVC.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Confirmar(CheckoutViewModel model)
         {
+            if (EsRevendedor()) return await ConfirmarRevendedorAsync();
             var carrito = await ArmarCarritoAsync();
             if (!carrito.Items.Any()) return RedirectToAction(nameof(Carrito));
             if (carrito.TieneProductosBloqueados)
@@ -498,11 +500,61 @@ namespace Panaderia.MVC.Controllers
             return RedirectToAction(nameof(Confirmacion));
         }
 
+        // El revendedor confirma el resumen, usando exclusivamente su cliente vinculado.
+        private async Task<IActionResult> ConfirmarRevendedorAsync()
+        {
+            var cliente = await ClienteRevendedorAsync();
+            if (cliente?.Revendedor != true)
+            {
+                TempData["TiendaMsg"] = "Tu cuenta no tiene un cliente revendedor habilitado. Contactanos para revisar el acceso.";
+                return RedirectToAction(nameof(Carrito));
+            }
+            var carrito = await ArmarCarritoAsync();
+            if (!carrito.Items.Any()) return RedirectToAction(nameof(Carrito));
+            if (carrito.TieneProductosBloqueados)
+            {
+                TempData["TiendaMsg"] = DisponibilidadSemanal.MensajeCarrito;
+                return RedirectToAction(nameof(Carrito));
+            }
+            var solicitud = new Pedido
+            {
+                IdCliente = cliente.Id, FechaEntrega = ProximoSabado(), FechaCreacion = DateTime.UtcNow,
+                MontoTotal = carrito.Total, Notas = "[Tienda · Revendedor] Entrega y pago a coordinar.",
+                Detalles = carrito.Items.Select(i => new DetallePedido
+                {
+                    IdProducto = i.Producto.Id, Cantidad = i.Cantidad, PrecioUnitario = i.PrecioUnitario
+                }).ToList()
+            };
+            Pedido pedido;
+            try
+            {
+                pedido = await _pedidoService.CrearOAmpliarDesdeTiendaAsync(solicitud);
+            }
+            catch (InvalidOperationException ex)
+            {
+                TempData["TiendaMsg"] = ex.Message;
+                return RedirectToAction(nameof(Carrito));
+            }
+            // Ya guardado: limpiar el carrito antes de enviar la notificación.
+            GuardarCarrito(new Dictionary<int, int>());
+            pedido.Cliente = cliente;
+            await _pushNotificationService.NotificarNuevoPedidoAsync(pedido, true);
+            TempData["PedidoId"] = pedido.Id;
+            TempData["PedidoAmpliado"] = !ReferenceEquals(pedido, solicitud);
+            TempData["PedidoRevendedor"] = true;
+            TempData.Remove("PedidoWhatsApp");
+            TempData.Remove("PedidoEntrega");
+            TempData.Remove("PedidoMedioPago");
+            TempData.Remove("PedidoFechaEntrega");
+            return RedirectToAction(nameof(Confirmacion));
+        }
+
         // GET: /Tienda/Confirmacion
         public IActionResult Confirmacion()
         {
             if (TempData["PedidoId"] == null) return RedirectToAction(nameof(Index));
 
+            ViewBag.EsRevendedor = TempData["PedidoRevendedor"] is true;
             ViewBag.PedidoId = TempData["PedidoId"];
             ViewBag.PedidoAmpliado = TempData["PedidoAmpliado"];
             ViewBag.PedidoConfirmacionClave = TempData["PedidoConfirmacionClave"];
@@ -658,11 +710,11 @@ namespace Panaderia.MVC.Controllers
         private async Task<CarritoViewModel> ArmarCarritoAsync()
         {
             var carrito = LeerCarrito();
-            var vm = new CarritoViewModel { Configuracion = await _configuracionTiendaService.GetAsync() };
+            var vm = new CarritoViewModel { EsRevendedor = EsRevendedor(), Configuracion = await _configuracionTiendaService.GetAsync() };
             if (!carrito.Any()) return vm;
 
             var productos = (await _productoService.GetAllAsync())
-                .Where(p => !p.OcultoEnTienda && !p.EstaSinStockEnTienda)
+                .Where(p => !p.OcultoEnTienda && !p.SinStockPara(EsRevendedor()))
                 .ToDictionary(p => p.Id);
 
             var huboCambios = false;
@@ -671,7 +723,7 @@ namespace Panaderia.MVC.Controllers
             {
                 if (productos.TryGetValue(idProducto, out var producto))
                 {
-                    var cantidadMaxima = producto.PorEncargo ? 50 : producto.Stock;
+                    var cantidadMaxima = producto.EsPorEncargoPara(EsRevendedor()) ? 50 : producto.Stock;
                     var cantidadSegura = Math.Min(cantidad, cantidadMaxima);
                     if (cantidadSegura <= 0)
                     {

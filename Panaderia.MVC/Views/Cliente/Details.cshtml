@@ -1,4 +1,4 @@
-﻿@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 @model Panaderia.Models.Entities.Cliente
 
 @{
@@ -75,7 +75,7 @@
         @if (ViewBag.EmailAccesoTienda is string email)
         {
             <p class="mb-1">Cuenta vinculada: <strong>@email</strong></p>
-            <p class="small text-muted">Puede iniciar sesión en la tienda. La contraseña no se muestra por seguridad.</p>
+            <p class="small text-muted">@(ViewBag.AccesoTiendaHabilitado is true ? "Acceso habilitado." : "Acceso deshabilitado.") Podés cambiar el acceso, usuario y contraseña desde Editar.</p>
         }
         else if (Model.Revendedor)
         {

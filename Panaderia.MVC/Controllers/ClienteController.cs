@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Panaderia.Models.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Panaderia.MVC.Models;
@@ -39,6 +39,7 @@ namespace Panaderia.MVC.Controllers
             }
 
             ViewBag.EmailAccesoTienda = await _accesoTiendaService.ObtenerEmailAsync(cliente.Id);
+            ViewBag.AccesoTiendaHabilitado = await _accesoTiendaService.TieneAccesoAsync(cliente.Id);
             return View(cliente);
         }
 
@@ -103,37 +104,42 @@ namespace Panaderia.MVC.Controllers
             return View(cliente);
         }
 
-        //GET: Editar Cliente
+        [HttpGet]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public async Task<IActionResult> Edit(int? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
+            if (id == null) return NotFound();
             var cliente = await _clienteService.GetByIdAsync(id.Value);
-            if (cliente == null)
+            if (cliente == null) return NotFound();
+            return View(new EditarClienteViewModel
             {
-                return NotFound();
-            }
-            return View(cliente);
+                Id = cliente.Id, Nombre = cliente.Nombre, Apellido = cliente.Apellido,
+                Direccion = cliente.Direccion, Localidad = cliente.Localidad, Provincia = cliente.Provincia,
+                Telefono = cliente.Telefono, Revendedor = cliente.Revendedor, PrecioDeCosto = cliente.PrecioDeCosto,
+                DescuentoPorcentaje = cliente.DescuentoPorcentaje,
+                EmailAcceso = await _accesoTiendaService.ObtenerEmailAsync(cliente.Id),
+                AccesoTienda = await _accesoTiendaService.TieneAccesoAsync(cliente.Id)
+            });
         }
 
-        //POST: Editar Cliente
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, Cliente cliente)
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        public async Task<IActionResult> Edit(int id, EditarClienteViewModel cliente)
         {
-            if (id != cliente.Id) return NotFound();
-
+            if (id != cliente.Id || !await _clienteService.ExistsAsync(id)) return NotFound();
             if (ModelState.IsValid)
             {
-                var existe = await _clienteService.GetByIdAsync(id);
-                if (existe == null) return NotFound();
-
-                await _clienteService.UpdateAsync(cliente);
-                return RedirectToAction(nameof(Index));
+                var result = await _accesoTiendaService.GuardarClienteAsync(cliente, cliente.AccesoTienda, cliente.EmailAcceso, cliente.NuevaPassword);
+                if (result.Succeeded) return RedirectToAction(nameof(Index));
+                foreach (var error in result.Errors) ModelState.AddModelError("", error.Description);
             }
+            var errors = ModelState.Where(e => e.Key == nameof(cliente.NuevaPassword) || e.Key == nameof(cliente.ConfirmarPassword))
+                .SelectMany(e => e.Value!.Errors).Select(e => e.ErrorMessage).ToList();
+            ModelState.Remove(nameof(cliente.NuevaPassword));
+            ModelState.Remove(nameof(cliente.ConfirmarPassword));
+            foreach (var error in errors) ModelState.AddModelError("", error);
+            cliente.NuevaPassword = cliente.ConfirmarPassword = null;
             return View(cliente);
         }
 

@@ -79,7 +79,7 @@
                                 <input type="hidden" name="id" value="@item.Producto.Id" />
                                 <input type="hidden" name="cantidad" value="@(item.Cantidad + 1)" />
                                 <button type="submit" aria-label="Sumar" title="Sumar uno"
-                                        disabled="@(item.BloqueadoPorCierreSemanal || (!item.Producto.PorEncargo && item.Cantidad >= item.Producto.Stock))">
+                                        disabled="@(item.BloqueadoPorCierreSemanal || (item.Cantidad >= (item.Producto.EsPorEncargoPara(Model.EsRevendedor) ? 50 : item.Producto.Stock)))">
                                     <span class="material-symbols-outlined">add</span>
                                 </button>
                             </form>
@@ -94,16 +94,28 @@
                 <span>Productos (@Model.CantidadTotal)</span>
                 <span>$@Model.Total.ToString("N0", ar)</span>
             </div>
-            <div class="cr-fila">
-                <span>Entrega (@(Model.Configuracion.RetiroHabilitado ? "delivery o retiro" : "delivery"))</span>
-                <span>Sin cargo</span>
-            </div>
+            @if (!Model.EsRevendedor)
+            {
+                <div class="cr-fila">
+                    <span>Entrega (@(Model.Configuracion.RetiroHabilitado ? "delivery o retiro" : "delivery"))</span>
+                    <span>Sin cargo</span>
+                </div>
+            }
             <div class="cr-fila total">
                 <span>Total</span>
                 <span>$@Model.Total.ToString("N0", ar)</span>
             </div>
         </div>
 
+        @if (Model.EsRevendedor)
+        {
+            <form asp-controller="Tienda" asp-action="Confirmar" method="post" onsubmit="this.querySelector('button[type=submit]').disabled = true;">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn-mv-primary carrito-cta" disabled="@Model.TieneProductosBloqueados">Confirmar pedido</button>
+            </form>
+        }
+        else
+        {
         <partial name="_MinimoPedido" model="Model" />
         @if (Model.TieneProductosBloqueados || Model.FaltaParaMinimo > 0)
         {
@@ -114,6 +126,7 @@
         <a class="btn-mv-primary carrito-cta" asp-controller="Tienda" asp-action="Checkout">
             Continuar <span class="material-symbols-outlined">arrow_forward</span>
         </a>
+        }
         }
     }
 </div>

@@ -3,6 +3,7 @@
     ViewData["Title"] = "Pedido confirmado";
     var ar = new System.Globalization.CultureInfo("es-AR");
     var fechaEntrega = ViewBag.FechaEntrega as DateTime?;
+    var esRevendedor = ViewBag.EsRevendedor is true;
     var esRetiro = (ViewBag.Entrega as string) == "retiro";
     var esTransferencia = (ViewBag.MedioPago as string) == "transferencia";
     var fechaTexto = fechaEntrega.HasValue ? fechaEntrega.Value.ToString("dddd d 'de' MMMM", ar) : "el sábado";
@@ -16,10 +17,14 @@
     <h1 class="font-literata">¡Pedido confirmado!</h1>
     @if (ViewBag.PedidoAmpliado is true)
     {
-        <p class="conf-texto">Sumamos estos artículos a tu pedido anterior para el mismo sábado.</p>
+        <p class="conf-texto">@(esRevendedor ? "Sumamos estos artículos a tu pedido anterior." : "Sumamos estos artículos a tu pedido anterior para el mismo sábado.")</p>
     }
 
-    @if (esRetiro)
+    @if (esRevendedor)
+    {
+        <p class="conf-texto">Recibimos tu pedido. Coordinamos la entrega y el pago con vos.</p>
+    }
+    else if (esRetiro)
     {
         <p class="conf-texto">
             Retiralo el <b>@fechaTexto</b> en <b>Kiosco Suyay</b> (San Martín 888),<br />
@@ -34,7 +39,7 @@
         </p>
     }
 
-    @if (esTransferencia)
+    @if (!esRevendedor && esTransferencia)
     {
         <div class="entrega-banner" style="margin: 14px 0; text-align: left;">
             <span class="material-symbols-outlined">account_balance</span>
@@ -56,12 +61,17 @@
     }
     else
     {
-        <p class="conf-texto">Te vamos a escribir por WhatsApp para confirmar.</p>
+        @if (!esRevendedor)
+        {
+            <p class="conf-texto">Te vamos a escribir por WhatsApp para confirmar.</p>
+        }
         <a class="btn-mv-primary carrito-cta" asp-controller="Tienda" asp-action="Index">Volver a la tienda</a>
     }
 </div>
 
 @section Scripts {
+    @if (!esRevendedor)
+    {
     <script src="~/js/alias-transferencia.js" asp-append-version="true"></script>
     <script>
         // Abrir en la misma pestaña para no depender de ventanas emergentes.
@@ -91,4 +101,5 @@
             }
         })();
     </script>
+    }
 }

@@ -72,8 +72,9 @@ var exact = Controller();
 Check(await exact.Confirmar(Order()) is RedirectToActionResult { ActionName: "Confirmacion" } && writes == 1,
     "Exact minimum can confirm");
 var resellerController = Controller(true);
-Check(await resellerController.Confirmar(Order()) is ViewResult && writes == 1,
-    "Reseller minimum uses reseller price, not retail price");
+Check(await resellerController.Confirmar(new CheckoutViewModel()) is RedirectToActionResult { ActionName: "Confirmacion" } && writes == 2,
+    "Reseller confirms below minimum without contact, delivery or payment form");
+writes--; // Keep retail assertions independent of this additional successful order.
 settings.MontoMinimoPedido = 0m;
 settings.RetiroHabilitado = false;
 var closed = Controller();
@@ -191,8 +192,7 @@ Console.WriteLine($"{checks} total checks passed.");
 
 settings.MontoMinimoPedido = 0;
 var linkedStore = Controller(true);
-var linkedForm = (CheckoutViewModel)((ViewResult)await linkedStore.Checkout()).Model!;
-Check(linkedForm.Nombre == "Revendedor", "Checkout prefills the linked reseller customer");
+Check(await linkedStore.Checkout() is RedirectToActionResult { ActionName: "Carrito" }, "Reseller skips the delivery checkout page");
 var linkedOrder = Order();
 linkedOrder.Telefono = "999999";
 Check(await linkedStore.Confirmar(linkedOrder) is RedirectToActionResult && lastOrder?.IdCliente == 9 && lastOrder.MontoTotal == 80m,

@@ -189,7 +189,7 @@ namespace Panaderia.Services.Implementations
             await using var transaction = await IniciarMutacionAsync();
             await AplicarPrecioDeCostoAsync(pedido);
             await AplicarCostoEmpaqueAsync(pedido.Detalles);
-            await ReservarStockAsync(pedido.Detalles);
+            await ReservarStockAsync(pedido.Detalles, pedido.IdCliente);
             await _context.Pedidos.AddAsync(pedido);
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
@@ -228,7 +228,7 @@ namespace Panaderia.Services.Implementations
                 (await _context.Clientes.FindAsync(pedido.IdCliente))?.PrecioDeCosto == true)
                 existente = null;
             await AplicarCostoEmpaqueAsync(pedido.Detalles);
-            await ReservarStockAsync(pedido.Detalles);
+            await ReservarStockAsync(pedido.Detalles, pedido.IdCliente);
             // También cubrir una solicitud que atraviese el horario de cierre.
             DisponibilidadSemanal.ValidarPedido(productos, _reloj.GetUtcNow());
             if (existente == null) _context.Pedidos.Add(pedido);
@@ -258,7 +258,7 @@ namespace Panaderia.Services.Implementations
             await RestituirStockReservadoAsync(existing.Detalles);
             await AplicarPrecioDeCostoAsync(pedido);
             await AplicarCostoEmpaqueAsync(pedido.Detalles);
-            await ReservarStockAsync(pedido.Detalles);
+            await ReservarStockAsync(pedido.Detalles, pedido.IdCliente);
 
             existing.DescuentoPorcentaje = pedido.DescuentoPorcentaje;
             existing.MontoTotal = pedido.MontoTotal;
@@ -875,7 +875,7 @@ namespace Panaderia.Services.Implementations
 
         // Reserva unidades al registrar el pedido. ExecuteUpdate hace que la condición
         // Stock >= cantidad se aplique en la base, evitando sobreventas simultáneas.
-        private async Task ReservarStockAsync(IEnumerable<DetallePedido> detalles)
+        private async Task ReservarStockAsync(IEnumerable<DetallePedido> detalles, int idCliente)
         {
             var detallesLista = detalles.Where(d => d.Cantidad > 0).ToList();
             foreach (var detalle in detallesLista)
@@ -886,9 +886,9 @@ namespace Panaderia.Services.Implementations
                 .ToDictionary(g => g.Key, g => g.Sum(d => d.Cantidad));
             if (!cantidadesPorProducto.Any()) return;
 
-            var productos = await _context.Productos
+            var revendedor = await _context.Clientes.AsNoTracking().AnyAsync(c => c.Id == idCliente && c.Revendedor);
+            var productos = await _context.Productos.AsNoTracking().Include(p => p.Categoria)
                 .Where(p => cantidadesPorProducto.Keys.Contains(p.Id))
-                .Select(p => new { p.Id, p.Nombre, p.PorEncargo })
                 .ToDictionaryAsync(p => p.Id);
 
             foreach (var (idProducto, cantidad) in cantidadesPorProducto)
@@ -896,8 +896,8 @@ namespace Panaderia.Services.Implementations
                 if (!productos.TryGetValue(idProducto, out var producto))
                     throw new InvalidOperationException("Uno de los productos del pedido ya no existe.");
 
-                // Panes, crackers y cualquier producto por encargo no consumen stock.
-                if (producto.PorEncargo) continue;
+                // La política se relee desde el cliente y el producto persistidos.
+                if (producto.EsPorEncargoPara(revendedor)) continue;
 
                 var filasActualizadas = await _context.Productos
                     .Where(p => p.Id == idProducto && !p.PorEncargo && p.Stock >= cantidad)

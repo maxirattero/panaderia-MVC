@@ -1,4 +1,4 @@
-﻿using Panaderia.Models.Enums;
+using Panaderia.Models.Enums;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
@@ -65,6 +65,11 @@ namespace Panaderia.Models.Entities
 
         // Los productos por encargo no requieren stock. Para el resto, la
         // disponibilidad de tienda depende de las unidades reales en stock.
+        public bool EsPorEncargoPara(bool revendedor) => PorEncargo || (revendedor &&
+            Categoria?.Nombre.Trim().ToLowerInvariant() is "pan" or "panes" or "cracker" or "crackers" or "pizza" or "pizzas" or "prepizza" or "prepizzas");
+
+        public bool SinStockPara(bool revendedor) => !EsPorEncargoPara(revendedor) && Stock <= 0;
+
         [NotMapped]
         public bool EstaSinStockEnTienda => !PorEncargo && Stock <= 0;
 
