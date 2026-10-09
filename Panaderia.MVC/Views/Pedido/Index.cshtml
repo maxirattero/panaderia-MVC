@@ -13,9 +13,12 @@
         </div>
         @* Desktop buttons *@
         <div class="col-md-5 text-md-end d-none d-md-block">
-            <a asp-action="Produccion" class="btn btn-mv-primary d-inline-flex align-items-center gap-2 shadow me-2">
-                <span class="material-symbols-outlined">factory</span>Producción
-            </a>
+            <div class="dropdown d-inline-block me-2">
+                <button class="btn btn-mv-primary dropdown-toggle d-inline-flex align-items-center gap-2 shadow" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <span class="material-symbols-outlined" aria-hidden="true">factory</span>Producción
+                </button>
+                <partial name="_OpcionesProduccion" />
+            </div>
             <a asp-action="Create" class="btn btn-mv-primary d-inline-flex align-items-center gap-2 shadow">
                 <span class="material-symbols-outlined">add</span>Nuevo pedido
             </a>
@@ -33,19 +36,18 @@
 
     @* Mobile buttons (below title, hidden on desktop) *@
     <div class="d-md-none d-flex gap-2 mb-4">
-        <a asp-action="Produccion" class="btn btn-mv-secondary flex-fill d-flex align-items-center justify-content-center gap-2">
-            <span class="material-symbols-outlined">factory</span>Producción
-        </a>
+        <div class="dropdown flex-fill">
+            <button class="btn btn-mv-secondary dropdown-toggle w-100 d-flex align-items-center justify-content-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <span class="material-symbols-outlined" aria-hidden="true">factory</span>Producción
+            </button>
+            <partial name="_OpcionesProduccion" />
+        </div>
         <a asp-action="Create" class="btn btn-mv-primary flex-fill d-flex align-items-center justify-content-center gap-2">
             <span class="material-symbols-outlined">add</span>Nuevo pedido
         </a>
     </div>
 
-    <div class="mb-4">
-        <a asp-action="TotalesSemana" class="btn btn-mv-secondary d-inline-flex align-items-center gap-2">
-            <span class="material-symbols-outlined" aria-hidden="true">summarize</span>Totales de la semana
-        </a>
-    </div>
+    <partial name="_TotalesSemanaModal" model="(Panaderia.Models.DTOs.TotalesPedidosSemana)ViewBag.TotalesSemana" />
 
     @* Desktop summary (right-aligned, inline) *@
     <div class="d-none d-md-flex justify-content-end mb-4">

@@ -297,12 +297,6 @@ namespace Panaderia.MVC.Controllers
             return View(vm);
         }
 
-        [HttpGet]
-        public async Task<IActionResult> TotalesSemana()
-        {
-            return View(await _pedidoService.GetTotalesSemanaAsync());
-        }
-
         public async Task<IActionResult> Index()
         {
             var pendientes = await _pedidoService.GetByEstadoAsync(EstadoPedido.Pendiente);
@@ -312,6 +306,7 @@ namespace Panaderia.MVC.Controllers
                 .ThenBy(p => p.Id)
                 .ToList();
             ViewBag.TotalVendidoSemana = await _pedidoService.GetTotalVendidoSemanaAsync();
+            ViewBag.TotalesSemana = await _pedidoService.GetTotalesSemanaAsync();
             return View(pedidos);
         }
 

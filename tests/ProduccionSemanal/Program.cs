@@ -78,8 +78,9 @@ Check(totales.CantidadPedidos == 4 && totales.Moldes == 111 && totales.Campos ==
 await using (var readDb = new PanaderiaContext(new DbContextOptionsBuilder<PanaderiaContext>().UseNpgsql(connection).Options))
 {
     var controller = new PedidoController(new PedidoService(readDb, clock), null!, null!, null!, null!);
-    Check(((ViewResult)await controller.TotalesSemana()).Model is Panaderia.Models.DTOs.TotalesPedidosSemana model && model == totales,
-        "Botón de totales obtiene el resumen completo desde un contexto nuevo");
+    await controller.Index();
+    Check(controller.ViewBag.TotalesSemana is Panaderia.Models.DTOs.TotalesPedidosSemana model && model == totales,
+        "Pedidos carga los totales para la ventana flotante desde un contexto nuevo");
 }
 var summary = await service.GetResumenProduccionAsync();
 Check(summary.PorProducto.Single().CantidadTotal == 9, "Solo entregas de lunes a domingo, descontando unidades ya producidas");

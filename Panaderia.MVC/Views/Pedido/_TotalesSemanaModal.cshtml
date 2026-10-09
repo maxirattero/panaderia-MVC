@@ -1,0 +1,46 @@
+@model Panaderia.Models.DTOs.TotalesPedidosSemana
+
+<div class="modal fade" id="totalesSemanaModal" tabindex="-1" aria-labelledby="totalesSemanaTitulo" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5 fw-bold titulo-pagina" id="totalesSemanaTitulo">Totales de la semana</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <p class="fw-bold mb-2">Entregas del @Model.InicioSemana.ToString("dd/MM/yyyy") al @Model.FinSemana.ToString("dd/MM/yyyy")</p>
+                <p class="text-secondary small mb-4">
+                    @Model.CantidadPedidos pedido(s) sin entregar de lunes a domingo, incluidos los que ya están en producción.
+                    No incluye pedidos entregados, anulados ni producción adicional para stock.
+                </p>
+
+                @if (Model.CantidadPedidos == 0)
+                {
+                    <div class="alert alert-info" role="status">No hay pedidos sin entregar con fecha de entrega en esta semana.</div>
+                }
+
+                <div class="row g-3">
+                    @foreach (var total in new[] {
+                        (Nombre: "Moldes", Cantidad: Model.Moldes),
+                        (Nombre: "Campos", Cantidad: Model.Campos),
+                        (Nombre: "Bolsas", Cantidad: Model.Bolsas),
+                        (Nombre: "Bolsas de papel", Cantidad: Model.BolsasPapel)
+                    })
+                    {
+                        <div class="col-6 col-md-3">
+                            <div class="card card-custom p-3 h-100">
+                                <h3 class="h6 text-secondary mb-2">@total.Nombre</h3>
+                                <p class="display-5 fw-bold titulo-pagina mb-0">@total.Cantidad</p>
+                            </div>
+                        </div>
+                    }
+                </div>
+                <p class="text-secondary small mt-4 mb-2">Los totales se mantienen al confirmar la producción o imprimir las recetas.</p>
+                <p class="text-secondary small mb-0">Las bolsas se cuentan según el empaque elegido en cada pedido: una por unidad. “Bolsas” no incluye las de papel. Los productos sin empaque no suman bolsas.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-mv-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
