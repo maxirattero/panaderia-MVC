@@ -14,13 +14,13 @@
 </div>
 
 <p class="text-secondary mb-4">
-    @Model.CantidadPedidos pedido(s) de lunes a domingo, incluidos los que ya están en producción o entregados.
-    Estos totales se mantienen al confirmar la producción o imprimir las recetas. No incluyen pedidos anulados ni producción adicional para stock.
+    @Model.CantidadPedidos pedido(s) sin entregar de lunes a domingo, incluidos los que ya están en producción.
+    Estos totales se mantienen al confirmar la producción o imprimir las recetas. No incluyen pedidos entregados, anulados ni producción adicional para stock.
 </p>
 
 @if (Model.CantidadPedidos == 0)
 {
-    <div class="alert alert-info" role="status">No hay pedidos con fecha de entrega en esta semana.</div>
+    <div class="alert alert-info" role="status">No hay pedidos sin entregar con fecha de entrega en esta semana.</div>
 }
 
 <div class="row g-4">

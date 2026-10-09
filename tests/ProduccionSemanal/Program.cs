@@ -73,8 +73,8 @@ Check((await service.GetByEstadoAsync(EstadoPedido.Pendiente)).Any(p => p.Id == 
 await service.AgregarProduccionStockAsync(bread.Id, 1);
 var totales = await service.GetTotalesSemanaAsync();
 Check(totales.InicioSemana == DateOnly.FromDateTime(monday) && totales.FinSemana == DateOnly.FromDateTime(monday.AddDays(6)), "Totales muestran el rango de lunes a domingo");
-Check(totales.CantidadPedidos == 5 && totales.Moldes == 211 && totales.Campos == 0 && totales.Bolsas == 0 && totales.BolsasPapel == 211,
-    "Totales incluyen cantidades completas, en producción y entregados; excluyen anulados, otras semanas, sin fecha y stock adicional");
+Check(totales.CantidadPedidos == 4 && totales.Moldes == 111 && totales.Campos == 0 && totales.Bolsas == 0 && totales.BolsasPapel == 111,
+    "Totales incluyen cantidades completas de pendientes y en producción; excluyen entregados, anulados, otras semanas, sin fecha y stock adicional");
 await using (var readDb = new PanaderiaContext(new DbContextOptionsBuilder<PanaderiaContext>().UseNpgsql(connection).Options))
 {
     var controller = new PedidoController(new PedidoService(readDb, clock), null!, null!, null!, null!);
@@ -130,7 +130,10 @@ Check(empaques.CantidadPedidos == 1 && empaques.Campos == 9 && empaques.Moldes =
     "Distingue bolsas y papel, no cuenta empaques ausentes y conserva cantidades producidas o reservadas");
 pedidoEmpaques.Estado = EstadoPedido.Entregado;
 await db.SaveChangesAsync();
-Check(await service.GetTotalesSemanaAsync() == empaques, "Entregar un pedido conserva los totales semanales");
+Check(await service.GetTotalesSemanaAsync() == vacio, "Entregar un pedido retira sus cantidades de todos los totales semanales");
+pedidoEmpaques.Estado = EstadoPedido.EnProduccion;
+await db.SaveChangesAsync();
+Check(await service.GetTotalesSemanaAsync() == empaques, "Un pedido en producción vuelve a sumar sus cantidades completas");
 pedidoEmpaques.Anulado = true;
 await db.SaveChangesAsync();
 Check(await service.GetTotalesSemanaAsync() == vacio, "Anular un pedido retira sus cantidades del resumen");

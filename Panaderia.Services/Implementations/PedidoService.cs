@@ -478,7 +478,8 @@ namespace Panaderia.Services.Implementations
             var fin = inicio.AddDays(7);
             // El filtro global excluye anulados. No se descuentan unidades producidas ni reservadas.
             var pedidos = await _context.Pedidos.AsNoTracking()
-                .Where(p => p.FechaEntrega >= inicio && p.FechaEntrega < fin)
+                .Where(p => p.Estado != EstadoPedido.Entregado
+                    && p.FechaEntrega >= inicio && p.FechaEntrega < fin)
                 .Select(p => new
                 {
                     Detalles = p.Detalles.Select(d => new
