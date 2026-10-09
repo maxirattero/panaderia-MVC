@@ -23,6 +23,9 @@ namespace Panaderia.Services.Interfaces
         // Pedidos pendientes con entrega en la semana actual (lunes a domingo, Argentina).
         Task<IEnumerable<Pedido>> GetPendientesSemanaAsync();
 
+        // Totales completos por fecha de entrega, independientemente de la producción y el estado.
+        Task<TotalesPedidosSemana> GetTotalesSemanaAsync();
+
         //obtener pedidos por fecha
         Task<IEnumerable<Pedido>> GetByFechaAsync(DateTime fecha);
 

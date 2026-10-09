@@ -297,6 +297,12 @@ namespace Panaderia.MVC.Controllers
             return View(vm);
         }
 
+        [HttpGet]
+        public async Task<IActionResult> TotalesSemana()
+        {
+            return View(await _pedidoService.GetTotalesSemanaAsync());
+        }
+
         public async Task<IActionResult> Index()
         {
             var pendientes = await _pedidoService.GetByEstadoAsync(EstadoPedido.Pendiente);

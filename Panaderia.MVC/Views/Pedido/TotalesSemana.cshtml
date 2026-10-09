@@ -1,0 +1,42 @@
+@model Panaderia.Models.DTOs.TotalesPedidosSemana
+@{
+    ViewData["Title"] = "Totales de la semana";
+}
+
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+    <div>
+        <h1 class="display-6 fw-bold titulo-pagina mb-1">Totales de la semana</h1>
+        <p class="text-secondary mb-0">Entregas del @Model.InicioSemana.ToString("dd/MM/yyyy") al @Model.FinSemana.ToString("dd/MM/yyyy")</p>
+    </div>
+    <a asp-action="Index" class="btn btn-mv-secondary d-inline-flex align-items-center gap-2">
+        <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>Volver a Pedidos
+    </a>
+</div>
+
+<p class="text-secondary mb-4">
+    @Model.CantidadPedidos pedido(s) de lunes a domingo, incluidos los que ya están en producción o entregados.
+    Estos totales se mantienen al confirmar la producción o imprimir las recetas. No incluyen pedidos anulados ni producción adicional para stock.
+</p>
+
+@if (Model.CantidadPedidos == 0)
+{
+    <div class="alert alert-info" role="status">No hay pedidos con fecha de entrega en esta semana.</div>
+}
+
+<div class="row g-4">
+    @foreach (var total in new[] {
+        (Nombre: "Moldes", Cantidad: Model.Moldes),
+        (Nombre: "Campos", Cantidad: Model.Campos),
+        (Nombre: "Bolsas", Cantidad: Model.Bolsas),
+        (Nombre: "Bolsas de papel", Cantidad: Model.BolsasPapel)
+    })
+    {
+        <div class="col-6 col-lg-3">
+            <div class="card card-custom p-4 h-100">
+                <h2 class="h6 text-secondary mb-2">@total.Nombre</h2>
+                <p class="display-5 fw-bold titulo-pagina mb-0">@total.Cantidad</p>
+            </div>
+        </div>
+    }
+</div>
+<p class="text-secondary small mt-4 mb-0">Las bolsas se cuentan según el empaque elegido en cada pedido: una por unidad. “Bolsas” no incluye las de papel. Los productos sin empaque no suman bolsas.</p>

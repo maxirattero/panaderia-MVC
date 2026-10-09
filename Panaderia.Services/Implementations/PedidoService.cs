@@ -457,14 +457,43 @@ namespace Panaderia.Services.Implementations
             };
         }
 
-        private IQueryable<Pedido> PedidosPendientesDeLaSemana()
+        private DateTime InicioSemanaActual()
         {
             var hoy = DateOnly.FromDateTime(CalendarioCaja.Local(_reloj.GetUtcNow().UtcDateTime));
             // FechaEntrega guarda la fecha calendario como UTC, sin desplazarla por huso horario.
-            var inicio = DateTime.SpecifyKind(CalendarioCaja.Lunes(hoy).ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc);
+            return DateTime.SpecifyKind(CalendarioCaja.Lunes(hoy).ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc);
+        }
+
+        private IQueryable<Pedido> PedidosPendientesDeLaSemana()
+        {
+            var inicio = InicioSemanaActual();
             var fin = inicio.AddDays(7);
             return _context.Pedidos.Where(p => p.Estado == EstadoPedido.Pendiente
                 && p.FechaEntrega >= inicio && p.FechaEntrega < fin);
+        }
+
+        public async Task<TotalesPedidosSemana> GetTotalesSemanaAsync()
+        {
+            var inicio = InicioSemanaActual();
+            var fin = inicio.AddDays(7);
+            // El filtro global excluye anulados. No se descuentan unidades producidas ni reservadas.
+            var pedidos = await _context.Pedidos.AsNoTracking()
+                .Where(p => p.FechaEntrega >= inicio && p.FechaEntrega < fin)
+                .Select(p => new
+                {
+                    Detalles = p.Detalles.Select(d => new
+                    {
+                        d.Cantidad,
+                        Formato = d.Producto.Formato == null ? null : d.Producto.Formato.Descripcion,
+                        BolsaPapel = d.Empaque == null ? (bool?)null : d.Empaque.EsBolsaPapel
+                    }).ToList()
+                }).ToListAsync();
+            var detalles = pedidos.SelectMany(p => p.Detalles).ToList();
+            return new TotalesPedidosSemana(DateOnly.FromDateTime(inicio), pedidos.Count,
+                detalles.Where(d => string.Equals(d.Formato?.Trim(), "Molde", StringComparison.OrdinalIgnoreCase)).Sum(d => d.Cantidad),
+                detalles.Where(d => string.Equals(d.Formato?.Trim(), "Campo", StringComparison.OrdinalIgnoreCase)).Sum(d => d.Cantidad),
+                detalles.Where(d => d.BolsaPapel == false).Sum(d => d.Cantidad),
+                detalles.Where(d => d.BolsaPapel == true).Sum(d => d.Cantidad));
         }
 
         private IQueryable<DetallePedido> DetallesPendientesDeLaSemana()
