@@ -9,4 +9,7 @@ public record TotalesPedidosSemana(
     int BolsasPapel)
 {
     public DateOnly FinSemana => InicioSemana.AddDays(6);
+    public IReadOnlyList<PanPedidoSemana> Panes { get; init; } = [];
 }
+
+public record PanPedidoSemana(int IdProducto, string NombreProducto, string Formato, string? Tamano, int CantidadTotal);

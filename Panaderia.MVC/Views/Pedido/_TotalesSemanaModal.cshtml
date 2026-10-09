@@ -35,6 +35,41 @@
                         </div>
                     }
                 </div>
+                <h3 class="h6 fw-bold mt-4 mb-2">Detalle de panes pedidos</h3>
+                <p class="text-secondary small mb-3">Cantidades completas de pedidos pendientes y en producción.</p>
+                @if (Model.Panes.Count == 0)
+                {
+                    <p class="text-secondary small">No hay panes pendientes o en producción para esta semana.</p>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0" aria-label="Detalle de panes pedidos">
+                            <thead>
+                                <tr><th scope="col">Pan</th><th scope="col">Molde / formato</th><th scope="col" class="text-end">Cantidad</th></tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var pan in Model.Panes)
+                                {
+                                    <tr>
+                                        <td>@pan.NombreProducto</td>
+                                        <td>
+                                            @pan.Formato
+                                            @if (!string.IsNullOrWhiteSpace(pan.Tamano))
+                                            {
+                                                <span class="d-block small text-secondary">@pan.Tamano</span>
+                                            }
+                                        </td>
+                                        <td class="text-end fw-bold">@pan.CantidadTotal</td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot>
+                                <tr><th scope="row" colspan="2">Total de panes</th><td class="text-end fw-bold">@Model.Panes.Sum(p => p.CantidadTotal)</td></tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                }
                 <p class="text-secondary small mt-4 mb-2">Los totales se mantienen al confirmar la producción o imprimir las recetas.</p>
                 <p class="text-secondary small mb-0">Las bolsas se cuentan según el empaque elegido en cada pedido: una por unidad. “Bolsas” no incluye las de papel. Los productos sin empaque no suman bolsas.</p>
             </div>

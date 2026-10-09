@@ -478,23 +478,31 @@ namespace Panaderia.Services.Implementations
             var fin = inicio.AddDays(7);
             // El filtro global excluye anulados. No se descuentan unidades producidas ni reservadas.
             var pedidos = await _context.Pedidos.AsNoTracking()
-                .Where(p => p.Estado != EstadoPedido.Entregado
+                .Where(p => (p.Estado == EstadoPedido.Pendiente || p.Estado == EstadoPedido.EnProduccion)
                     && p.FechaEntrega >= inicio && p.FechaEntrega < fin)
-                .Select(p => new
-                {
-                    Detalles = p.Detalles.Select(d => new
-                    {
-                        d.Cantidad,
-                        Formato = d.Producto.Formato == null ? null : d.Producto.Formato.Descripcion,
-                        BolsaPapel = d.Empaque == null ? (bool?)null : d.Empaque.EsBolsaPapel
-                    }).ToList()
-                }).ToListAsync();
+                .Include(p => p.Detalles).ThenInclude(d => d.Producto).ThenInclude(p => p.Categoria)
+                .Include(p => p.Detalles).ThenInclude(d => d.Producto).ThenInclude(p => p.Formato)
+                .Include(p => p.Detalles).ThenInclude(d => d.Producto).ThenInclude(p => p.Tamano)
+                .Include(p => p.Detalles).ThenInclude(d => d.Empaque)
+                .ToListAsync();
             var detalles = pedidos.SelectMany(p => p.Detalles).ToList();
+            var orden = StringComparer.Create(new System.Globalization.CultureInfo("es-AR"), ignoreCase: true);
+            var panes = detalles
+                .Where(d => d.Producto.Categoria.Nombre.Trim().ToLowerInvariant() is "pan" or "panes")
+                .GroupBy(d => d.IdProducto)
+                .Select(g => new PanPedidoSemana(g.Key, g.First().Producto.NombreVisible,
+                    g.First().Producto.Formato?.Descripcion.Trim() ?? "Sin formato",
+                    g.First().Producto.Tamano?.Descripcion.Trim(), g.Sum(d => d.Cantidad)))
+                .OrderBy(p => p.NombreProducto, orden)
+                .ThenBy(p => p.Formato, orden)
+                .ThenBy(p => p.Tamano, orden)
+                .ThenBy(p => p.IdProducto)
+                .ToList();
             return new TotalesPedidosSemana(DateOnly.FromDateTime(inicio), pedidos.Count,
-                detalles.Where(d => string.Equals(d.Formato?.Trim(), "Molde", StringComparison.OrdinalIgnoreCase)).Sum(d => d.Cantidad),
-                detalles.Where(d => string.Equals(d.Formato?.Trim(), "Campo", StringComparison.OrdinalIgnoreCase)).Sum(d => d.Cantidad),
-                detalles.Where(d => d.BolsaPapel == false).Sum(d => d.Cantidad),
-                detalles.Where(d => d.BolsaPapel == true).Sum(d => d.Cantidad));
+                detalles.Where(d => string.Equals(d.Producto.Formato?.Descripcion.Trim(), "Molde", StringComparison.OrdinalIgnoreCase)).Sum(d => d.Cantidad),
+                detalles.Where(d => string.Equals(d.Producto.Formato?.Descripcion.Trim(), "Campo", StringComparison.OrdinalIgnoreCase)).Sum(d => d.Cantidad),
+                detalles.Where(d => d.Empaque?.EsBolsaPapel == false).Sum(d => d.Cantidad),
+                detalles.Where(d => d.Empaque?.EsBolsaPapel == true).Sum(d => d.Cantidad)) { Panes = panes };
         }
 
         private IQueryable<DetallePedido> DetallesPendientesDeLaSemana()

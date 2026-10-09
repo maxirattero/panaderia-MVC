@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
 using Npgsql;
 using Panaderia.Models.Data;
+using Panaderia.Models.DTOs;
 using Panaderia.Models.Entities;
 using Panaderia.Models.Enums;
 using Panaderia.Services.Implementations;
@@ -17,6 +18,8 @@ var schema = db.Database.GenerateCreateScript().Replace("CREATE TABLE ", "CREATE
 if (schema.Contains("public.") || schema.Contains("CREATE SCHEMA")) throw new Exception("Esquema no aislado");
 await new NpgsqlCommand(schema, connection).ExecuteNonQueryAsync();
 var checks = 0;
+bool MismosTotales(TotalesPedidosSemana a, TotalesPedidosSemana b) =>
+    (a with { Panes = b.Panes }) == b && a.Panes.SequenceEqual(b.Panes);
 void Check(bool ok, string message)
 {
     if (!ok) throw new Exception(message);
@@ -75,11 +78,13 @@ var totales = await service.GetTotalesSemanaAsync();
 Check(totales.InicioSemana == DateOnly.FromDateTime(monday) && totales.FinSemana == DateOnly.FromDateTime(monday.AddDays(6)), "Totales muestran el rango de lunes a domingo");
 Check(totales.CantidadPedidos == 4 && totales.Moldes == 111 && totales.Campos == 0 && totales.Bolsas == 0 && totales.BolsasPapel == 111,
     "Totales incluyen cantidades completas de pendientes y en producción; excluyen entregados, anulados, otras semanas, sin fecha y stock adicional");
+Check(totales.Panes.Single() is { NombreProducto: "Pan", Formato: "molde", CantidadTotal: 111 },
+    "Desglose agrupa el mismo pan de varios pedidos pendientes y en producción, sin descontar unidades confirmadas");
 await using (var readDb = new PanaderiaContext(new DbContextOptionsBuilder<PanaderiaContext>().UseNpgsql(connection).Options))
 {
     var controller = new PedidoController(new PedidoService(readDb, clock), null!, null!, null!, null!);
     await controller.Index();
-    Check(controller.ViewBag.TotalesSemana is Panaderia.Models.DTOs.TotalesPedidosSemana model && model == totales,
+    Check(controller.ViewBag.TotalesSemana is TotalesPedidosSemana model && MismosTotales(model, totales),
         "Pedidos carga los totales para la ventana flotante desde un contexto nuevo");
 }
 var summary = await service.GetResumenProduccionAsync();
@@ -92,7 +97,7 @@ Check(ingredients.CantidadUnidades == 10 && ingredients.PesoMasaTotal == 1000, "
 Check((await service.GetResumenProduccionAsync([bread.Id])).PorProducto.Count == 0
     && (await service.GetIngredientesProduccionAsync([bread.Id])).Count == 0, "Se conserva la exclusión manual de productos");
 clock.Now = DateTimeOffset.Parse("2026-10-05T02:59:59Z");
-Check(await service.GetTotalesSemanaAsync() == totales, "Totales conservan la semana hasta la medianoche argentina");
+Check(MismosTotales(await service.GetTotalesSemanaAsync(), totales), "Totales conservan la semana hasta la medianoche argentina");
 Check((await Printed(false)).Select(p => p.Id).SequenceEqual(current.Select(p => p.Id)), "Impresión conserva la semana durante el domingo argentino");
 Check((await service.GetResumenProduccionAsync()).PorProducto.Single().CantidadTotal == 9, "Domingo argentino sigue en la semana actual aunque sea lunes UTC");
 clock.Now = DateTimeOffset.Parse("2026-10-05T03:00:00Z");
@@ -107,7 +112,7 @@ var confirmacion = new List<Panaderia.Models.DTOs.ItemProduccionSeleccionable> {
 await service.PrepararConfirmacionAsync(confirmacion);
 var warnings = await service.ConfirmarProduccionAsync(confirmacion);
 Check(warnings.Count == 0, "Se puede confirmar la semana sin producir pedidos futuros");
-Check(await service.GetTotalesSemanaAsync() == totales, "Confirmar producción conserva moldes y bolsas completos en Pedidos");
+Check(MismosTotales(await service.GetTotalesSemanaAsync(), totales), "Confirmar producción conserva moldes, bolsas y desglose de panes completos en Pedidos");
 Check(current.All(p => p.Estado == EstadoPedido.EnProduccion && p.Detalles.All(d => d.CantidadProducida == d.Cantidad)), "Confirmación completa solo los pedidos de esta semana");
 Check(outside.All(p => p.Estado == EstadoPedido.Pendiente && p.Detalles.All(d => d.CantidadProducida == 0)), "Entregas pasadas y futuras permanecen pendientes e intactas");
 Check(water.StockActual == 99550 && flour.StockActual == 99550, "Descuento de insumos corresponde a las nueve unidades confirmadas");
@@ -118,6 +123,7 @@ clock.Now = DateTimeOffset.Parse("2026-11-04T12:00:00-03:00");
 var vacio = await service.GetTotalesSemanaAsync();
 Check(vacio.CantidadPedidos == 0 && vacio.Moldes == 0 && vacio.Campos == 0 && vacio.Bolsas == 0 && vacio.BolsasPapel == 0,
     "Semana sin pedidos devuelve los cuatro totales en cero");
+Check(vacio.Panes.Count == 0, "Semana vacía no muestra panes");
 var campo = new Producto { Nombre = "Campo", Categoria = bread.Categoria, Formato = new() { Descripcion = "CAMPO" } };
 var bolsaSellada = new Insumo { Nombre = "Bolsa sellada", TipoInsumo = TipoInsumo.Empaque };
 var pedidoEmpaques = new Pedido { Cliente = customer, FechaEntrega = new DateTime(2026, 11, 4, 0, 0, 0, DateTimeKind.Utc),
@@ -129,15 +135,30 @@ await db.SaveChangesAsync();
 var empaques = await service.GetTotalesSemanaAsync();
 Check(empaques.CantidadPedidos == 1 && empaques.Campos == 9 && empaques.Moldes == 0 && empaques.Bolsas == 9 && empaques.BolsasPapel == 2,
     "Distingue bolsas y papel, no cuenta empaques ausentes y conserva cantidades producidas o reservadas");
+Check(empaques.Panes.Single(p => p.IdProducto == campo.Id).CantidadTotal == 9
+    && empaques.Panes.Single(p => p.IdProducto == futureOnlyProduct.Id).Formato == "Sin formato",
+    "Agrupa renglones del mismo pan con empaques distintos y muestra panes sin formato");
+var otroFormato = new Producto { Nombre = "Campo", Categoria = new() { Nombre = " Pan " },
+    Formato = new() { Descripcion = "Molde" }, Tamano = new() { Descripcion = "Grande" } };
+var sinNombre = new Producto { Categoria = bread.Categoria, Masa = (Masa)0, Formato = campo.Formato };
+pedidoEmpaques.Detalles.Add(new() { Producto = otroFormato, Cantidad = 2 });
+pedidoEmpaques.Detalles.Add(new() { Producto = sinNombre, Cantidad = 1 });
+pedidoEmpaques.Detalles.Add(new() { Producto = new() { Nombre = "Prepizza", Categoria = new() { Nombre = "Prepizzas" } }, Cantidad = 5 });
+await db.SaveChangesAsync();
+empaques = await service.GetTotalesSemanaAsync();
+Check(empaques.Panes.Count == 4 && empaques.Panes.Sum(p => p.CantidadTotal) == 18
+    && empaques.Panes.Single(p => p.IdProducto == otroFormato.Id) is { Formato: "Molde", Tamano: "Grande", CantidadTotal: 2 }
+    && empaques.Panes.Single(p => p.IdProducto == sinNombre.Id).NombreProducto == sinNombre.NombreVisible,
+    "Desglose distingue formatos de panes con el mismo nombre, incluye tamaños y nombres generados y excluye otros productos");
 pedidoEmpaques.Estado = EstadoPedido.Entregado;
 await db.SaveChangesAsync();
-Check(await service.GetTotalesSemanaAsync() == vacio, "Entregar un pedido retira sus cantidades de todos los totales semanales");
+Check(MismosTotales(await service.GetTotalesSemanaAsync(), vacio), "Entregar un pedido retira sus cantidades de los totales y del desglose");
 pedidoEmpaques.Estado = EstadoPedido.EnProduccion;
 await db.SaveChangesAsync();
-Check(await service.GetTotalesSemanaAsync() == empaques, "Un pedido en producción vuelve a sumar sus cantidades completas");
+Check(MismosTotales(await service.GetTotalesSemanaAsync(), empaques), "Un pedido en producción vuelve a sumar sus cantidades completas");
 pedidoEmpaques.Anulado = true;
 await db.SaveChangesAsync();
-Check(await service.GetTotalesSemanaAsync() == vacio, "Anular un pedido retira sus cantidades del resumen");
+Check(MismosTotales(await service.GetTotalesSemanaAsync(), vacio), "Anular un pedido retira sus cantidades del resumen y del desglose");
 await ConfirmacionConcurrente.RunAsync(port, Check, args.Contains("--preview"));
 Console.WriteLine($"{checks} verificaciones de producción semanal correctas.");
 
