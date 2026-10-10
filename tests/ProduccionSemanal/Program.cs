@@ -52,8 +52,14 @@ db.Add(recipe);
 db.AddRange(current);
 db.AddRange(outside);
 db.Add(withoutDate);
-db.AddRange(Order(monday, 100, EstadoPedido.Entregado), Order(monday, 100, EstadoPedido.EnProduccion), Order(monday, 100, cancelled: true));
+var enProduccion = Order(monday, 100, EstadoPedido.EnProduccion, produced: 100);
+db.AddRange(Order(monday, 100, EstadoPedido.Entregado), enProduccion, Order(monday, 100, cancelled: true));
+var enProduccionSinFecha = Order(monday, 100, EstadoPedido.EnProduccion);
+enProduccionSinFecha.FechaEntrega = null;
+db.AddRange(enProduccionSinFecha, Order(monday.AddDays(-1), 100, EstadoPedido.EnProduccion),
+    Order(monday.AddDays(14), 100, EstadoPedido.EnProduccion), Order(monday, 100, EstadoPedido.EnProduccion, cancelled: true));
 await db.SaveChangesAsync();
+var idsImpresos = current.Append(enProduccion).OrderBy(p => p.FechaEntrega).ThenBy(p => p.Id).Select(p => p.Id).ToArray();
 
 async Task<List<Pedido>> Printed(bool details)
 {
@@ -67,8 +73,10 @@ async Task<List<Pedido>> Printed(bool details)
 foreach (var details in new[] { false, true })
 {
     var printed = await Printed(details);
-    Check(printed.Select(p => p.Id).SequenceEqual(current.Select(p => p.Id)),
-        "Impresión solo incluye pendientes con entrega esta semana; excluye futuros, anteriores, sin fecha, entregados y anulados");
+    Check(printed.Select(p => p.Id).SequenceEqual(idsImpresos),
+        "Ambas impresiones incluyen pendientes y en producción de esta semana; excluyen futuros, anteriores, sin fecha, entregados y anulados");
+    Check(printed.Single(p => p.Id == enProduccion.Id).Detalles.Single().Cantidad == 100,
+        "El pedido en producción se imprime completo aunque todas sus unidades estén confirmadas");
     Check(printed.All(p => p.Detalles.Single().Empaque?.Nombre == bag.Nombre), "Impresión carga la bolsa asignada a cada producto");
 }
 Check((await service.GetByEstadoAsync(EstadoPedido.Pendiente)).Any(p => p.Id == outside[1].Id),
@@ -98,7 +106,7 @@ Check((await service.GetResumenProduccionAsync([bread.Id])).PorProducto.Count ==
     && (await service.GetIngredientesProduccionAsync([bread.Id])).Count == 0, "Se conserva la exclusión manual de productos");
 clock.Now = DateTimeOffset.Parse("2026-10-05T02:59:59Z");
 Check(MismosTotales(await service.GetTotalesSemanaAsync(), totales), "Totales conservan la semana hasta la medianoche argentina");
-Check((await Printed(false)).Select(p => p.Id).SequenceEqual(current.Select(p => p.Id)), "Impresión conserva la semana durante el domingo argentino");
+Check((await Printed(false)).Select(p => p.Id).SequenceEqual(idsImpresos), "Impresión conserva la semana durante el domingo argentino");
 Check((await service.GetResumenProduccionAsync()).PorProducto.Single().CantidadTotal == 9, "Domingo argentino sigue en la semana actual aunque sea lunes UTC");
 clock.Now = DateTimeOffset.Parse("2026-10-05T03:00:00Z");
 var totalesSiguienteSemana = await service.GetTotalesSemanaAsync();
@@ -112,6 +120,12 @@ var confirmacion = new List<Panaderia.Models.DTOs.ItemProduccionSeleccionable> {
 await service.PrepararConfirmacionAsync(confirmacion);
 var warnings = await service.ConfirmarProduccionAsync(confirmacion);
 Check(warnings.Count == 0, "Se puede confirmar la semana sin producir pedidos futuros");
+foreach (var details in new[] { false, true })
+{
+    var printed = await Printed(details);
+    Check(printed.Select(p => p.Id).SequenceEqual(idsImpresos) && printed.Sum(p => p.Detalles.Sum(d => d.Cantidad)) == 111,
+        "Confirmar producción conserva todos los pedidos y sus cantidades en ambas impresiones");
+}
 Check(MismosTotales(await service.GetTotalesSemanaAsync(), totales), "Confirmar producción conserva moldes, bolsas y desglose de panes completos en Pedidos");
 Check(current.All(p => p.Estado == EstadoPedido.EnProduccion && p.Detalles.All(d => d.CantidadProducida == d.Cantidad)), "Confirmación completa solo los pedidos de esta semana");
 Check(outside.All(p => p.Estado == EstadoPedido.Pendiente && p.Detalles.All(d => d.CantidadProducida == 0)), "Entregas pasadas y futuras permanecen pendientes e intactas");

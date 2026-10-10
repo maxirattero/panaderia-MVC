@@ -75,8 +75,14 @@ namespace Panaderia.Services.Implementations
         public Task<IEnumerable<Pedido>> GetByEstadoAsync(EstadoPedido estado) =>
             CargarListadoAsync(_context.Pedidos.Where(p => p.Estado == estado));
 
-        public Task<IEnumerable<Pedido>> GetPendientesSemanaAsync() =>
-            CargarListadoAsync(PedidosPendientesDeLaSemana());
+        public Task<IEnumerable<Pedido>> GetSinEntregarSemanaAsync()
+        {
+            var inicio = InicioSemanaActual();
+            var fin = inicio.AddDays(7);
+            return CargarListadoAsync(_context.Pedidos.Where(p =>
+                (p.Estado == EstadoPedido.Pendiente || p.Estado == EstadoPedido.EnProduccion)
+                && p.FechaEntrega >= inicio && p.FechaEntrega < fin));
+        }
 
         private static async Task<IEnumerable<Pedido>> CargarListadoAsync(IQueryable<Pedido> pedidos)
         {
