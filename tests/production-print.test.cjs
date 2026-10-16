@@ -10,9 +10,9 @@ const source = view.match(/<script>([\s\S]*?)<\/script>/)[1]
     { idSubReceta: 2, nombre: 'Soaker', totalGramos: 200, ingredientes: [{ nombreInsumo: 'Semillas', cantidad: 100, unidad: 'g' }] }
   ]));
 function imprimir(query) {
-  const area = {};
+  const area = { dataset: {}, classList: { contains() { return false; } } };
   const context = vm.createContext({ URLSearchParams, location: { search: query }, setTimeout() {},
-    document: { addEventListener() {}, getElementById() { return area; }, createElement() { return { set textContent(v) { this.innerHTML = v; } }; } } });
+    document: { addEventListener() {}, querySelectorAll() { return []; }, getElementById() { return area; }, createElement() { return { set textContent(v) { this.innerHTML = v; } }; } } });
   vm.runInContext(source + '\nimprimirSinConfirmar();', context);
   return area.innerHTML;
 }
@@ -30,14 +30,18 @@ test('sin anterior conserva cantidades; exceso nunca da negativos', () => {
   assert.doesNotMatch(html, /NaN|Infinity|-250/);
 });
 
-function flujo(response) {
+function flujo(response, options = {}) {
+  const storage = options.storage || new Map();
   const state = { requests: 0, prints: 0, shown: 0, hidden: 0, errors: [] };
   const buttons = [{ disabled: false }, { disabled: false }];
   const elements = {
     confirmarPlanificacionForm: { action: '/Pedido/ConfirmarPlanificacion' },
-    confirmarImpresionModal: {}, produccionConfirmada: { style: { display: 'none' } }, 'print-area': {}
+    planificador: { dataset: { usuario: 'test', soloReimpresion: String(!!options.recovery) } },
+    estadoGuardado: {}, restaurarPlanBtn: {}, avisoReimpresion: {}, 'action-bar': { style: {} }, 'selected-count': {},
+    confirmarImpresionModal: { classList: { contains() { return state.shown > state.hidden; } }, addEventListener(name, callback) { state.afterHidden = callback; } }, produccionConfirmada: { style: { display: 'none' } }, 'print-area': {}
   };
-  const context = vm.createContext({ URLSearchParams, location: { search: '' },
+  const context = vm.createContext({ URLSearchParams, location: { search: options.query || '' }, structuredClone,
+    localStorage: { getItem(key) { return storage.get(key); }, setItem(key, value) { storage.set(key, value); } },
     setTimeout(fn) { fn(); }, window: { print() { state.prints++; } },
     alert(message) { state.errors.push(message); }, FormData: class { constructor(form) { this.form = form; } },
     async fetch(url, options) {
@@ -47,15 +51,16 @@ function flujo(response) {
       assert.equal(options.body.form, elements.confirmarPlanificacionForm);
       return response();
     },
-    bootstrap: { Modal: { getOrCreateInstance() { return { show() { state.shown++; }, hide() { state.hidden++; } }; } } },
+    bootstrap: { Modal: { getOrCreateInstance() { return { show() { state.shown++; }, hide() { state.hidden++; if (!options.deferHide) state.afterHidden?.(); } }; } } },
     document: {
-      addEventListener() {}, querySelectorAll() { return buttons; }, getElementById(id) { return elements[id]; },
+      addEventListener() {}, querySelectorAll(selector) { return selector.includes('.Revision') ? [{ value: options.revision || 'r1' }] : selector === '.batch-check:checked' ? (state.selected || []).map(id => ({ dataset: { id } })) : buttons; }, getElementById(id) { return elements[id]; },
       createElement() { return { set textContent(v) { this.innerHTML = v; } }; }
     }
   });
-  vm.runInContext(source.replace('const productosOriginales = [];', 'const productosOriginales = [{ idProducto: 1 }];'), context);
-  return { state, buttons, elements, run(code) { return vm.runInContext(code, context); } };
+  vm.runInContext(source.replace('let productosOriginales = [];', 'let productosOriginales = ' + JSON.stringify(options.products ?? products) + ';'), context);
+  return { state, buttons, elements, storage, run(code) { return vm.runInContext(code, context); } };
 }
+const products = [1, 2].map(id => ({ idProducto: id, nombreProducto: 'Pan ' + id, masaKey: 'integral', nombreMasa: 'Integral', pesoMasaTotal: id * 1000, cantidadUnidades: id * 2, ingredientes: [{ idInsumo: 1, nombre: 'Harina', gramos: id * 500, unidad: 'g' }] }));
 const ok = () => ({ ok: true, redirected: false, json: async () => ({ success: true }) });
 
 test('al imprimir pregunta; solo imprimir no confirma ni hace solicitudes', () => {
@@ -114,3 +119,79 @@ test('un rechazo o error de red no imprime ni deja la interfaz bloqueada', async
     assert.equal(f.state.shown, 1);
   }
 });
+
+
+test('conserva combinaciones, divisiones y preparación anterior después de recargar', () => {
+  const f = flujo(ok, { query: '?anteriores=1:150' });
+  f.run('init()');
+  f.elements['div-1'] = { value: '2' };
+  f.run('dividir(1)');
+  f.state.selected = [3, 2];
+  f.run('combinar()');
+  const saved = f.run('JSON.stringify(amasadas)');
+  const reload = flujo(ok, { storage: f.storage, query: '?anteriores=1:150' });
+  reload.run('init()');
+  assert.equal(reload.run('JSON.stringify(amasadas)'), saved);
+  assert.equal(reload.run('anteriores.get(1)'), 150);
+  assert.equal(reload.run('soloReimpresion'), false);
+});
+
+test('después de confirmar recupera el plan aun sin pendientes y no vuelve a confirmar', async () => {
+  const f = flujo(ok);
+  f.run('init()');
+  f.state.selected = [1, 2];
+  f.run('combinar()');
+  await f.run('confirmarEImprimir()');
+  const reload = flujo(ok, { storage: f.storage, products: [] });
+  reload.run('init(); solicitarImpresion()');
+  await reload.run('confirmarEImprimir()');
+  assert.equal(reload.run('amasadas.length'), 1);
+  assert.equal(reload.run('amasadas[0].productos.length'), 2);
+  assert.equal(reload.state.requests, 0);
+  assert.equal(reload.state.prints, 2);
+});
+
+test('un plan antiguo no reemplaza nuevos pendientes; recuperación manual solo reimprime', async () => {
+  const f = flujo(ok);
+  f.run('init()');
+  f.state.selected = [1, 2];
+  f.run('combinar()');
+  const reload = flujo(ok, { storage: f.storage, revision: 'nueva' });
+  reload.run('init()');
+  assert.equal(reload.run('amasadas.length'), 2);
+  reload.run('restaurarPlan(false)');
+  assert.equal(reload.run('amasadas.length'), 1);
+  await reload.run('confirmarEImprimir()');
+  assert.equal(reload.state.requests, 0);
+});
+
+test('recuperación de cantidades producidas y respuestas perdidas nunca duplican confirmación al reabrir', async () => {
+  const recovered = flujo(ok, { recovery: true });
+  recovered.run('init()');
+  await recovered.run('confirmarEImprimir()');
+  assert.equal(recovered.state.requests, 0);
+  const f = flujo(() => { throw new Error('Respuesta perdida'); });
+  f.run('init()');
+  await f.run('confirmarEImprimir()');
+  const reload = flujo(ok, { storage: f.storage });
+  reload.run('init()');
+  await reload.run('confirmarEImprimir()');
+  assert.equal(reload.state.requests, 0);
+});
+
+test('espera a que desaparezca el fondo del modal antes de imprimir', () => {
+  const f = flujo(ok, { deferHide: true });
+  f.run('init(); solicitarImpresion(); soloImprimir()');
+  assert.equal(f.state.prints, 0);
+  f.state.afterHidden();
+  assert.equal(f.state.prints, 1);
+  assert.match(view, /\.modal-backdrop[^}]+display: none !important/);
+  assert.match(view, /-webkit-text-fill-color: #000 !important/);
+});
+
+test('una copia dañada no impide abrir un nuevo plan', () => {
+  const storage = new Map([['masa-viva:plan-amasadas:v1:test', '{invalido']]);
+  const f = flujo(ok, { storage });
+  f.run('init()');
+  assert.equal(f.run('amasadas.length'), 2);
+});test('recargar la reconstrucción conserva las agrupaciones ya corregidas', () => {  const f = flujo(ok, { recovery: true });  f.run('init()');  f.state.selected = [1, 2];  f.run('combinar()');  const reload = flujo(ok, { recovery: true, storage: f.storage });  reload.run('init()');  assert.equal(reload.run('amasadas.length'), 1);  assert.equal(reload.run('soloReimpresion'), true);});

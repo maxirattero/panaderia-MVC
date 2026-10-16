@@ -202,11 +202,12 @@ namespace Panaderia.MVC.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> PlanificarAmasadas()
+        public async Task<IActionResult> PlanificarAmasadas(bool recuperar = false)
         {
-            var excluidos = LeerProductosExcluidos();
-            var productos = await _pedidoService.GetIngredientesProduccionAsync(excluidos);
-            var (porProducto, _, porSubReceta, _) = await _pedidoService.GetResumenProduccionAsync(excluidos);
+            var excluidos = recuperar ? new List<int>() : LeerProductosExcluidos();
+            var productos = await _pedidoService.GetIngredientesProduccionAsync(excluidos, recuperar);
+            var (porProducto, _, porSubReceta, _) = await _pedidoService.GetResumenProduccionAsync(excluidos, recuperar);
+            ViewBag.SoloReimpresion = recuperar;
             ViewBag.CantidadExcluidos = excluidos.Count;
             var jsonOptions = new JsonSerializerOptions
             {
@@ -214,7 +215,8 @@ namespace Panaderia.MVC.Controllers
             };
             ViewBag.ProductosJson = JsonSerializer.Serialize(productos, jsonOptions);
             ViewBag.SubRecetasJson = JsonSerializer.Serialize(porSubReceta, jsonOptions);
-            var items = await CrearItemsProduccionAsync(porProducto, new HashSet<int>(excluidos));
+            var items = recuperar ? new List<ItemProduccionSeleccionable>()
+                : await CrearItemsProduccionAsync(porProducto, new HashSet<int>(excluidos));
             // Si ingresaron pedidos mientras se armaba la página, no confirmar cantidades diferentes del plan visible.
             foreach (var grupo in items.Where(i => i.Seleccionado).GroupBy(i => i.IdProducto))
                 if (productos.SingleOrDefault(p => p.IdProducto == grupo.Key)?.CantidadUnidades != grupo.Sum(i => i.CantidadAProducir))

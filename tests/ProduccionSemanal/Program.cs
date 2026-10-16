@@ -132,6 +132,25 @@ Check(outside.All(p => p.Estado == EstadoPedido.Pendiente && p.Detalles.All(d =>
 Check(water.StockActual == 99550 && flour.StockActual == 99550, "Descuento de insumos corresponde a las nueve unidades confirmadas");
 Check((await service.GetResumenProduccionAsync()).PorProducto.Count == 0
     && (await service.GetProduccionCombinadaResumenAsync()).Single().CantidadTotal == 1, "Al confirmar desaparecen pedidos actuales y se conserva el stock adicional");
+var recuperados = await service.GetIngredientesProduccionAsync(confirmada: true);
+Check(recuperados.Single().CantidadUnidades == 111 && recuperados.Single().PesoMasaTotal == 11100,
+    "Reconstrucción usa cantidades ya producidas, sin sumar pendientes ni stock adicional");
+var resumenRecuperado = await service.GetResumenProduccionAsync(confirmada: true);
+Check(resumenRecuperado.TotalAgua == 5550 && resumenRecuperado.PorSubReceta.Single().TotalGramos == 5550,
+    "Reconstrucción calcula ingredientes y preparaciones con las mismas cantidades confirmadas");
+var recoveryController = new PedidoController(service, null!, null!, null!, null!)
+{
+    ControllerContext = new ControllerContext { HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext() }
+};
+var recoveryView = (ViewResult)await recoveryController.PlanificarAmasadas(recuperar: true);
+var recoveryModel = (Panaderia.MVC.Models.ProduccionViewModel)recoveryView.Model!;
+Check((bool)recoveryController.ViewBag.SoloReimpresion && recoveryModel.ItemsSeleccionables.Count == 0,
+    "El plan recuperado no genera un formulario para volver a confirmar lo producido");
+var recoveryPost = (JsonResult)await recoveryController.ConfirmarPlanificacion(recoveryModel);
+Check(System.Text.Json.JsonSerializer.Serialize(recoveryPost.Value).Contains("\"success\":false")
+    && water.StockActual == 99550 && flour.StockActual == 99550
+    && (await service.GetProduccionCombinadaResumenAsync()).Single().CantidadTotal == 1,
+    "Reconstruir y reintentar confirmar no modifica insumos, pedidos ni producción adicional");
 await ConfirmacionChecks.RunAsync(db, service, clock, monday, bread, recipe, customer, water, Check);
 clock.Now = DateTimeOffset.Parse("2026-11-04T12:00:00-03:00");
 var vacio = await service.GetTotalesSemanaAsync();

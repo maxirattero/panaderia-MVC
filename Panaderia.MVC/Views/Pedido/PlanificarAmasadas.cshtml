@@ -17,6 +17,20 @@
     </div>
 </div>
 
+<div class="mb-3 no-print" style="max-width:900px;">
+    <button id="restaurarPlanBtn" type="button" onclick="restaurarPlan(false)" class="btn btn-mv-secondary" hidden>Reabrir último plan guardado</button>
+    <a asp-action="PlanificarAmasadas" asp-route-recuperar="true" class="btn btn-link">Reconstruir lo producido esta semana</a>
+    <div id="estadoGuardado" class="small mt-2" role="status"></div>
+    <div id="avisoReimpresion" class="alert alert-info mt-2" hidden>
+        Plan recuperado para organizar y reimprimir. No vuelve a confirmar producción ni a descontar insumos.
+        <a asp-action="PlanificarAmasadas" asp-route-nuevo="true">Abrir pendientes actuales</a>
+    </div>
+    @if (ViewBag.SoloReimpresion == true)
+    {
+        <div class="alert alert-warning mt-2">Reconstrucción a partir de las cantidades ya producidas de los pedidos de esta semana y las recetas actuales. No incluye producción adicional para stock ni conserva agrupaciones anteriores.</div>
+    }
+</div>
+
 @if ((int)(ViewBag.CantidadExcluidos ?? 0) > 0)
 {
     <div class="alert alert-warning d-flex align-items-center gap-2 no-print" style="max-width:900px;">
@@ -36,7 +50,9 @@
     </button>
 </div>
 
-<div id="planificador" style="max-width: 900px;">
+<div id="planificador" style="max-width: 900px;"
+     data-solo-reimpresion="@((ViewBag.SoloReimpresion == true).ToString().ToLowerInvariant())"
+     data-usuario="@User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value">
     <p class="text-muted">Cargando...</p>
 </div>
 
@@ -83,11 +99,25 @@
 
 <style>
     @@media print {
-        .no-print { display: none !important; }
+        .no-print, .modal, .modal-backdrop, .offcanvas, .offcanvas-backdrop, .sidebar, .top-app-bar { display: none !important; }
+        html, body { background: white !important; overflow: visible !important; }
+        body { padding: 0 !important; }
+        .main-content { margin: 0 !important; padding: 0 !important; }
+        .main-content > .container-fluid { padding: 0 !important; }
         #planificador { display: none !important; }
         #print-area {
             display: block !important;
             font-size: 13px;
+            font-family: Arial, sans-serif;
+        }
+        #print-area, #print-area * {
+            color: #000 !important;
+            -webkit-text-fill-color: #000 !important;
+            opacity: 1 !important;
+            text-shadow: none !important;
+            border-color: #000 !important;
+            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact;
         }
         #print-area .grid-amasadas {
             display: grid;
@@ -110,13 +140,65 @@
 @section Scripts {
 <script>
     // ─── Data & State ───────────────────────────────────
-    const productosOriginales = @Html.Raw(ViewBag.ProductosJson);
-    const subRecetasOriginales = @Html.Raw(ViewBag.SubRecetasJson);
+    let productosOriginales = @Html.Raw(ViewBag.ProductosJson);
+    let subRecetasOriginales = @Html.Raw(ViewBag.SubRecetasJson);
     const anteriores = new Map((new URLSearchParams(location.search).get('anteriores') || '')
         .split(',').map(par => par.split(':').map(Number))
         .filter(([id, cantidad]) => Number.isInteger(id) && id > 0 && Number.isFinite(cantidad) && cantidad > 0));
     let amasadas = [];
     let nextId = 1;
+    const configuracion = document.getElementById('planificador').dataset;
+    const claveGuardado = 'masa-viva:plan-amasadas:v1:' + configuracion.usuario;
+    const fuenteActual = JSON.stringify([productosOriginales, subRecetasOriginales, [...anteriores],
+        Array.from(document.querySelectorAll('#confirmarPlanificacionForm input[name$=".Revision"]'), input => input.value)]);
+    let soloReimpresion = configuracion.soloReimpresion === 'true';
+    let fechaPlan = new Date().toISOString();
+
+    function leerPlan() {
+        try {
+            const plan = JSON.parse(localStorage.getItem(claveGuardado));
+            if (plan?.version !== 1 || !Array.isArray(plan.amasadas) || !plan.amasadas.length
+                || !Array.isArray(plan.productos) || !Array.isArray(plan.subRecetas)
+                || !Array.isArray(plan.anteriores) || !Number.isInteger(plan.nextId)
+                || !Number.isFinite(Date.parse(plan.fecha))) return null;
+            const productoValido = p => p && Number.isFinite(p.pesoMasaTotal) && Number.isFinite(p.cantidadUnidades)
+                && Array.isArray(p.ingredientes) && p.ingredientes.every(i => i && Number.isFinite(i.gramos));
+            if (!plan.productos.every(productoValido) || !plan.amasadas.every(a => Number.isInteger(a.id)
+                && Array.isArray(a.productos) && a.productos.length && a.productos.every(productoValido)
+                && (!a.splitInfo || (Number.isInteger(a.splitInfo.parte) && Number.isInteger(a.splitInfo.total))))) return null;
+            return plan;
+        } catch { return null; }
+    }
+
+    function guardarPlan(forzarReimpresion = false) {
+        if (!amasadas.length) return;
+        try {
+            localStorage.setItem(claveGuardado, JSON.stringify({ version: 1, fuente: fuenteActual,
+                productos: productosOriginales, subRecetas: subRecetasOriginales, anteriores: [...anteriores],
+                amasadas, nextId, fecha: fechaPlan, soloReimpresion: forzarReimpresion || soloReimpresion || produccionConfirmada || intentoConfirmacion }));
+            document.getElementById('estadoGuardado').textContent = 'Plan guardado en este navegador, con sus combinaciones y divisiones.';
+            document.getElementById('restaurarPlanBtn').hidden = false;
+        } catch {
+            document.getElementById('estadoGuardado').textContent = 'No se pudo guardar el plan en este navegador. Conservá esta pestaña abierta o guardá la impresión como PDF.';
+        }
+    }
+
+    function restaurarPlan(permitirConfirmacion) {
+        const plan = leerPlan();
+        if (!plan) return false;
+        soloReimpresion = !permitirConfirmacion || plan.soloReimpresion || plan.fuente !== fuenteActual;
+        productosOriginales = plan.productos;
+        subRecetasOriginales = plan.subRecetas;
+        anteriores.clear();
+        plan.anteriores.forEach(([id, cantidad]) => anteriores.set(id, cantidad));
+        amasadas = plan.amasadas;
+        nextId = plan.nextId;
+        fechaPlan = plan.fecha;
+        document.getElementById('avisoReimpresion').hidden = !soloReimpresion;
+        document.getElementById('estadoGuardado').textContent = 'Plan recuperado del ' + new Date(fechaPlan).toLocaleString('es-AR') + '.';
+        render();
+        return true;
+    }
 
     function escaparHtml(texto) {
         const div = document.createElement('div');
@@ -126,6 +208,18 @@
 
     // ─── Init ───────────────────────────────────────────
     function init() {
+        const guardado = leerPlan();
+        document.getElementById('restaurarPlanBtn').hidden = !guardado;
+        const query = new URLSearchParams(location.search);
+        if (!query.has('nuevo') && guardado
+            && ((!soloReimpresion && !productosOriginales.length) || guardado.fuente === fuenteActual)
+            && restaurarPlan(!soloReimpresion)) return;
+        document.getElementById('avisoReimpresion').hidden = !soloReimpresion;
+        crearAmasadas();
+        if (!guardado || soloReimpresion) guardarPlan();
+    }
+
+    function crearAmasadas() {
         nextId = 1;
         amasadas = productosOriginales.map(p => ({
             id: nextId++,
@@ -149,6 +243,7 @@
         amasadas = amasadas.filter(a => !ids.includes(a.id));
         amasadas.push(nuevaAmasada);
         render();
+        guardarPlan();
     }
 
     // ─── Uncombine ──────────────────────────────────────
@@ -166,13 +261,14 @@
             });
         }
         render();
+        guardarPlan();
     }
 
     // ─── Split ──────────────────────────────────────────
     function dividir(amasadaId) {
         const input = document.getElementById('div-' + amasadaId);
         const n = parseInt(input?.value);
-        if (!n || n < 2) return;
+        if (!n || n < 2 || n > 10) return;
 
         const batch = amasadas.find(a => a.id === amasadaId);
         if (!batch || batch.productos.length !== 1) return;
@@ -197,11 +293,13 @@
             });
         }
         render();
+        guardarPlan();
     }
 
     // ─── Reset ──────────────────────────────────────────
     function resetear() {
-        init();
+        crearAmasadas();
+        guardarPlan();
     }
 
     // ─── Combine ingredients across products ────────────
@@ -247,7 +345,9 @@
         const container = document.getElementById('planificador');
 
         if (!amasadas.length) {
-            container.innerHTML = '<p class="text-muted">No hay productos con receta en los pedidos pendientes.</p>';
+            container.innerHTML = soloReimpresion
+                ? '<p class="text-muted">No hay cantidades producidas con receta para reconstruir esta semana.</p>'
+                : '<p class="text-muted">No hay productos con receta en los pedidos pendientes.</p>';
             document.getElementById('action-bar').style.display = 'none';
             return;
         }
@@ -293,7 +393,7 @@
                     <!-- Pesos agrupados por masa -->
                     ${getPesosPorMasa(am).map(g => `
                         <div class="d-flex justify-content-between small mb-1">
-                            <span>${g.nombreCategoria ? g.nombreCategoria + ' — ' : ''}${g.nombreMasa}</span>
+                            <span>${g.nombreCategoria ? escaparHtml(g.nombreCategoria) + ' — ' : ''}${escaparHtml(g.nombreMasa)}</span>
                             <strong>${Math.round(g.pesoTotal)} g</strong>
                         </div>
                     `).join('')}
@@ -320,8 +420,8 @@
                         <tbody>
                             ${ingredientes.map(ing => `
                             <tr${ing.esSubReceta ? ' class="table-warning"' : ''}>
-                                <td>${ing.esSubReceta ? '\u27F3 ' : ''}${ing.nombre}</td>
-                                <td class="text-end fw-bold">${Math.round(ing.gramos)} ${ing.unidad}</td>
+                                <td>${ing.esSubReceta ? '\u27F3 ' : ''}${escaparHtml(ing.nombre)}</td>
+                                <td class="text-end fw-bold">${Math.round(ing.gramos)} ${escaparHtml(ing.unidad)}</td>
                             </tr>`).join('')}
                         </tbody>
                     </table>
@@ -339,9 +439,10 @@
     // ─── Print ──────────────────────────────────────────
     let confirmandoProduccion = false;
     let produccionConfirmada = false;
+    let intentoConfirmacion = false;
     function solicitarImpresion() {
         if (confirmandoProduccion) return;
-        if (produccionConfirmada || !productosOriginales.length) {
+        if (soloReimpresion || produccionConfirmada || !productosOriginales.length) {
             imprimirSinConfirmar();
             return;
         }
@@ -350,17 +451,19 @@
 
     function soloImprimir() {
         if (confirmandoProduccion) return;
-        bootstrap.Modal.getOrCreateInstance(document.getElementById('confirmarImpresionModal')).hide();
         imprimirSinConfirmar();
     }
 
     async function confirmarEImprimir() {
         if (confirmandoProduccion) return;
-        if (produccionConfirmada) { imprimirSinConfirmar(); return; }
+        if (soloReimpresion || produccionConfirmada) { imprimirSinConfirmar(); return; }
         confirmandoProduccion = true;
         const buttons = document.querySelectorAll('#confirmarImpresionModal button, #imprimirPlanBtn');
         buttons.forEach(button => button.disabled = true);
         try {
+            // Ante una respuesta perdida, la copia guardada solo permite reimprimir.
+            intentoConfirmacion = true;
+            guardarPlan(true);
             const form = document.getElementById('confirmarPlanificacionForm');
             const response = await fetch(form.action, { method: 'POST', body: new FormData(form) });
             if (!response.ok || response.redirected) throw new Error('No se pudo confirmar la producción. Recargá Producción para comprobar el estado antes de reintentar.');
@@ -368,7 +471,6 @@
             if (!resultado.success) throw new Error(resultado.error || 'No se pudo confirmar la producción.');
             produccionConfirmada = true;
             document.getElementById('produccionConfirmada').style.display = '';
-            bootstrap.Modal.getOrCreateInstance(document.getElementById('confirmarImpresionModal')).hide();
             imprimirSinConfirmar();
         } catch (error) {
             alert(error.message || 'No se pudo comprobar la confirmación. Volvé a Producción para revisar el estado.');
@@ -379,8 +481,9 @@
     }
 
     function imprimirSinConfirmar() {
+        guardarPlan();
         const printArea = document.getElementById('print-area');
-        const hoy = new Date().toLocaleDateString('es-AR');
+        const hoy = new Date(fechaPlan).toLocaleDateString('es-AR');
 
         let html = `<h4>Plan de amasadas \u2014 ${hoy}</h4>`;
         html += '<div class="grid-amasadas">';
@@ -400,7 +503,7 @@
             const pesosPorMasa = getPesosPorMasa(am);
             for (const g of pesosPorMasa) {
                 html += `<div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:2px;">
-                    <span>${g.nombreCategoria ? g.nombreCategoria + ' — ' : ''}${g.nombreMasa}</span>
+                    <span>${g.nombreCategoria ? escaparHtml(g.nombreCategoria) + ' — ' : ''}${escaparHtml(g.nombreMasa)}</span>
                     <strong>${Math.round(g.pesoTotal)} g</strong>
                 </div>`;
             }
@@ -428,8 +531,8 @@
                 const bg = ing.esSubReceta ? ' background-color:#fff8e1;' : '';
                 const prefix = ing.esSubReceta ? '\u27F3 ' : '';
                 html += `<tr>
-                    <td style="border:1px solid #ccc; padding:3px 6px;${bg}">${prefix}${ing.nombre}</td>
-                    <td style="border:1px solid #ccc; padding:3px 6px; text-align:center;${bg}">${ing.unidad}</td>
+                    <td style="border:1px solid #ccc; padding:3px 6px;${bg}">${prefix}${escaparHtml(ing.nombre)}</td>
+                    <td style="border:1px solid #ccc; padding:3px 6px; text-align:center;${bg}">${escaparHtml(ing.unidad)}</td>
                     <td style="border:1px solid #ccc; padding:3px 6px; text-align:right;${bg}">${Math.round(ing.gramos)}</td>
                 </tr>`;
             }
@@ -485,7 +588,13 @@
 
         printArea.innerHTML = html;
 
-        setTimeout(() => window.print(), 100);
+        const modal = document.getElementById('confirmarImpresionModal');
+        if (modal.classList.contains('show')) {
+            modal.addEventListener('hidden.bs.modal', () => window.print(), { once: true });
+            bootstrap.Modal.getOrCreateInstance(modal).hide();
+        } else {
+            setTimeout(() => window.print(), 100);
+        }
     }
 
     // ─── Boot ───────────────────────────────────────────

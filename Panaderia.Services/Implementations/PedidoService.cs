@@ -751,10 +751,18 @@ namespace Panaderia.Services.Implementations
 
         // Producción combinada: pedidos pendientes + buffer de stock, sumado por producto.
         // Los productos destildados en el dashboard de Producción quedan fuera.
-        private async Task<List<(int IdProducto, Producto Producto, int Cantidad)>> GetProduccionCombinadaAsync(IEnumerable<int>? productosExcluidos = null)
+        private IQueryable<DetallePedido> DetallesConfirmadosDeLaSemana()
+        {
+            var inicio = InicioSemanaActual();
+            var fin = inicio.AddDays(7);
+            return _context.DetallesPedido.Where(d => d.CantidadProducida > 0
+                && d.Pedido.FechaEntrega >= inicio && d.Pedido.FechaEntrega < fin);
+        }
+
+        private async Task<List<(int IdProducto, Producto Producto, int Cantidad)>> GetProduccionCombinadaAsync(IEnumerable<int>? productosExcluidos = null, bool confirmada = false)
         {
             var excluidos = productosExcluidos?.ToHashSet() ?? new HashSet<int>();
-            var detalles = await DetallesPendientesDeLaSemana()
+            var detalles = await (confirmada ? DetallesConfirmadosDeLaSemana() : DetallesPendientesDeLaSemana())
                 .Include(d => d.Producto).ThenInclude(p => p.Categoria)
                 .Include(d => d.Producto).ThenInclude(p => p.Formato)
                 .ToListAsync();
@@ -764,12 +772,13 @@ namespace Panaderia.Services.Implementations
             foreach (var d in detalles)
             {
                 if (acumulado.TryGetValue(d.IdProducto, out var actual))
-                    acumulado[d.IdProducto] = (actual.Producto, actual.Cantidad + d.Cantidad - d.CantidadProducida);
+                    acumulado[d.IdProducto] = (actual.Producto, actual.Cantidad + (confirmada ? d.CantidadProducida : d.Cantidad - d.CantidadProducida));
                 else
-                    acumulado[d.IdProducto] = (d.Producto, d.Cantidad - d.CantidadProducida);
+                    acumulado[d.IdProducto] = (d.Producto, confirmada ? d.CantidadProducida : d.Cantidad - d.CantidadProducida);
             }
 
             var stock = await _context.ProduccionStock
+                .Where(s => !confirmada)
                 .Include(s => s.Producto).ThenInclude(p => p.Categoria)
                 .Include(s => s.Producto).ThenInclude(p => p.Formato)
                 .ToListAsync();
@@ -801,11 +810,11 @@ namespace Panaderia.Services.Implementations
 
         // Resumen de producción (entregas pendientes de la semana, anulados excluidos por query filter).
         // PorProducto y PorBolsa son solo de pedidos; sub-recetas y agua reflejan produccion completa (pedidos + stock).
-        public async Task<(List<ResumenProductoItem> PorProducto, List<ResumenBolsaItem> PorBolsa, List<ResumenSubRecetaItem> PorSubReceta, decimal TotalAgua)> GetResumenProduccionAsync(IEnumerable<int>? productosExcluidos = null)
+        public async Task<(List<ResumenProductoItem> PorProducto, List<ResumenBolsaItem> PorBolsa, List<ResumenSubRecetaItem> PorSubReceta, decimal TotalAgua)> GetResumenProduccionAsync(IEnumerable<int>? productosExcluidos = null, bool confirmada = false)
         {
             var excluidos = productosExcluidos?.ToHashSet() ?? new HashSet<int>();
 
-            var detalles = (await DetallesPendientesDeLaSemana()
+            var detalles = (await (confirmada ? DetallesConfirmadosDeLaSemana() : DetallesPendientesDeLaSemana())
                 .Include(d => d.Producto)
                     .ThenInclude(p => p.Categoria)
                 .Include(d => d.Producto)
@@ -821,7 +830,7 @@ namespace Panaderia.Services.Implementations
                 {
                     IdProducto = g.Key,
                     Producto = g.First().Producto,
-                    Cantidad = g.Sum(d => d.Cantidad - d.CantidadProducida)
+                    Cantidad = g.Sum(d => confirmada ? d.CantidadProducida : d.Cantidad - d.CantidadProducida)
                 })
                 .OrderBy(x => x.Producto.Categoria?.Nombre)
                 .ThenBy(x => x.Producto.Masa)
@@ -834,11 +843,11 @@ namespace Panaderia.Services.Implementations
                 .Where(d => d.Empaque != null)
                 .GroupBy(d => d.Empaque!.EsBolsaPapel ? TipoBolsa.Papel : TipoBolsa.Sellado)
                 .OrderBy(g => g.Key)
-                .Select(g => new ResumenBolsaItem(g.Key, g.Sum(d => d.Cantidad - d.CantidadProducida)))
+                .Select(g => new ResumenBolsaItem(g.Key, g.Sum(d => confirmada ? d.CantidadProducida : d.Cantidad - d.CantidadProducida)))
                 .ToList();
 
             // Produccion completa (pedidos + stock) para sub-recetas y agua
-            var combinada = await GetProduccionCombinadaAsync(productosExcluidos);
+            var combinada = await GetProduccionCombinadaAsync(productosExcluidos, confirmada);
 
             var porSubReceta = new List<ResumenSubRecetaItem>();
             decimal totalAgua = 0m;
@@ -1073,9 +1082,9 @@ namespace Panaderia.Services.Implementations
             }
         }
 
-        public async Task<List<ProduccionProductoDetalle>> GetIngredientesProduccionAsync(IEnumerable<int>? productosExcluidos = null)
+        public async Task<List<ProduccionProductoDetalle>> GetIngredientesProduccionAsync(IEnumerable<int>? productosExcluidos = null, bool confirmada = false)
         {
-            var combinada = await GetProduccionCombinadaAsync(productosExcluidos);
+            var combinada = await GetProduccionCombinadaAsync(productosExcluidos, confirmada);
 
             var resultado = new List<ProduccionProductoDetalle>();
 
