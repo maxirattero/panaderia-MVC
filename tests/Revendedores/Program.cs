@@ -35,6 +35,8 @@ builder.Services.AddScoped<IClienteService, ClienteService>();
 builder.Services.AddScoped<IAccesoTiendaService, AccesoTiendaService>();
 builder.Services.AddScoped<IProductoService, ProductoService>();
 builder.Services.AddScoped<IPedidoService, PedidoService>();
+builder.Services.AddScoped<IRecetaService, RecetaService>();
+builder.Services.AddScoped<IInsumoService, InsumoService>();
 builder.Services.AddScoped<IConfiguracionTiendaService, ConfiguracionTiendaService>();
 builder.Services.AddSingleton<IPushNotificationService, FakePush>();
 builder.Services.AddSingleton<TimeProvider>(new Clock());
@@ -150,23 +152,84 @@ try {
         var service = sp.GetRequiredService<IPedidoService>(); var order = (await service.GetByIdAsync(orderId))!;
         var edit = new Pedido { Id = order.Id, IdCliente = order.IdCliente, FechaEntrega = order.FechaEntrega, MontoTotal = order.MontoTotal + 80,
             Detalles = order.Detalles.Select(d => new DetallePedido { IdProducto = d.IdProducto, Cantidad = d.Cantidad + (d.IdProducto == 1 ? 1 : 0), PrecioUnitario = d.PrecioUnitario }).ToList() };
-        await service.UpdateAsync(edit);
+        try { await service.UpdateAsync(edit); throw new Exception("Admin allowed insufficient stock"); }
+        catch (InvalidOperationException ex) { Check(ex.Message.Contains("stock suficiente"), "Admin edit enforces stock even for an existing reseller store order"); }
     });
     await Scope(async sp => {
         var db = sp.GetRequiredService<PanaderiaContext>();
-        Check((await db.Productos.OrderBy(p => p.Id).Select(p => p.Stock).ToListAsync()).SequenceEqual(new[] {0,1,0,2}), "Admin editing reseller order preserves stock policy");
+        Check((await db.Productos.OrderBy(p => p.Id).Select(p => p.Stock).ToListAsync()).SequenceEqual(new[] {0,1,0,2})
+            && await db.DetallesPedido.SumAsync(d => d.Cantidad) == 7, "Rejected admin edit rolls back stock and order lines");
+        foreach (var p in await db.Productos.Where(p => p.Id < 4).ToListAsync()) p.Stock = p.Id == 1 ? 3 : 2;
+        await db.SaveChangesAsync();
+    });
+    await Scope(async sp => {
+        var service = sp.GetRequiredService<IPedidoService>(); var order = (await service.GetByIdAsync(orderId))!;
+        await service.UpdateAsync(new Pedido { Id = order.Id, IdCliente = order.IdCliente, FechaEntrega = order.FechaEntrega, MontoTotal = order.MontoTotal + 80,
+            Detalles = order.Detalles.Select(d => new DetallePedido { IdProducto = d.IdProducto, Cantidad = d.Cantidad + (d.IdProducto == 1 ? 1 : 0), PrecioUnitario = d.PrecioUnitario }).ToList() });
+    });
+    await Scope(async sp => {
+        var db = sp.GetRequiredService<PanaderiaContext>();
+        Check((await db.Productos.OrderBy(p => p.Id).Select(p => p.Stock).ToListAsync()).SequenceEqual(new[] {0,0,0,2}), "Admin editing reseller order reserves all stock-managed products");
         Check(await db.DetallesPedido.CountAsync() == 4 && await db.DetallesPedido.SumAsync(d => d.Cantidad) == 8, "Admin edit keeps every order line");
         await sp.GetRequiredService<IPedidoService>().AnularAsync(orderId);
     });
     await Scope(async sp => {
         var db = sp.GetRequiredService<PanaderiaContext>();
-        Check((await db.Productos.OrderBy(p => p.Id).Select(p => p.Stock).ToListAsync()).SequenceEqual(new[] {0,1,0,3}), "Cancellation restores only actually reserved stock");
+        Check((await db.Productos.OrderBy(p => p.Id).Select(p => p.Stock).ToListAsync()).SequenceEqual(new[] {3,2,2,3}), "Cancellation restores only actually reserved stock");
+        var pizza = (await db.Productos.FindAsync(3))!; pizza.Stock = 1; pizza.SinStock = false;
+        var bread = (await db.Productos.FindAsync(1))!; bread.PorEncargo = true; bread.Stock = 0;
+        await db.SaveChangesAsync();
+    });
+
+    Dictionary<string,string> AdminOrder(int id = 0, int pizza = 1) => new() {
+        ["Id"] = id.ToString(), ["IdCliente"] = "1", ["FechaEntrega"] = "2026-10-10",
+        ["Detalles[0].IdProducto"] = "1", ["Detalles[0].Cantidad"] = "2",
+        ["Detalles[1].IdProducto"] = "3", ["Detalles[1].Cantidad"] = pizza.ToString()
+    };
+    page = await Post(adminBrowser, "/Pedido/Create", AdminOrder(), await adminBrowser.GetStringAsync("/Pedido/Create"));
+    Check(!page.Contains("No hay stock suficiente"), "Admin creates reseller order with the last prepizza");
+    int adminOrderId = 0;
+    await Scope(async sp => {
+        var db = sp.GetRequiredService<PanaderiaContext>();
+        var order = await db.Pedidos.Include(p => p.Detalles).SingleAsync(); adminOrderId = order.Id;
+        var pizza = (await db.Productos.FindAsync(3))!;
+        Check(pizza.Stock == 0 && pizza.SinStock && pizza.EstaSinStockEnTienda, "Last unit is deducted and becomes unavailable for retail");
+        Check(order.Detalles.Single(d => d.IdProducto == 3).ReservaStock && !order.Detalles.Single(d => d.IdProducto == 1).ReservaStock,
+            "Admin respects product configuration: prepizza uses stock and made-to-order bread does not");
+        Check(order.MontoTotal == 240 && order.Detalles.All(d => d.PrecioUnitario == 80), "Admin retains wholesale prices independently of stock policy");
+    });
+    Check((await retail.GetStringAsync("/Tienda/Detalle/3")).Contains("temporalmente sin stock"), "Retail storefront no longer offers the last prepizza");
+    Check((await enabled.GetStringAsync("/Tienda/Detalle/3")).Contains("Por encargo"), "Reseller storefront still permits ordering prepizza without stock");
+    editPage = await adminBrowser.GetStringAsync($"/Pedido/Edit/{adminOrderId}");
+    Check(editPage.Contains("const reservasIniciales = {\"3\":1};"), "Editor counts only actual reservations as available units");
+    await Post(adminBrowser, $"/Pedido/Edit/{adminOrderId}", AdminOrder(adminOrderId), editPage);
+    page = await Post(adminBrowser, $"/Pedido/Edit/{adminOrderId}", AdminOrder(adminOrderId, 2), editPage);
+    Check(page.Contains("No hay stock suficiente"), "Admin cannot increase reseller order beyond available stock");
+    await Scope(async sp => {
+        var db = sp.GetRequiredService<PanaderiaContext>();
+        Check((await db.Productos.FindAsync(3))!.Stock == 0 && (await db.DetallesPedido.SingleAsync(d => d.IdProducto == 3)).Cantidad == 1,
+            "Unchanged edit and rejected increase do not double-deduct or release the last unit");
+    });
+    page = await Post(adminBrowser, "/Pedido/Create", AdminOrder(), await adminBrowser.GetStringAsync("/Pedido/Create"));
+    Check(page.Contains("No hay stock suficiente"), "Another admin order cannot reserve the same last unit");
+    var removePizza = AdminOrder(adminOrderId); removePizza.Remove("Detalles[1].IdProducto"); removePizza.Remove("Detalles[1].Cantidad");
+    await Post(adminBrowser, $"/Pedido/Edit/{adminOrderId}", removePizza, editPage);
+    await Scope(async sp => {
+        var db = sp.GetRequiredService<PanaderiaContext>(); var pizza = (await db.Productos.FindAsync(3))!;
+        Check(pizza.Stock == 1 && !pizza.SinStock, "Removing prepizza returns its reservation to the store");
+    });
+    await Post(adminBrowser, $"/Pedido/Edit/{adminOrderId}", AdminOrder(adminOrderId), editPage);
+    await Scope(async sp => {
+        var db = sp.GetRequiredService<PanaderiaContext>();
+        Check((await db.Productos.FindAsync(3))!.Stock == 0, "Adding prepizza to an existing reseller order reserves the last unit");
+        await sp.GetRequiredService<IPedidoService>().AnularAsync(adminOrderId);
     });
     Console.WriteLine($"{checks} reseller integration checks passed.");
     if (args.Contains("--preview")) { Console.WriteLine("PREVIEW http://127.0.0.1:5096 — admin@example.test / fixture-admin-123"); await app.WaitForShutdownAsync(); }
 }
 finally { await app.StopAsync(); await using var cleanup = new PanaderiaContext(options); await cleanup.Database.EnsureDeletedAsync(); }
-sealed class Clock : TimeProvider { private readonly global::System.Diagnostics.Stopwatch elapsed = global::System.Diagnostics.Stopwatch.StartNew(); public override DateTimeOffset GetUtcNow() => DateTimeOffset.Parse("2026-10-07T15:00:00Z") + elapsed.Elapsed; }
+// Las cookies de autenticación deben tener una vigencia real para el navegador HTTP.
+sealed class Clock : TimeProvider { public override DateTimeOffset GetUtcNow() => DateTimeOffset.UtcNow; }
 sealed class FakePush : IPushNotificationService {
     public Task GuardarSuscripcionAsync(string userId, SuscripcionPushDto suscripcion) => Task.CompletedTask;
     public Task NotificarNuevoPedidoAsync(Pedido pedido, bool esRevendedor) => Task.CompletedTask;

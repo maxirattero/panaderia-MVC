@@ -121,10 +121,7 @@
     <script>
         const initialDetalles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Detalles,
             new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
-        const reservasIniciales = initialDetalles.reduce((mapa, detalle) => {
-            mapa[detalle.idProducto] = (mapa[detalle.idProducto] || 0) + detalle.cantidad;
-            return mapa;
-        }, {});
+        const reservasIniciales = @Html.Raw(ViewBag.ReservasStockJson ?? "{}");
 
         (function () {
             const tbody = document.getElementById('detallesBody');
@@ -171,7 +168,7 @@
                         .reduce((total, otra) => total + (parseInt(otra.querySelector('.cant-input').value, 10) || 0), 0);
                     const disponible = Math.max(0, stockActual + reservaOriginal - reservadoEnOtrasFilas);
                     input.max = disponible;
-                    if ((parseInt(input.value, 10) || 0) > disponible) input.value = disponible;
+                    // Conservar lo pedido: el límite del campo pide corregirlo sin reducirlo en silencio.
                     texto.textContent = `Stock actual: ${stockActual}`;
                 });
             }

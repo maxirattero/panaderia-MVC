@@ -195,7 +195,7 @@ namespace Panaderia.Services.Implementations
             await using var transaction = await IniciarMutacionAsync();
             await AplicarPrecioDeCostoAsync(pedido);
             await AplicarCostoEmpaqueAsync(pedido.Detalles);
-            await ReservarStockAsync(pedido.Detalles, pedido.IdCliente);
+            await ReservarStockAsync(pedido.Detalles);
             await _context.Pedidos.AddAsync(pedido);
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
@@ -234,7 +234,10 @@ namespace Panaderia.Services.Implementations
                 (await _context.Clientes.FindAsync(pedido.IdCliente))?.PrecioDeCosto == true)
                 existente = null;
             await AplicarCostoEmpaqueAsync(pedido.Detalles);
-            await ReservarStockAsync(pedido.Detalles, pedido.IdCliente);
+            // La excepción mayorista corresponde únicamente al ingreso desde la tienda.
+            var encargoRevendedor = await _context.Clientes.AsNoTracking()
+                .AnyAsync(c => c.Id == pedido.IdCliente && c.Revendedor);
+            await ReservarStockAsync(pedido.Detalles, encargoRevendedor);
             // También cubrir una solicitud que atraviese el horario de cierre.
             DisponibilidadSemanal.ValidarPedido(productos, _reloj.GetUtcNow());
             if (existente == null) _context.Pedidos.Add(pedido);
@@ -264,7 +267,7 @@ namespace Panaderia.Services.Implementations
             await RestituirStockReservadoAsync(existing.Detalles);
             await AplicarPrecioDeCostoAsync(pedido);
             await AplicarCostoEmpaqueAsync(pedido.Detalles);
-            await ReservarStockAsync(pedido.Detalles, pedido.IdCliente);
+            await ReservarStockAsync(pedido.Detalles);
 
             existing.DescuentoPorcentaje = pedido.DescuentoPorcentaje;
             existing.MontoTotal = pedido.MontoTotal;
@@ -928,7 +931,7 @@ namespace Panaderia.Services.Implementations
 
         // Reserva unidades al registrar el pedido. ExecuteUpdate hace que la condición
         // Stock >= cantidad se aplique en la base, evitando sobreventas simultáneas.
-        private async Task ReservarStockAsync(IEnumerable<DetallePedido> detalles, int idCliente)
+        private async Task ReservarStockAsync(IEnumerable<DetallePedido> detalles, bool encargoRevendedor = false)
         {
             var detallesLista = detalles.Where(d => d.Cantidad > 0).ToList();
             foreach (var detalle in detallesLista)
@@ -939,7 +942,6 @@ namespace Panaderia.Services.Implementations
                 .ToDictionary(g => g.Key, g => g.Sum(d => d.Cantidad));
             if (!cantidadesPorProducto.Any()) return;
 
-            var revendedor = await _context.Clientes.AsNoTracking().AnyAsync(c => c.Id == idCliente && c.Revendedor);
             var productos = await _context.Productos.AsNoTracking().Include(p => p.Categoria)
                 .Where(p => cantidadesPorProducto.Keys.Contains(p.Id))
                 .ToDictionaryAsync(p => p.Id);
@@ -949,8 +951,9 @@ namespace Panaderia.Services.Implementations
                 if (!productos.TryGetValue(idProducto, out var producto))
                     throw new InvalidOperationException("Uno de los productos del pedido ya no existe.");
 
-                // La política se relee desde el cliente y el producto persistidos.
-                if (producto.EsPorEncargoPara(revendedor)) continue;
+                // El panel usa la configuración del producto, independientemente del cliente.
+                // La tienda habilita explícitamente el encargo para un revendedor verificado.
+                if (producto.EsPorEncargoPara(encargoRevendedor)) continue;
 
                 var filasActualizadas = await _context.Productos
                     .Where(p => p.Id == idProducto && !p.PorEncargo && p.Stock >= cantidad)
@@ -961,7 +964,7 @@ namespace Panaderia.Services.Implementations
                 if (filasActualizadas == 0)
                 {
                     var nombre = string.IsNullOrWhiteSpace(producto.Nombre) ? "el producto seleccionado" : producto.Nombre;
-                    throw new InvalidOperationException($"No hay stock suficiente de {nombre}. Volvé al carrito para ajustar el pedido.");
+                    throw new InvalidOperationException($"No hay stock suficiente de {nombre}. Ajustá la cantidad del pedido.");
                 }
 
                 foreach (var detalle in detallesLista.Where(d => d.IdProducto == idProducto))

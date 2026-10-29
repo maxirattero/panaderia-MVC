@@ -20,7 +20,8 @@ function preview(edit) {
         .replace(/@foreach \(var e[\s\S]*?\n\s*\}/, '<option value="1">Bolsa de papel</option>');
     const products = source.slice(source.indexOf('<h4'), source.indexOf('<div class="d-flex flex-column'));
     const script = source.slice(source.indexOf('<script>'), source.lastIndexOf('</script>') + 9)
-        .replace(/@Html.Raw\([\s\S]*?CamelCase \}\)\)/, '[{"idProducto":1,"cantidad":2,"idEmpaque":1,"llevaEtiqueta":true}]');
+        .replace(/@Html.Raw\([\s\S]*?CamelCase \}\)\)/, '[{"idProducto":1,"cantidad":2,"idEmpaque":1,"llevaEtiqueta":true}]')
+        .replace('@Html.Raw(ViewBag.ReservasStockJson ?? "{}")', '{"1":2}');
     return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
         <link rel="stylesheet" href="/lib/bootstrap/dist/css/bootstrap.min.css">
         <link rel="stylesheet" href="/lib/tom-select/css/tom-select.bootstrap5.min.css">

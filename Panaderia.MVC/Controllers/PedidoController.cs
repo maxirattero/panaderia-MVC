@@ -490,6 +490,7 @@ namespace Panaderia.MVC.Controllers
         {
             var pedido = await _pedidoService.GetByIdAsync(id);
             if (pedido == null) return NotFound();
+            CargarReservasStock(pedido);
 
             var vm = new PedidoViewModel
             {
@@ -518,6 +519,10 @@ namespace Panaderia.MVC.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(PedidoViewModel vm)
         {
+            var existente = await _pedidoService.GetByIdAsync(vm.Id);
+            if (existente == null) return NotFound();
+            CargarReservasStock(existente);
+
             if (vm.Detalles == null || !vm.Detalles.Any())
                 ModelState.AddModelError("", "El pedido debe tener al menos un producto.");
 
@@ -569,7 +574,6 @@ namespace Panaderia.MVC.Controllers
             };
 
             // Un descuento no puede dejar el total por debajo de lo ya cobrado.
-            var existente = await _pedidoService.GetByIdAsync(vm.Id);
             if (existente != null && pedido.MontoTotal < existente.MontoCobrado)
             {
                 ModelState.AddModelError("", $"El total con descuento ({pedido.MontoTotal.ToString("C", new CultureInfo("es-AR"))}) queda por debajo de lo ya cobrado ({existente.MontoCobrado.ToString("C", new CultureInfo("es-AR"))}).");
@@ -588,6 +592,14 @@ namespace Panaderia.MVC.Controllers
                 return View(vm);
             }
             return RedirectToAction(nameof(Index));
+        }
+
+        private void CargarReservasStock(Pedido pedido)
+        {
+            ViewBag.ReservasStockJson = JsonSerializer.Serialize(pedido.Detalles
+                .Where(d => d.ReservaStock)
+                .GroupBy(d => d.IdProducto)
+                .ToDictionary(g => g.Key, g => g.Sum(d => d.Cantidad)));
         }
 
         [HttpPost]
