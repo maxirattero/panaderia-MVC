@@ -15,12 +15,12 @@ public static class DisponibilidadSemanal
             || (local.DayOfWeek == DayOfWeek.Saturday && local.TimeOfDay < TimeSpan.FromHours(12));
     }
 
-    public static bool EstaBloqueado(Producto producto, DateTimeOffset ahora) =>
-        producto.TieneDisponibilidadSemanal && EstaCerrada(ahora);
+    public static bool EstaBloqueado(Producto producto, DateTimeOffset ahora, bool esRevendedor = false) =>
+        !esRevendedor && producto.TieneDisponibilidadSemanal && EstaCerrada(ahora);
 
-    public static void ValidarPedido(IEnumerable<Producto> productos, DateTimeOffset ahora)
+    public static void ValidarPedido(IEnumerable<Producto> productos, DateTimeOffset ahora, bool esRevendedor = false)
     {
-        if (productos.Any(p => EstaBloqueado(p, ahora)))
+        if (productos.Any(p => EstaBloqueado(p, ahora, esRevendedor)))
             throw new InvalidOperationException(MensajeCarrito);
     }
 }

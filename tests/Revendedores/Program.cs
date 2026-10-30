@@ -16,6 +16,8 @@ using Panaderia.Services.Interfaces;
 var database = "revendedores_checks_" + Guid.NewGuid().ToString("N");
 var options = new DbContextOptionsBuilder<PanaderiaContext>()
     .UseNpgsql($"Host=127.0.0.1;Port=55459;Username=postgres;Database={database}").Options;
+var storeClock = new StoreClock(DateTimeOffset.Parse(args.Contains("--sabado")
+    ? "2026-10-31T09:00:00-03:00" : "2026-10-30T10:00:00-03:00"));
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions {
     ApplicationName = typeof(TiendaController).Assembly.GetName().Name,
     ContentRootPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../Panaderia.MVC")), EnvironmentName = "Production"
@@ -23,7 +25,7 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions {
 builder.WebHost.UseUrls("http://127.0.0.1:5096");
 builder.Logging.SetMinimumLevel(LogLevel.Error);
 builder.Services.AddControllersWithViews(o => o.Filters.Add(new AuthorizeFilter(new AuthorizationPolicyBuilder().RequireRole("Admin").Build())))
-    .AddApplicationPart(typeof(TiendaController).Assembly);
+    .AddApplicationPart(typeof(TiendaController).Assembly).AddControllersAsServices();
 builder.Services.AddDataProtection().UseEphemeralDataProtectionProvider();
 builder.Services.AddScoped(_ => new PanaderiaContext(options));
 builder.Services.AddDefaultIdentity<ApplicationUser>(o => {
@@ -34,7 +36,12 @@ builder.Services.ConfigureApplicationCookie(o => { o.LoginPath = "/Account/Login
 builder.Services.AddScoped<IClienteService, ClienteService>();
 builder.Services.AddScoped<IAccesoTiendaService, AccesoTiendaService>();
 builder.Services.AddScoped<IProductoService, ProductoService>();
-builder.Services.AddScoped<IPedidoService, PedidoService>();
+builder.Services.AddScoped<IPedidoService>(sp => new PedidoService(sp.GetRequiredService<PanaderiaContext>(), storeClock));
+builder.Services.AddTransient<TiendaController>(sp => new TiendaController(
+    sp.GetRequiredService<IProductoService>(), sp.GetRequiredService<IClienteService>(),
+    sp.GetRequiredService<IPedidoService>(), sp.GetRequiredService<IPushNotificationService>(),
+    sp.GetRequiredService<IConfiguration>(), sp.GetRequiredService<IConfiguracionTiendaService>(),
+    sp.GetRequiredService<IAccesoTiendaService>(), storeClock));
 builder.Services.AddScoped<IRecetaService, RecetaService>();
 builder.Services.AddScoped<IInsumoService, InsumoService>();
 builder.Services.AddScoped<IConfiguracionTiendaService, ConfiguracionTiendaService>();
@@ -69,7 +76,7 @@ try {
         await roles.CreateAsync(new("Admin")); await roles.CreateAsync(new("Revendedor"));
         db.Clientes.AddRange(new Cliente { Id = 1, Nombre = "Revendedor de prueba", Revendedor = true }, new Cliente { Id = 2, Nombre = "Minorista" });
         db.CategoriasProducto.AddRange(new CategoriaProducto { Id = 1, Nombre = "Pan" }, new CategoriaProducto { Id = 2, Nombre = "Crackers" }, new CategoriaProducto { Id = 3, Nombre = "Prepizza" }, new CategoriaProducto { Id = 4, Nombre = "Untables" });
-        db.Productos.AddRange(Enumerable.Range(1,4).Select(i => new Producto { Id = i, IdCategoria = i, Nombre = new[] {"Pan de prueba","Crackers de prueba","Prepizza de prueba","Hummus de prueba"}[i-1], PrecioFinal = 100, PrecioReventa = 80, Stock = i == 2 ? 1 : i == 4 ? 3 : 0 }));
+        db.Productos.AddRange(Enumerable.Range(1,4).Select(i => new Producto { Id = i, IdCategoria = i, Nombre = new[] {"Pan de prueba","Crackers de prueba","Prepizza de prueba","Hummus de prueba"}[i-1], TieneDisponibilidadSemanal = i < 4, PrecioFinal = 100, PrecioReventa = 80, Stock = i == 2 ? 1 : i == 4 ? 3 : 0 }));
         await db.SaveChangesAsync();
         await sp.GetRequiredService<IConfiguracionTiendaService>().GuardarAsync(false, 10000);
         var users = sp.GetRequiredService<UserManager<ApplicationUser>>();
@@ -90,9 +97,14 @@ try {
     Check((await reseller.GetStringAsync("/Cliente/Edit/1")).Contains("Tienda - Masa Viva"), "Reseller cannot edit clients");
     var catalog = WebUtility.HtmlDecode(await reseller.GetStringAsync("/"));
     Check(!catalog.Contains("Última unidad") && !catalog.Contains("tc-tag agotado"), "Own products available without stock or scarcity notices");
+    Check(!catalog.Contains("Cerramos la toma") && !catalog.Contains("hasta los jueves"), "Logged-in reseller sees no retail closure notice");
     var detail = await reseller.GetStringAsync("/Tienda/Detalle/1");
     Check(detail.Contains("Por encargo") && !detail.Contains("temporalmente sin stock"), "Zero-stock bread detail permits ordering");
-    page = await Post(reseller, "/Tienda/AgregarVarios", new() { ["cantidades[1]"] = "2", ["cantidades[2]"] = "2", ["cantidades[3]"] = "2", ["cantidades[4]"] = "1" }, catalog);
+    page = await Post(reseller, "/Tienda/Agregar", new() { ["id"] = "1", ["cantidad"] = "1" }, detail);
+    Check(page.Contains("Pan de prueba") && page.Contains("Confirmar pedido"), "Reseller can add zero-stock bread during closure");
+    page = await Post(reseller, "/Tienda/Actualizar", new() { ["id"] = "1", ["cantidad"] = "2" }, page);
+    Check(!page.Contains("pedidos semanales cerrados"), "Reseller can increase bread quantity during closure");
+    page = await Post(reseller, "/Tienda/AgregarVarios", new() { ["cantidades[2]"] = "2", ["cantidades[3]"] = "2", ["cantidades[4]"] = "1" }, catalog);
     Check(page.Contains("Confirmar pedido") && !page.Contains("mínimo") && !page.Contains("delivery o retiro") && !page.Contains(">Continuar"), "Single order summary, no minimum or delivery step");
     Check((await reseller.GetStringAsync("/Tienda/Checkout")).Contains("Confirmar pedido"), "Old checkout URL redirects to summary");
     page = await Post(reseller, "/Tienda/Confirmar", new() { ["Nombre"] = "Another customer", ["Telefono"] = "invalid", ["Entrega"] = "inventado", ["Carrito.Total"] = "1" }, page);
@@ -105,6 +117,30 @@ try {
         Check((await db.Productos.OrderBy(p => p.Id).Select(p => p.Stock).ToListAsync()).SequenceEqual(new[] {0,1,0,2}), "Own stock preserved; hummus deducted exactly once");
     });
     Check((await reseller.GetStringAsync("/Tienda/Carrito")).Contains("carrito-vacio"), "Confirmed cart is emptied");
+    // El horario cerrado no se puede eludir con datos de formulario ni usando
+    // el teléfono de un cliente revendedor sin haber iniciado sesión.
+    using (var guest = Browser())
+    {
+        var closedCatalog = WebUtility.HtmlDecode(await guest.GetStringAsync("/"));
+        Check(closedCatalog.Contains("Cerramos la toma") && closedCatalog.Contains("No disponible"), "Retail still sees the closed catalog");
+        var refused = await Post(guest, "/Tienda/Agregar", new() { ["id"] = "1", ["esRevendedorAutenticado"] = "true" }, closedCatalog);
+        Check(refused.Contains("Pedidos cerrados"), "Guest cannot bypass closure by posting reseller flag");
+        guest.DefaultRequestHeaders.Add("Cookie", "mv_carrito=" + Uri.EscapeDataString("{\"2\":1}"));
+        var oldCart = WebUtility.HtmlDecode(await guest.GetStringAsync("/Tienda/Carrito"));
+        Check(oldCart.Contains("pedidos semanales cerrados"), "Guest stale cart remains blocked");
+        refused = await Post(guest, "/Tienda/Confirmar", new() { ["esRevendedorAutenticado"] = "true", ["Nombre"] = "Invitado", ["Telefono"] = "123456" }, oldCart);
+        Check(refused.Contains("pedidos semanales cerrados"), "Forged guest confirmation stays blocked");
+    }
+    await Scope(async sp => {
+        var db = sp.GetRequiredService<PanaderiaContext>();
+        var request = new Pedido { IdCliente = 1, FechaCreacion = DateTime.UtcNow,
+            Detalles = [new DetallePedido { IdProducto = 1, Cantidad = 1, PrecioUnitario = 80 }] };
+        try { await sp.GetRequiredService<IPedidoService>().CrearOAmpliarDesdeTiendaAsync(request); throw new Exception("Unauthenticated reseller bypassed closure"); }
+        catch (InvalidOperationException ex) { Check(ex.Message == DisponibilidadSemanal.MensajeCarrito, "Service requires authenticated reseller context, not just a wholesale client ID"); }
+        Check(await db.Pedidos.CountAsync() == 1, "Blocked retail requests did not create orders");
+    });
+    // Continuar las regresiones de stock minorista y admin en un día abierto.
+    storeClock.Now = DateTimeOffset.Parse("2026-10-28T10:00:00-03:00");
     // A normal customer still has the retail flow and cannot buy zero-stock products.
     using var retail = Browser();
     var retailCatalog = await retail.GetStringAsync("/");
@@ -234,3 +270,5 @@ sealed class FakePush : IPushNotificationService {
     public Task GuardarSuscripcionAsync(string userId, SuscripcionPushDto suscripcion) => Task.CompletedTask;
     public Task NotificarNuevoPedidoAsync(Pedido pedido, bool esRevendedor) => Task.CompletedTask;
 }
+
+sealed class StoreClock(DateTimeOffset now) : TimeProvider { public DateTimeOffset Now { get; set; } = now; public override DateTimeOffset GetUtcNow() => Now.ToUniversalTime(); }

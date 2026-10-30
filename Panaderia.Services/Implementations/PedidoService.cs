@@ -201,7 +201,7 @@ namespace Panaderia.Services.Implementations
             await transaction.CommitAsync();
         }
 
-        public async Task<Pedido> CrearOAmpliarDesdeTiendaAsync(Pedido pedido)
+        public async Task<Pedido> CrearOAmpliarDesdeTiendaAsync(Pedido pedido, bool esRevendedorAutenticado = false)
         {
             if (pedido.Detalles.Count == 0 || pedido.Detalles.Any(d => d.Cantidad <= 0))
                 throw new InvalidOperationException("Agregá productos al pedido.");
@@ -209,7 +209,13 @@ namespace Panaderia.Services.Implementations
             // Releer la bandera persistida dentro de la transacción; no confiar en el carrito.
             var ids = pedido.Detalles.Select(d => d.IdProducto).Distinct().ToArray();
             var productos = await _context.Productos.AsNoTracking().Where(p => ids.Contains(p.Id)).ToListAsync();
-            DisponibilidadSemanal.ValidarPedido(productos, _reloj.GetUtcNow());
+            // La excepción requiere una sesión mayorista y un cliente vinculado vigente.
+            // Encontrar un revendedor por teléfono en el checkout público no alcanza.
+            var encargoRevendedor = esRevendedorAutenticado && await _context.Clientes.AsNoTracking()
+                .AnyAsync(c => c.Id == pedido.IdCliente && c.Revendedor);
+            if (esRevendedorAutenticado && !encargoRevendedor)
+                throw new InvalidOperationException("Tu cliente revendedor ya no está habilitado. Contactanos para revisar el acceso.");
+            DisponibilidadSemanal.ValidarPedido(productos, _reloj.GetUtcNow(), encargoRevendedor);
             foreach (var detalle in pedido.Detalles)
             {
                 var producto = productos.Single(p => p.Id == detalle.IdProducto);
@@ -235,11 +241,9 @@ namespace Panaderia.Services.Implementations
                 existente = null;
             await AplicarCostoEmpaqueAsync(pedido.Detalles);
             // La excepción mayorista corresponde únicamente al ingreso desde la tienda.
-            var encargoRevendedor = await _context.Clientes.AsNoTracking()
-                .AnyAsync(c => c.Id == pedido.IdCliente && c.Revendedor);
             await ReservarStockAsync(pedido.Detalles, encargoRevendedor);
             // También cubrir una solicitud que atraviese el horario de cierre.
-            DisponibilidadSemanal.ValidarPedido(productos, _reloj.GetUtcNow());
+            DisponibilidadSemanal.ValidarPedido(productos, _reloj.GetUtcNow(), encargoRevendedor);
             if (existente == null) _context.Pedidos.Add(pedido);
             else UnificacionPedido.Agregar(existente, pedido);
             await _context.SaveChangesAsync();

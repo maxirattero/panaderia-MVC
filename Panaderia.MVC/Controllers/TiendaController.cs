@@ -105,7 +105,7 @@ namespace Panaderia.MVC.Controllers
                 Etiquetas = etiquetas,
                 EtiquetaSeleccionada = etiqueta,
                 EsRevendedor = EsRevendedor(),
-                PedidosSemanalesCerrados = DisponibilidadSemanal.EstaCerrada(_reloj.GetUtcNow()),
+                PedidosSemanalesCerrados = !EsRevendedor() && DisponibilidadSemanal.EstaCerrada(_reloj.GetUtcNow()),
                 CantidadesEnCarrito = LeerCarrito()
             };
 
@@ -118,7 +118,7 @@ namespace Panaderia.MVC.Controllers
             var producto = await _productoService.GetByIdAsync(id);
             if (producto == null || producto.OcultoEnTienda) return NotFound();
 
-            ViewBag.BloqueadoPorCierreSemanal = DisponibilidadSemanal.EstaBloqueado(producto, _reloj.GetUtcNow());
+            ViewBag.BloqueadoPorCierreSemanal = DisponibilidadSemanal.EstaBloqueado(producto, _reloj.GetUtcNow(), EsRevendedor());
             ViewBag.EsRevendedor = EsRevendedor();
             ViewBag.Costos = await CostosClienteAsync(new[] { producto.Id });
             var carrito = LeerCarrito();
@@ -148,7 +148,7 @@ namespace Panaderia.MVC.Controllers
             var producto = await _productoService.GetByIdAsync(id);
             if (producto == null || producto.OcultoEnTienda) return NotFound();
 
-            if (DisponibilidadSemanal.EstaBloqueado(producto, _reloj.GetUtcNow()))
+            if (DisponibilidadSemanal.EstaBloqueado(producto, _reloj.GetUtcNow(), EsRevendedor()))
             {
                 TempData["TiendaMsg"] = DisponibilidadSemanal.MensajeCierre;
                 return RedirectToAction(nameof(Detalle), new { id });
@@ -208,7 +208,7 @@ namespace Panaderia.MVC.Controllers
             var carrito = LeerCarrito();
             var cantidadAgregada = 0;
             var ahora = _reloj.GetUtcNow();
-            if (seleccion.Any(x => productos.TryGetValue(x.Key, out var p) && DisponibilidadSemanal.EstaBloqueado(p, ahora)))
+            if (seleccion.Any(x => productos.TryGetValue(x.Key, out var p) && DisponibilidadSemanal.EstaBloqueado(p, ahora, EsRevendedor())))
             {
                 TempData["TiendaMsg"] = DisponibilidadSemanal.MensajeCierre + " Revisá tu selección.";
                 return RedirectToAction(nameof(Index));
@@ -261,7 +261,7 @@ namespace Panaderia.MVC.Controllers
                 {
                     carrito.Remove(id);
                 }
-                else if (DisponibilidadSemanal.EstaBloqueado(producto, _reloj.GetUtcNow())
+                else if (DisponibilidadSemanal.EstaBloqueado(producto, _reloj.GetUtcNow(), EsRevendedor())
                     && cantidad > carrito.GetValueOrDefault(id))
                 {
                     TempData["TiendaMsg"] = DisponibilidadSemanal.MensajeCarrito;
@@ -460,7 +460,7 @@ namespace Panaderia.MVC.Controllers
             }
             catch (InvalidOperationException ex)
             {
-                if (carrito.Items.Any(i => DisponibilidadSemanal.EstaBloqueado(i.Producto, _reloj.GetUtcNow())))
+                if (carrito.Items.Any(i => DisponibilidadSemanal.EstaBloqueado(i.Producto, _reloj.GetUtcNow(), EsRevendedor())))
                 {
                     TempData["TiendaMsg"] = DisponibilidadSemanal.MensajeCarrito;
                     return RedirectToAction(nameof(Carrito));
@@ -528,7 +528,7 @@ namespace Panaderia.MVC.Controllers
             Pedido pedido;
             try
             {
-                pedido = await _pedidoService.CrearOAmpliarDesdeTiendaAsync(solicitud);
+                pedido = await _pedidoService.CrearOAmpliarDesdeTiendaAsync(solicitud, esRevendedorAutenticado: true);
             }
             catch (InvalidOperationException ex)
             {
@@ -742,7 +742,7 @@ namespace Panaderia.MVC.Controllers
                     {
                         Producto = producto,
                         Cantidad = cantidadSegura,
-                        BloqueadoPorCierreSemanal = DisponibilidadSemanal.EstaBloqueado(producto, _reloj.GetUtcNow()),
+                        BloqueadoPorCierreSemanal = DisponibilidadSemanal.EstaBloqueado(producto, _reloj.GetUtcNow(), EsRevendedor()),
                         PrecioUnitario = costos.TryGetValue(producto.Id, out var costo) ? costo : ObtenerPrecio(producto)
                     });
                 }

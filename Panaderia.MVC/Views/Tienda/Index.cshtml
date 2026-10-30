@@ -26,10 +26,13 @@
     }
 </section>
 
+@if (!Model.EsRevendedor)
+{
 <aside class="tienda-aviso-pedidos" role="note">
     <span class="material-symbols-outlined">schedule</span>
     <span>@(Model.PedidosSemanalesCerrados ? "Cerramos la toma de pedidos de panes por esta semana. Volvemos a tomar pedidos el sábado a las 12:00 (hora de Argentina)." : "Tomamos pedidos de panes hasta los jueves a las 23:59 hs.")</span>
 </aside>
+}
 
 <!-- Categorías -->
 <div class="tienda-chips">
