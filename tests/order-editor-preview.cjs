@@ -7,7 +7,7 @@ const path = require('node:path');
 const root = path.join(__dirname, '../Panaderia.MVC');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 
-function preview(edit) {
+function preview(edit, encargo = false) {
     const source = read(`Views/Pedido/${edit ? 'Edit' : 'Create'}.cshtml`);
     let template = read('Views/Pedido/_ProductoPedidoTemplate.cshtml')
         .replace('@using Panaderia.Models.Entities', '')
@@ -20,8 +20,9 @@ function preview(edit) {
         .replace(/@foreach \(var e[\s\S]*?\n\s*\}/, '<option value="1">Bolsa de papel</option>');
     const products = source.slice(source.indexOf('<h4'), source.indexOf('<div class="d-flex flex-column'));
     const script = source.slice(source.indexOf('<script>'), source.lastIndexOf('</script>') + 9)
-        .replace(/@Html.Raw\([\s\S]*?CamelCase \}\)\)/, '[{"idProducto":1,"cantidad":2,"idEmpaque":1,"llevaEtiqueta":true}]')
-        .replace('@Html.Raw(ViewBag.ReservasStockJson ?? "{}")', '{"1":2}');
+        .replace(/@Html.Raw\([\s\S]*?CamelCase \}\)\)/, JSON.stringify([{ id: 101, idProducto: 1, cantidad: encargo ? 12 : 2, idEmpaque: 1, llevaEtiqueta: true }]))
+        .replace('@Html.Raw(ViewBag.ReservasStockJson ?? "{}")', encargo ? '{}' : '{"1":2}')
+        .replace('@Html.Raw(ViewBag.EncargosOriginalesJson ?? "{}")', encargo ? '{"101":1}' : '{}');
     return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
         <link rel="stylesheet" href="/lib/bootstrap/dist/css/bootstrap.min.css">
         <link rel="stylesheet" href="/lib/tom-select/css/tom-select.bootstrap5.min.css">
@@ -35,15 +36,15 @@ function preview(edit) {
         <div class="row g-4"><label class="col-md-8">Cliente<select id="IdCliente" class="form-select"><option data-revendedor="false" data-descuento="0">Cliente de prueba</option><option data-revendedor="true" data-descuento="10">Revendedor de prueba</option></select></label>
         <label class="col-md-4">Descuento (%)<input id="DescuentoPorcentaje" class="form-control" type="number" value="0"></label></div>
         ${products}</form></div></main>${template}
-        <script src="/lib/tom-select/js/tom-select.base.min.js"></script><script src="/js/site.js"></script>${script}</body></html>`;
+        <script src="/lib/tom-select/js/tom-select.base.min.js"></script><script src="/js/site.js"></script><script src="/js/pedido-empaque.js"></script>${script}</body></html>`;
 }
 
-const assets = new Set(['/lib/bootstrap/dist/css/bootstrap.min.css', '/lib/tom-select/css/tom-select.bootstrap5.min.css', '/css/site.css', '/lib/tom-select/js/tom-select.base.min.js', '/js/site.js']);
+const assets = new Set(['/lib/bootstrap/dist/css/bootstrap.min.css', '/lib/tom-select/css/tom-select.bootstrap5.min.css', '/css/site.css', '/lib/tom-select/js/tom-select.base.min.js', '/js/site.js', '/js/pedido-empaque.js']);
 http.createServer((req, res) => {
     const url = new URL(req.url, 'http://127.0.0.1:4178');
     if (url.pathname === '/') {
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
-        res.end(preview(url.searchParams.has('edit')));
+        res.end(preview(url.searchParams.has('edit'), url.searchParams.has('encargo')));
     } else if (assets.has(url.pathname)) {
         res.setHeader('Content-Type', url.pathname.endsWith('.css') ? 'text/css' : 'text/javascript');
         res.end(read('wwwroot' + url.pathname));

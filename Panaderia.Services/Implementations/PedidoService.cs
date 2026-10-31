@@ -261,6 +261,21 @@ namespace Panaderia.Services.Implementations
                 .FirstOrDefaultAsync(p => p.Id == pedido.Id);
             if (existing == null) return;
 
+            // El modo de cada línea pertenece al pedido guardado, no a los datos
+            // enviados por el navegador ni a la configuración actual del producto.
+            var originales = existing.Detalles.ToDictionary(d => d.Id, d => new { d.IdProducto, d.ReservaStock });
+            var idsEditados = pedido.Detalles.Where(d => d.Id != 0).Select(d => d.Id).ToArray();
+            if (idsEditados.Distinct().Count() != idsEditados.Length || idsEditados.Any(id => !originales.ContainsKey(id)))
+                throw new InvalidOperationException("El detalle del pedido cambió. Recargá la página antes de guardar.");
+            var detallesConStock = new List<DetallePedido>();
+            foreach (var detalle in pedido.Detalles)
+            {
+                detalle.ReservaStock = false;
+                var conservaEncargo = originales.TryGetValue(detalle.Id, out var original)
+                    && original.IdProducto == detalle.IdProducto && !original.ReservaStock;
+                if (!conservaEncargo) detallesConStock.Add(detalle);
+            }
+
             existing.IdCliente = pedido.IdCliente;
             existing.FechaEntrega = pedido.FechaEntrega;
             existing.Notas = pedido.Notas;
@@ -271,7 +286,7 @@ namespace Panaderia.Services.Implementations
             await RestituirStockReservadoAsync(existing.Detalles);
             await AplicarPrecioDeCostoAsync(pedido);
             await AplicarCostoEmpaqueAsync(pedido.Detalles);
-            await ReservarStockAsync(pedido.Detalles);
+            await ReservarStockAsync(detallesConStock);
 
             existing.DescuentoPorcentaje = pedido.DescuentoPorcentaje;
             existing.MontoTotal = pedido.MontoTotal;

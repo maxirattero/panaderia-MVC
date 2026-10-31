@@ -185,33 +185,66 @@ try {
     await Scope(async sp => {
         var db = sp.GetRequiredService<PanaderiaContext>();
         Check(await db.Users.CountAsync(u => u.IdCliente == 1) == 1 && await db.Pedidos.CountAsync() == 1, "Access toggles preserve account and order history");
-        var service = sp.GetRequiredService<IPedidoService>(); var order = (await service.GetByIdAsync(orderId))!;
-        var edit = new Pedido { Id = order.Id, IdCliente = order.IdCliente, FechaEntrega = order.FechaEntrega, MontoTotal = order.MontoTotal + 80,
-            Detalles = order.Detalles.Select(d => new DetallePedido { IdProducto = d.IdProducto, Cantidad = d.Cantidad + (d.IdProducto == 1 ? 1 : 0), PrecioUnitario = d.PrecioUnitario }).ToList() };
-        try { await service.UpdateAsync(edit); throw new Exception("Admin allowed insufficient stock"); }
-        catch (InvalidOperationException ex) { Check(ex.Message.Contains("stock suficiente"), "Admin edit enforces stock even for an existing reseller store order"); }
-    });
-    await Scope(async sp => {
-        var db = sp.GetRequiredService<PanaderiaContext>();
-        Check((await db.Productos.OrderBy(p => p.Id).Select(p => p.Stock).ToListAsync()).SequenceEqual(new[] {0,1,0,2})
-            && await db.DetallesPedido.SumAsync(d => d.Cantidad) == 7, "Rejected admin edit rolls back stock and order lines");
-        foreach (var p in await db.Productos.Where(p => p.Id < 4).ToListAsync()) p.Stock = p.Id == 1 ? 3 : 2;
+        (await db.DetallesPedido.SingleAsync(d => d.IdProducto == 2)).CantidadProducida = 1;
         await db.SaveChangesAsync();
     });
+    async Task<Dictionary<string,string>> StoredOrderForm(string date = "2026-11-02") {
+        var form = new Dictionary<string,string> { ["Id"] = orderId.ToString(), ["IdCliente"] = "1", ["FechaEntrega"] = date };
+        await Scope(async sp => {
+            var order = await sp.GetRequiredService<PanaderiaContext>().Pedidos.Include(p => p.Detalles).SingleAsync(p => p.Id == orderId);
+            form["Notas"] = order.Notas ?? "";
+            int i = 0;
+            foreach (var d in order.Detalles.OrderBy(d => d.Id)) {
+                form[$"Detalles[{i}].Id"] = d.Id.ToString();
+                form[$"Detalles[{i}].IdProducto"] = d.IdProducto.ToString();
+                form[$"Detalles[{i}].Cantidad"] = d.Cantidad.ToString();
+                i++;
+            }
+        });
+        return form;
+    }
+    editPage = await adminBrowser.GetStringAsync($"/Pedido/Edit/{orderId}");
+    Check(editPage.Contains("const encargosOriginales = {") && !editPage.Contains("const encargosOriginales = {};"), "Editor receives persisted made-to-order line identities");
+    var datedForm = await StoredOrderForm();
+    page = await Post(adminBrowser, $"/Pedido/Edit/{orderId}", datedForm, editPage);
+    Check(!page.Contains("No hay stock suficiente") && !page.Contains("id=\"detallesBody\""), "Changing only the date saves a wholesale store order without stock");
     await Scope(async sp => {
-        var service = sp.GetRequiredService<IPedidoService>(); var order = (await service.GetByIdAsync(orderId))!;
-        await service.UpdateAsync(new Pedido { Id = order.Id, IdCliente = order.IdCliente, FechaEntrega = order.FechaEntrega, MontoTotal = order.MontoTotal + 80,
-            Detalles = order.Detalles.Select(d => new DetallePedido { IdProducto = d.IdProducto, Cantidad = d.Cantidad + (d.IdProducto == 1 ? 1 : 0), PrecioUnitario = d.PrecioUnitario }).ToList() });
+        var db = sp.GetRequiredService<PanaderiaContext>(); var order = await db.Pedidos.Include(p => p.Detalles).SingleAsync();
+        Check(order.FechaEntrega == new DateTime(2026,11,2,0,0,0,DateTimeKind.Utc) && order.MontoTotal == 560 && order.Detalles.Sum(d => d.Cantidad) == 7, "Date change preserves total and all quantities");
+        Check(order.Detalles.Single(d => d.IdProducto == 2).CantidadProducida == 1 && order.Detalles.Where(d => d.IdProducto < 4).All(d => !d.ReservaStock), "Date change preserves production progress and made-to-order lines");
+        Check((await db.Productos.OrderBy(p => p.Id).Select(p => p.Stock).ToListAsync()).SequenceEqual(new[] {0,1,0,2}), "Date change leaves every stock unchanged");
     });
+    page = await Post(adminBrowser, $"/Pedido/Edit/{orderId}", datedForm, editPage);
+    Check(page.Contains("Recargá la página"), "Stale line identities rejected without reapplying stock changes");
+    var increasedForm = await StoredOrderForm();
+    var crackerKey = increasedForm.Single(x => x.Key.EndsWith(".IdProducto") && x.Value == "2").Key.Replace(".IdProducto", ".Cantidad");
+    increasedForm[crackerKey] = "3";
+    page = await Post(adminBrowser, $"/Pedido/Edit/{orderId}", increasedForm, await adminBrowser.GetStringAsync($"/Pedido/Edit/{orderId}"));
+    Check(!page.Contains("No hay stock suficiente"), "Increasing an existing made-to-order line still does not require stock");
+    var mixedForm = await StoredOrderForm();
+    mixedForm["Detalles[4].IdProducto"] = "2"; mixedForm["Detalles[4].Cantidad"] = "1";
+    await Post(adminBrowser, $"/Pedido/Edit/{orderId}", mixedForm, await adminBrowser.GetStringAsync($"/Pedido/Edit/{orderId}"));
     await Scope(async sp => {
         var db = sp.GetRequiredService<PanaderiaContext>();
-        Check((await db.Productos.OrderBy(p => p.Id).Select(p => p.Stock).ToListAsync()).SequenceEqual(new[] {0,0,0,2}), "Admin editing reseller order reserves all stock-managed products");
-        Check(await db.DetallesPedido.CountAsync() == 4 && await db.DetallesPedido.SumAsync(d => d.Cantidad) == 8, "Admin edit keeps every order line");
+        var crackers = await db.DetallesPedido.Where(d => d.IdProducto == 2).ToListAsync();
+        Check(crackers.Count == 2 && crackers.Single(d => !d.ReservaStock).Cantidad == 3 && crackers.Single(d => d.ReservaStock).Cantidad == 1,
+            "Mixed order preserves made-to-order crackers separately from a new admin stock line");
+        Check((await db.Productos.FindAsync(2))!.Stock == 0, "Only the new stock line reserves the last cracker");
+    });
+    await Post(adminBrowser, $"/Pedido/Edit/{orderId}", await StoredOrderForm("2026-11-03"), await adminBrowser.GetStringAsync($"/Pedido/Edit/{orderId}"));
+    var wrongProduct = await StoredOrderForm();
+    var breadKey = wrongProduct.Single(x => x.Key.EndsWith(".IdProducto") && x.Value == "1").Key;
+    wrongProduct[breadKey] = "4"; wrongProduct[breadKey.Replace(".IdProducto", ".Cantidad")] = "10";
+    page = await Post(adminBrowser, $"/Pedido/Edit/{orderId}", wrongProduct, await adminBrowser.GetStringAsync($"/Pedido/Edit/{orderId}"));
+    Check(page.Contains("No hay stock suficiente"), "Replacing an old made-to-order product cannot bypass stock of another product");
+    await Scope(async sp => {
+        var db = sp.GetRequiredService<PanaderiaContext>();
+        Check((await db.Productos.OrderBy(p => p.Id).Select(p => p.Stock).ToListAsync()).SequenceEqual(new[] {0,0,0,2}), "Mixed date edit and failed product replacement preserve reservations");
         await sp.GetRequiredService<IPedidoService>().AnularAsync(orderId);
     });
     await Scope(async sp => {
         var db = sp.GetRequiredService<PanaderiaContext>();
-        Check((await db.Productos.OrderBy(p => p.Id).Select(p => p.Stock).ToListAsync()).SequenceEqual(new[] {3,2,2,3}), "Cancellation restores only actually reserved stock");
+        Check((await db.Productos.OrderBy(p => p.Id).Select(p => p.Stock).ToListAsync()).SequenceEqual(new[] {0,1,0,3}), "Cancellation restores only actual reservations, never made-to-order quantities");
         var pizza = (await db.Productos.FindAsync(3))!; pizza.Stock = 1; pizza.SinStock = false;
         var bread = (await db.Productos.FindAsync(1))!; bread.PorEncargo = true; bread.Stock = 0;
         await db.SaveChangesAsync();

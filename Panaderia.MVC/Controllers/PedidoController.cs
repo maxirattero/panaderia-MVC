@@ -504,6 +504,7 @@ namespace Panaderia.MVC.Controllers
                 DescuentoPorcentaje = pedido.DescuentoPorcentaje > 0 ? pedido.DescuentoPorcentaje : (decimal?)null,
                 Detalles = pedido.Detalles.Select(d => new DetallePedidoViewModel
                 {
+                    Id = d.Id,
                     IdProducto = d.IdProducto,
                     Cantidad = d.Cantidad,
                     IdEmpaque = d.IdEmpaque,
@@ -549,6 +550,7 @@ namespace Panaderia.MVC.Controllers
                 var precio = cliente.Revendedor ? producto.PrecioReventa : producto.PrecioFinal;
                 detalles.Add(new DetallePedido
                 {
+                    Id = d.Id,
                     IdProducto = d.IdProducto,
                     Cantidad = d.Cantidad,
                     PrecioUnitario = precio,
@@ -596,6 +598,8 @@ namespace Panaderia.MVC.Controllers
 
         private void CargarReservasStock(Pedido pedido)
         {
+            ViewBag.EncargosOriginalesJson = JsonSerializer.Serialize(pedido.Detalles
+                .Where(d => !d.ReservaStock).ToDictionary(d => d.Id, d => d.IdProducto));
             ViewBag.ReservasStockJson = JsonSerializer.Serialize(pedido.Detalles
                 .Where(d => d.ReservaStock)
                 .GroupBy(d => d.IdProducto)

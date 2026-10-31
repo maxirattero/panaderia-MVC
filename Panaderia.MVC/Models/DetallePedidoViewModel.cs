@@ -4,6 +4,7 @@ namespace Panaderia.MVC.Models
 {
     public class DetallePedidoViewModel
     {
+        public int Id { get; set; }
         public int IdProducto { get; set; }
         public int Cantidad { get; set; }
         public int? IdEmpaque { get; set; }

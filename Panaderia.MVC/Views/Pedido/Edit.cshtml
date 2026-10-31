@@ -121,6 +121,7 @@
     <script>
         const initialDetalles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Detalles,
             new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
+        const encargosOriginales = @Html.Raw(ViewBag.EncargosOriginalesJson ?? "{}");
         const reservasIniciales = @Html.Raw(ViewBag.ReservasStockJson ?? "{}");
 
         (function () {
@@ -141,6 +142,11 @@
                 return opt && opt.dataset.revendedor === 'true';
             }
 
+            function esEncargoOriginal(tr) {
+                const id = tr.querySelector('.detalle-id').value;
+                return encargosOriginales[id] === Number(tr.querySelector('.prod-select').value);
+            }
+
             function actualizarLimitesStock() {
                 const filas = Array.from(tbody.querySelectorAll('.pedido-item'));
                 filas.forEach(tr => {
@@ -155,7 +161,7 @@
                         return;
                     }
 
-                    if (opcion.dataset.porEncargo === 'true') {
+                    if (opcion.dataset.porEncargo === 'true' || esEncargoOriginal(tr)) {
                         input.removeAttribute('max');
                         texto.textContent = 'Producto por encargo';
                         return;
@@ -164,7 +170,7 @@
                     const stockActual = parseInt(opcion.dataset.stock, 10) || 0;
                     const reservaOriginal = reservasIniciales[select.value] || 0;
                     const reservadoEnOtrasFilas = filas
-                        .filter(otra => otra !== tr && otra.querySelector('.prod-select').value === select.value)
+                        .filter(otra => otra !== tr && !esEncargoOriginal(otra) && otra.querySelector('.prod-select').value === select.value)
                         .reduce((total, otra) => total + (parseInt(otra.querySelector('.cant-input').value, 10) || 0), 0);
                     const disponible = Math.max(0, stockActual + reservaOriginal - reservadoEnOtrasFilas);
                     input.max = disponible;
@@ -226,6 +232,7 @@
 
             function reindexar() {
                 tbody.querySelectorAll('.pedido-item').forEach((tr, i) => {
+                    tr.querySelector('.detalle-id').name = `Detalles[${i}].Id`;
                     tr.querySelector('.prod-select').name    = `Detalles[${i}].IdProducto`;
                     tr.querySelector('.cant-input').name     = `Detalles[${i}].Cantidad`;
                     tr.querySelectorAll('.pedido-field').forEach(field => {
@@ -245,6 +252,11 @@
 
             function agregarFila(data) {
                 const tr = template.content.cloneNode(true).querySelector('.pedido-item');
+                const detalleId = document.createElement('input');
+                detalleId.type = 'hidden';
+                detalleId.className = 'detalle-id';
+                detalleId.value = data?.id || 0;
+                tr.appendChild(detalleId);
                 tbody.appendChild(tr);
 
                 if (data) {
