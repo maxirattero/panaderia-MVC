@@ -14,5 +14,6 @@ namespace Panaderia.Models.Enums
         Transferencia = 5,
         Devolucion = 6,
         Ajuste = 7,
+        ReintegroPersonal = 8,
     }
 }

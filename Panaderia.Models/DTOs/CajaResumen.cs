@@ -13,6 +13,7 @@ public class CajaResumen
     public decimal MaxiPagado { get; set; }
     public List<SaldoCuentaCaja> SaldosActuales { get; set; } = [];
     public List<ReporteCaja> SinClasificar { get; set; } = [];
+    public FinanciacionResumen Financiacion { get; set; } = new();
     public decimal Pendiente(DestinoCierre destino) => destino switch
     {
         DestinoCierre.Reserva => Cierre.Reserva - ReservaPagada,

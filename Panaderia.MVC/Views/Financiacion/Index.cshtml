@@ -1,0 +1,86 @@
+@model Panaderia.Models.DTOs.FinanciacionResumen
+@using Panaderia.Models.Entities
+@using Panaderia.Models.Enums
+@using Panaderia.MVC.Models
+@using Panaderia.Services.Implementations
+@using System.Globalization
+@{
+    ViewData["Title"] = "Inversiones personales";
+    var inv = CultureInfo.InvariantCulture;
+    var compras = (List<CompraProveedor>)ViewBag.Compras;
+    var productos = (List<Producto>)ViewBag.Productos;
+}
+<div class="d-flex flex-wrap justify-content-between gap-3 mb-4">
+    <div><h1 class="display-6 fw-bold titulo-pagina">Inversiones personales</h1><p class="text-muted">Compras financiadas, ventas y devoluciones de aportes.</p></div>
+    <a asp-controller="Compra" asp-action="Create" class="btn btn-mv-primary align-self-start">Registrar compra</a>
+</div>
+@if (TempData["Success"] is string exito) { <div class="alert alert-success">@exito</div> }
+@if (TempData["Error"] is string error) { <div class="alert alert-danger">@error</div> }
+<div class="row g-3 mb-4">
+@foreach (var persona in new[] { OrigenFondos.Maxi, OrigenFondos.Ani })
+{
+    var deudas = Model.Deudas.Where(x => x.Aporte.Origen == persona).ToList();
+    <div class="col-md-6"><div class="card-custom p-4"><h2 class="h5">@persona</h2><p class="fs-4 fw-bold">Por devolver: @CajaUi.Moneda(deudas.Sum(x => x.Deuda))</p>
+    <p>Aportado: @CajaUi.Moneda(deudas.Sum(x => x.Aporte.Monto)) · Pagado: @CajaUi.Moneda(deudas.Sum(x => x.Pagado))</p>
+    <p class="mb-0">Generado por ventas: @CajaUi.Moneda(deudas.Sum(x => x.Generado)) · Reservado en cierres: @CajaUi.Moneda(deudas.Sum(x => x.Reservado))</p></div></div>
+}
+</div>
+<div class="card-custom p-4 mb-4">
+    <h2 class="h5">Deuda por compra y adelantos</h2>
+    <p class="text-muted">Un adelanto se registra cuando retirás el dinero. Reduce la deuda y los próximos reintegros por ventas. Se descuenta del reparto de la semana del pago. Lo reservado en cierres se confirma por separado.</p>
+    @if (!Model.Deudas.Any()) { <p>Todavía no hay compras con aportes personales.</p> }
+    @foreach (var d in Model.Deudas)
+    {
+        <div class="border-top pt-3 mt-3">
+            <h3 class="h6">@d.Aporte.Origen · <a asp-controller="Compra" asp-action="Details" asp-route-id="@d.Aporte.IdCompra">Compra #@d.Aporte.IdCompra</a> · @d.Aporte.Compra.Proveedor.Nombre</h3>
+            <p>Aporte: @CajaUi.Moneda(d.Aporte.Monto) · Pagado: @CajaUi.Moneda(d.Pagado) · Deuda: <strong>@CajaUi.Moneda(d.Deuda)</strong> · Sugerido sin reservar: @CajaUi.Moneda(d.Sugerido)</p>
+            @if (d.DisponibleAdelanto > 0)
+            {
+                <form asp-action="Pagar" method="post" class="row g-2 align-items-end">
+                    @Html.AntiForgeryToken()<input type="hidden" name="Aporte" value="@d.Aporte.Id" /><input type="hidden" name="Clave" value="@Guid.NewGuid()" />
+                    <div class="col-sm-4"><label class="form-label" for="cuenta-@d.Aporte.Id">Cuenta de Masa Viva</label><select name="Cuenta" id="cuenta-@d.Aporte.Id" class="form-select" required><option value="">Elegir cuenta</option><option value="1">Efectivo</option><option value="2">Banco</option></select></div>
+                    <div class="col-sm-4"><label class="form-label" for="monto-@d.Aporte.Id">Adelanto realizado</label><input name="Monto" id="monto-@d.Aporte.Id" type="number" step="0.01" min="0.01" max="@d.DisponibleAdelanto.ToString(inv)" class="form-control" required /></div>
+                    <div class="col-sm-4"><button class="btn btn-mv-secondary">Confirmar adelanto pagado</button></div>
+                </form>
+            }
+        </div>
+    }
+</div>
+<div class="card-custom p-4 mb-4">
+    <h2 class="h5">Reintegros pendientes de cierres</h2>
+    <p class="text-muted">Estos importes ya se separaron del reparto. Confirmarlos no vuelve a descontarlos. El registro no ejecuta transferencias bancarias.</p>
+    <partial name="_Reservas" model="Model" />
+</div>
+<div class="card-custom p-4 mb-4">
+    <h2 class="h5">Productos y lotes financiados</h2>
+    <p>Creá un lote con sus unidades y asignale costos de una o varias compras. Para un mismo producto se consumen primero los lotes con fecha más antigua. Las ventas anteriores a la fecha del lote no se incluyen. Solo se cuentan entregas totalmente cobradas; las devoluciones posteriores conservan el costo del insumo consumido.</p>
+    @foreach (var l in Model.Lotes)
+    {
+        <div class="border-top pt-3 mt-3"><h3 class="h6">#@l.Id · @l.Nombre · @l.Producto.NombreVisible</h3><p>@l.Unidades unidades · Desde @CalendarioCaja.Local(l.DesdeUtc).ToString("dd/MM/yyyy") · Costo asignado: @CajaUi.Moneda(l.Asignaciones.Sum(x => x.Monto))</p>
+        <p>Ventas computadas: @Model.UnidadesVendidas.GetValueOrDefault(l.Id) / @l.Unidades · Costo asignado por unidad: @CajaUi.Moneda(l.Asignaciones.Sum(x => x.Monto) / l.Unidades)</p>
+        @foreach (var a in l.Asignaciones) { <p class="small mb-1">Compra #@a.IdCompra: @CajaUi.Moneda(a.Monto)</p> }</div>
+    }
+    <details class="mt-4"><summary class="fw-bold">Crear lote</summary>
+        <form asp-action="CrearLote" method="post" class="row g-3 mt-1">
+            @Html.AntiForgeryToken()<input type="hidden" name="Clave" value="@Guid.NewGuid()" />
+            <div class="col-md-6"><label for="nombreLote" class="form-label">Nombre del lote</label><input name="Nombre" id="nombreLote" maxlength="120" class="form-control" placeholder="Pan dulce noviembre" required /></div>
+            <div class="col-md-6"><label for="productoLote" class="form-label">Producto</label><select name="IdProducto" id="productoLote" class="form-select" required><option value="">Elegir producto</option>@foreach (var p in productos) { <option value="@p.Id">@p.NombreVisible</option> }</select></div>
+            <div class="col-md-6"><label for="unidadesLote" class="form-label">Unidades obtenidas</label><input name="Unidades" id="unidadesLote" type="number" min="1" step="1" class="form-control" required /></div>
+            <div class="col-md-6"><label for="desdeLote" class="form-label">Contar ventas desde</label><input name="Desde" id="desdeLote" type="date" value="@CalendarioCaja.Hoy.ToString("yyyy-MM-dd")" class="form-control" required /></div>
+            <div><button class="btn btn-mv-primary">Crear lote</button></div>
+        </form>
+    </details>
+    <details class="mt-4"><summary class="fw-bold">Asignar costo de una compra</summary>
+        <p class="mt-3">El importe incluye la parte de envío que corresponda. Se distribuye entre los aportantes en la proporción pagada en esa compra. Una compra puede abastecer varios lotes; no se puede asignar más que su total. Completá las asignaciones antes del primer cierre del lote.</p>
+        <form asp-action="Asignar" method="post" class="row g-3">
+            @Html.AntiForgeryToken()<input type="hidden" name="clave" value="@Guid.NewGuid()" />
+            <div class="col-md-5"><label class="form-label" for="compraAsignada">Compra</label><select id="compraAsignada" name="compra" class="form-select" required><option value="">Elegir compra</option>@foreach (var c in compras) { <option value="@c.Id">#@c.Id · @c.Proveedor.Nombre · @CajaUi.Moneda(c.MontoTotal)</option> }</select></div>
+            <div class="col-md-4"><label class="form-label" for="loteAsignado">Lote</label><select id="loteAsignado" name="lote" class="form-select" required><option value="">Elegir lote</option>@foreach (var l in Model.Lotes) { <option value="@l.Id">#@l.Id · @l.Nombre</option> }</select></div>
+            <div class="col-md-3"><label class="form-label" for="costoAsignado">Costo destinado al lote</label><input id="costoAsignado" name="monto" type="number" step="0.01" min="0.01" class="form-control" required /></div>
+            <div><button class="btn btn-mv-primary">Asignar costo</button></div>
+        </form>
+    </details>
+</div>
+<div class="card-custom p-4"><h2 class="h5">Pagos confirmados</h2><div class="table-responsive"><table class="table"><thead><tr><th>Fecha</th><th>Aportante</th><th>Compra</th><th>Tipo</th><th>Cuenta</th><th>Importe</th></tr></thead><tbody>
+@foreach (var p in Model.Pagos) { <tr><td>@CalendarioCaja.Local(p.Movimiento.Fecha).ToString("dd/MM/yyyy HH:mm")</td><td>@p.Aporte.Origen</td><td>#@p.Aporte.IdCompra</td><td>@(p.IdReserva.HasValue ? "Reintegro de cierre" : "Adelanto")</td><td>@CajaUi.Cuenta(p.Movimiento.Cuenta)</td><td>@CajaUi.Moneda(p.Monto)</td></tr> }
+</tbody></table></div></div>

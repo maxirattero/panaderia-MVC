@@ -53,7 +53,7 @@ public class CierreCajaService(PanaderiaContext db) : ICierreCajaService
     {
         var pagos = await db.ReportesCaja.AsNoTracking().Where(r => r.IdCierreDestino == cierre.Id && r.Tipo == TipoMovimiento.Egreso).ToListAsync();
         return new CajaResumen {
-            Cierre = cierre, SaldosConfigurados = (await ConfiguracionAsync()).InicioSaldosUtc.HasValue,
+            Cierre = cierre, Financiacion = await new FinanciacionService(db).ResumenAsync(), SaldosConfigurados = (await ConfiguracionAsync()).InicioSaldosUtc.HasValue,
             SaldosActuales = await SaldosAsync(),
             ReservaPagada = pagos.Where(r => r.Destino == DestinoCierre.Reserva).Sum(r => r.Monto),
             AniPagado = pagos.Where(r => r.Destino == DestinoCierre.Ani).Sum(r => r.Monto),
@@ -128,8 +128,12 @@ public class CierreCajaService(PanaderiaContext db) : ICierreCajaService
                 cierre.Saldos.Add(new() { Cuenta = s.Cuenta, Inicial = s.Saldo, Entradas = entradas, Salidas = salidas, Final = s.Saldo + entradas - salidas });
             }
         }
+        var financiacion = await new FinanciacionService(db).ResumenAsync(fin, inicio);
+        FinanciacionService.PrepararCierre(db, cierre, financiacion, false);
+        Repartir(cierre, config.PorcentajeReserva);
         return new CajaResumen {
             Cierre = cierre, SaldosConfigurados = config.InicioSaldosUtc.HasValue, SaldosActuales = await SaldosAsync(),
+            Financiacion = financiacion,
             SinClasificar = movimientos.Where(r => r.Cuenta == CuentaCaja.SinClasificar).OrderBy(r => r.Fecha).ToList()
         };
     }
@@ -138,7 +142,7 @@ public class CierreCajaService(PanaderiaContext db) : ICierreCajaService
     {
         ValidarPorcentaje(porcentaje);
         cierre.PorcentajeReserva = porcentaje;
-        cierre.BaseReparto = cierre.CobrosEfectivo + cierre.CobrosBanco + cierre.CobrosSinClasificar - cierre.Devoluciones - cierre.GastosReparto;
+        cierre.BaseReparto = cierre.CobrosEfectivo + cierre.CobrosBanco + cierre.CobrosSinClasificar - cierre.Devoluciones - cierre.GastosReparto - cierre.ReintegrosProvisionados;
         var basePositiva = Math.Max(0, cierre.BaseReparto);
         cierre.Reserva = decimal.Round(basePositiva * porcentaje / 100m, 2, MidpointRounding.AwayFromZero);
         cierre.Ani = decimal.Round((basePositiva - cierre.Reserva) / 2m, 2, MidpointRounding.AwayFromZero);
@@ -159,6 +163,9 @@ public class CierreCajaService(PanaderiaContext db) : ICierreCajaService
         if (resumen.SinClasificar.Any()) throw new InvalidOperationException("Clasificá el origen de los movimientos de la semana antes de cerrar.");
         if (resumen.Cierre.Costos.Any(c => c.CostoPendiente) && !aceptarCostosPendientes)
             throw new InvalidOperationException("Hay productos sin costo completo. Revisalos o confirmá que querés guardar el cierre con esa advertencia.");
+        if (await db.LotesFinanciados.AnyAsync() && await db.CierresCaja.AnyAsync(c => !c.EsHistorico && c.FinUtc > resumen.Cierre.FinUtc))
+            throw new InvalidOperationException("Con lotes financiados, cerrá las semanas en orden cronológico para conservar sus ventas y reintegros.");
+        FinanciacionService.PrepararCierre(db, resumen.Cierre, resumen.Financiacion);
         Repartir(resumen.Cierre, porcentaje);
         resumen.Cierre.RegistradoUtc = DateTime.UtcNow;
         resumen.Cierre.Usuario = usuario;
@@ -174,7 +181,7 @@ public class CierreCajaService(PanaderiaContext db) : ICierreCajaService
         return resumen.Cierre.Id;
     }
 
-    private async Task FondosAsync(CuentaCaja cuenta, decimal monto, DateTime fecha)
+    internal async Task FondosAsync(CuentaCaja cuenta, decimal monto, DateTime fecha)
     {
         var config = await ConfiguracionAsync();
         if (config.InicioSaldosUtc is not DateTime inicio || fecha < inicio)

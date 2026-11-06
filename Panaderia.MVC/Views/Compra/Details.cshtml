@@ -39,6 +39,10 @@
     </div>
 
     <div class="card card-custom overflow-hidden mb-4">
+        <div class="p-4"><h2 class="h5">Origen de fondos</h2>
+        @if (!Model.Aportes.Any()) { <p class="text-muted">Compra histórica sin origen registrado. No genera deuda personal.</p> }
+        @foreach (var a in Model.Aportes.OrderBy(x => x.Origen)) { <p>@(a.Origen == Panaderia.Models.Enums.OrigenFondos.MasaViva ? "Masa Viva" : a.Origen.ToString()): <strong>@a.Monto.ToString("C", cultura)</strong> @(a.Cuenta.HasValue ? $"· {a.Cuenta}" : "· aporte personal")</p> }
+        <a asp-controller="Financiacion" asp-action="Index" class="btn btn-mv-secondary">Asignar costos y ver reintegros</a></div>
         <div class="table-responsive">
             <table class="table table-custom m-0">
                 <thead>

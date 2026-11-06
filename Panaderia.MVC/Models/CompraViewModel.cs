@@ -10,6 +10,10 @@ public class CompraViewModel
     [System.ComponentModel.DataAnnotations.Range(1, 3)]
     public Panaderia.Models.Enums.CuentaCaja CuentaPago { get; set; } = Panaderia.Models.Enums.CuentaCaja.ReservaMercadoPago;
     public bool DescontarDelReparto { get; set; }
+    [System.ComponentModel.DataAnnotations.Range(0, double.MaxValue)]
+    public decimal AporteMaxi { get; set; }
+    [System.ComponentModel.DataAnnotations.Range(0, double.MaxValue)]
+    public decimal AporteAni { get; set; }
     public Guid ClaveOperacion { get; set; } = Guid.NewGuid();
 }
 

@@ -18,6 +18,7 @@ public class CompraService : ICompraService
     public async Task<IEnumerable<CompraProveedor>> GetAllAsync()
     {
         return await _context.ComprasProveedor
+            .Include(c => c.Aportes)
             .Include(c => c.Proveedor)
             .Include(c => c.Detalles).ThenInclude(d => d.Insumo)
             .Include(c => c.Detalles).ThenInclude(d => d.UnidadCompra)
@@ -28,6 +29,7 @@ public class CompraService : ICompraService
     public async Task<CompraProveedor?> GetByIdAsync(int id)
     {
         return await _context.ComprasProveedor
+            .Include(c => c.Aportes)
             .Include(c => c.Proveedor)
             .Include(c => c.Detalles).ThenInclude(d => d.Insumo)
             .Include(c => c.Detalles).ThenInclude(d => d.UnidadCompra)
@@ -37,13 +39,14 @@ public class CompraService : ICompraService
     public async Task CreateAsync(CompraProveedor compra)
     {
         ReglasCaja.CuentaValida(compra.CuentaPago);
-        if (compra.ClaveOperacion == Guid.Empty || compra.Detalles.Count == 0 || compra.Detalles.Any(d => d.Cantidad <= 0 || d.PrecioUnitario < 0 || d.CostoEnvio < 0))
+        if (!compra.ClaveOperacion.HasValue || compra.ClaveOperacion == Guid.Empty || compra.Detalles.Count == 0 || compra.Detalles.Any(d => d.Cantidad <= 0 || d.PrecioUnitario < 0 || d.CostoEnvio < 0))
             throw new InvalidOperationException("Revisá los importes y cantidades de la compra.");
         if (compra.CuentaPago == CuentaCaja.ReservaMercadoPago && compra.DescontarDelReparto)
             throw new InvalidOperationException("Las compras desde la reserva no se descuentan del reparto semanal.");
         compra.Fecha = DateTime.SpecifyKind(compra.Fecha, DateTimeKind.Utc);
         await using var transaction = await ReglasCaja.IniciarAsync(_context);
-        if (compra.ClaveOperacion.HasValue && await _context.ReportesCaja.AnyAsync(r => r.ClaveOperacion == compra.ClaveOperacion)) return;
+        if (await _context.ComprasProveedor.AnyAsync(r => r.ClaveOperacion == compra.ClaveOperacion)
+            || await _context.ReportesCaja.AnyAsync(r => r.ClaveOperacion == compra.ClaveOperacion)) return;
         await ReglasCaja.PeriodoAbiertoAsync(_context, compra.Fecha);
 
         foreach (var detalle in compra.Detalles)
@@ -63,15 +66,34 @@ public class CompraService : ICompraService
         }
 
         compra.MontoTotal = compra.Detalles.Sum(d => d.Subtotal);
+        ReglasCaja.ImporteValido(compra.MontoTotal);
+        // Sin selección explícita se conserva el comportamiento de compras anteriores.
+        if (compra.Aportes.Count == 0)
+            compra.Aportes.Add(new() { Origen = OrigenFondos.MasaViva, Cuenta = compra.CuentaPago, Monto = compra.MontoTotal });
+        if (compra.Aportes.Select(a => a.Origen).Distinct().Count() != compra.Aportes.Count || compra.Aportes.Sum(a => a.Monto) != compra.MontoTotal)
+            throw new InvalidOperationException("Los aportes deben sumar exactamente el total de la compra, incluido el envío.");
+        foreach (var aporte in compra.Aportes)
+        {
+            ReglasCaja.ImporteValido(aporte.Monto);
+            if (!Enum.IsDefined(aporte.Origen) || (aporte.Origen != OrigenFondos.MasaViva && aporte.Cuenta.HasValue))
+                throw new InvalidOperationException("Revisá el origen de los aportes personales.");
+            if (aporte.Origen == OrigenFondos.MasaViva)
+            {
+                if (!aporte.Cuenta.HasValue || aporte.Cuenta != compra.CuentaPago)
+                    throw new InvalidOperationException("Elegí la cuenta de Masa Viva utilizada en la compra.");
+                ReglasCaja.CuentaValida(aporte.Cuenta.Value);
+            }
+        }
         _context.ComprasProveedor.Add(compra);
 
         var proveedor = await _context.Proveedores.FindAsync(compra.IdProveedor);
-        _context.ReportesCaja.Add(new ReporteCaja
+        var fondosMasaViva = compra.Aportes.SingleOrDefault(a => a.Origen == OrigenFondos.MasaViva);
+        if (fondosMasaViva != null) _context.ReportesCaja.Add(new ReporteCaja
         {
             Fecha       = compra.Fecha,
             Tipo        = TipoMovimiento.Egreso,
             Categoria   = CategoriaMovimiento.Proveedor,
-            Monto       = compra.MontoTotal,
+            Monto       = fondosMasaViva.Monto,
             IdProveedor = compra.IdProveedor,
             Compra = compra,
             Cuenta = compra.CuentaPago,

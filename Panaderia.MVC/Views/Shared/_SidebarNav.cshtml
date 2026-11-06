@@ -56,6 +56,7 @@
         <span class="material-symbols-outlined">account_balance_wallet</span>
         Caja
     </a>
+    <a class="nav-link-custom @(ViewContext.RouteData.Values["controller"]?.ToString() == "Financiacion" ? "active" : "")" asp-controller="Financiacion" asp-action="Index"><span class="material-symbols-outlined">savings</span>Inversiones personales</a>
 </nav>
 <div class="mt-auto border-top pt-4">
     <div class="mb-3 px-3">

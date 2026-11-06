@@ -54,7 +54,7 @@ public class ReporteCajaController(IReporteCajaService caja, IProveedorService p
         var r = await caja.GetByIdAsync(id); if (r == null) return NotFound();
         var vm = new ReporteCajaFormViewModel { Id = r.Id, Fecha = CalendarioCaja.Local(r.Fecha), Tipo = r.Tipo, Categoria = r.Categoria, Monto = r.Monto,
             Descripcion = r.Descripcion, IdProveedor = r.IdProveedor, IdPedido = r.IdPedido, Cuenta = r.Cuenta, DescontarDelReparto = r.DescontarDelReparto,
-            EsAutomatico = r.IdPedido.HasValue || r.IdCompra.HasValue || r.IdCierre.HasValue || r.IdCierreDestino.HasValue || r.IdTransferencia.HasValue || r.FechaInicioPeriodo.HasValue || r.Categoria == CategoriaMovimiento.Proveedor };
+            EsAutomatico = r.IdPedido.HasValue || r.IdCompra.HasValue || r.IdCierre.HasValue || r.IdCierreDestino.HasValue || r.IdTransferencia.HasValue || r.FechaInicioPeriodo.HasValue || r.Categoria == CategoriaMovimiento.Proveedor || r.Categoria == CategoriaMovimiento.ReintegroPersonal };
         await Cargar(vm); return View(vm);
     }
     [HttpPost, ValidateAntiForgeryToken]

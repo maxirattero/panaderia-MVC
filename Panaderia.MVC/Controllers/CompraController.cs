@@ -83,8 +83,15 @@ public class CompraController : Controller
             }).ToList()
         };
 
+        var total = vm.Detalles.Sum(d => d.Cantidad * d.PrecioUnitario + d.CostoEnvio);
+        var masaViva = total - vm.AporteMaxi - vm.AporteAni;
+        if (vm.AporteMaxi > 0) compra.Aportes.Add(new() { Origen = Panaderia.Models.Enums.OrigenFondos.Maxi, Monto = vm.AporteMaxi });
+        if (vm.AporteAni > 0) compra.Aportes.Add(new() { Origen = Panaderia.Models.Enums.OrigenFondos.Ani, Monto = vm.AporteAni });
+        if (masaViva > 0) compra.Aportes.Add(new() { Origen = Panaderia.Models.Enums.OrigenFondos.MasaViva, Monto = masaViva, Cuenta = vm.CuentaPago });
+
         try
         {
+            if (masaViva < 0) throw new InvalidOperationException("Los aportes personales superan el total de la compra.");
             await _compraService.CreateAsync(compra);
         }
         catch (InvalidOperationException ex)

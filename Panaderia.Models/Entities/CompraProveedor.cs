@@ -26,5 +26,6 @@ public class CompraProveedor
     public List<CompraDetalle> Detalles { get; set; } = new();
     [NotMapped] public CuentaCaja CuentaPago { get; set; } = CuentaCaja.ReservaMercadoPago;
     [NotMapped] public bool DescontarDelReparto { get; set; }
-    [NotMapped] public Guid? ClaveOperacion { get; set; }
+    public Guid? ClaveOperacion { get; set; }
+    [ValidateNever] public List<AporteCompra> Aportes { get; set; } = [];
 }

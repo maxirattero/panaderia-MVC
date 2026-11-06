@@ -30,6 +30,12 @@ namespace Panaderia.Models.Data
         public DbSet<UnidadCompra> UnidadesCompra { get; set; }
         public DbSet<CompraProveedor> ComprasProveedor { get; set; }
         public DbSet<CompraDetalle> ComprasDetalle { get; set; }
+        public DbSet<AporteCompra> AportesCompra { get; set; }
+        public DbSet<LoteFinanciado> LotesFinanciados { get; set; }
+        public DbSet<AsignacionCompraLote> AsignacionesCompraLote { get; set; }
+        public DbSet<VentaLote> VentasLote { get; set; }
+        public DbSet<ReservaReintegro> ReservasReintegro { get; set; }
+        public DbSet<PagoReintegro> PagosReintegro { get; set; }
         public DbSet<Receta> Recetas { get; set; }
         public DbSet<RecetaDetalle> RecetaDetalles { get; set; }
         public DbSet<SubReceta> SubRecetas { get; set; }
@@ -44,6 +50,7 @@ namespace Panaderia.Models.Data
     protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            FinanciacionMapping.Configurar(modelBuilder);
             // Mantener las longitudes de Identity tanto en el host MVC como al generar migraciones.
             modelBuilder.Entity<Microsoft.AspNetCore.Identity.IdentityUserLogin<string>>().Property(x => x.LoginProvider).HasMaxLength(128);
             modelBuilder.Entity<Microsoft.AspNetCore.Identity.IdentityUserLogin<string>>().Property(x => x.ProviderKey).HasMaxLength(128);

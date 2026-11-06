@@ -112,7 +112,7 @@ namespace Panaderia.Services.Implementations
 
         private static void ValidarEditable(ReporteCaja r)
         {
-            if (r.IdPedido.HasValue || r.IdCompra.HasValue || r.IdCierre.HasValue || r.IdCierreDestino.HasValue || r.IdTransferencia.HasValue || r.FechaInicioPeriodo.HasValue || r.Categoria == CategoriaMovimiento.Proveedor)
+            if (r.IdPedido.HasValue || r.IdCompra.HasValue || r.IdCierre.HasValue || r.IdCierreDestino.HasValue || r.IdTransferencia.HasValue || r.FechaInicioPeriodo.HasValue || r.Categoria == CategoriaMovimiento.Proveedor || r.Categoria == CategoriaMovimiento.ReintegroPersonal)
                 throw new InvalidOperationException("Este movimiento pertenece a un pedido, compra, transferencia o cierre. Se conserva para mantener el historial; los cobros se corrigen registrando una devolución.");
         }
         private static void ValidarManual(ReporteCaja r)

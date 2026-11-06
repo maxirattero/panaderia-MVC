@@ -74,6 +74,15 @@ else
         </details>
         <p class="small mb-0">Ventas de estos productos: @CajaUi.Moneda(c.TotalVendido ?? 0) @if (c.TotalVendido > 0) { <span>· Costo: @(((c.CostoInsumos ?? 0) / c.TotalVendido.Value * 100).ToString("N1")) %</span> }</p>
     </div>
+    <div class="card-custom p-4 mb-4">
+        <h2 class="h5">Reintegros personales</h2>
+        <p>Generado por ventas nuevas: <strong>@CajaUi.Moneda(c.ReintegrosGenerados)</strong> · Adelantos realizados en la semana: <strong>@CajaUi.Moneda(c.AdelantosPersonales)</strong></p>
+        <p>Separado del reparto en este cierre: <strong>@CajaUi.Moneda(c.ReintegrosProvisionados)</strong></p>
+        <p class="small text-muted">Se consideran entregas totalmente cobradas, con costos asignados a lotes. Los adelantos y pagos anteriores reducen lo sugerido. Si los cobros disponibles no alcanzan, el resto sigue pendiente para otro cierre. La reserva de insumos y el reparto por mitades se calculan sobre la base restante. Confirmar después el pago no vuelve a descontarlo.</p>
+        @foreach (var persona in new[] { OrigenFondos.Maxi, OrigenFondos.Ani }) { <p>@persona · deuda actual: @CajaUi.Moneda(r.Financiacion.Deudas.Where(x => x.Aporte.Origen == persona).Sum(x => x.Deuda))</p> }
+        @if (r.Guardado) { <partial name="_Reservas" model="new Panaderia.Models.DTOs.FinanciacionResumen { Reservas = r.Financiacion.Reservas.Where(x => x.IdCierre == c.Id).ToList(), Pagos = r.Financiacion.Pagos }" /> }
+        <a asp-controller="Financiacion" asp-action="Index">Ver compras, lotes y adelantos</a>
+    </div>
     @if (!r.Guardado)
     {
         <form asp-action="RegistrarCierre" method="post" class="card-custom p-4 mb-4" id="formCierre" data-base-centavos="@decimal.Round(Math.Max(0,c.BaseReparto)*100,0).ToString(inv)">

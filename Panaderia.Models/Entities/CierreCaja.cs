@@ -21,6 +21,9 @@ public class CierreCaja
     public decimal Devoluciones { get; set; }
     public decimal GastosReparto { get; set; }
     public decimal BaseReparto { get; set; }
+    public decimal ReintegrosProvisionados { get; set; }
+    public decimal ReintegrosGenerados { get; set; }
+    public decimal AdelantosPersonales { get; set; }
     public decimal Reserva { get; set; }
     public decimal Ani { get; set; }
     public decimal Maxi { get; set; }

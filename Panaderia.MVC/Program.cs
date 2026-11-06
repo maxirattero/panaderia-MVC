@@ -97,6 +97,7 @@ builder.Services.AddScoped<IConfiguracionTiendaService, ConfiguracionTiendaServi
 builder.Services.AddScoped<IInsumoService, InsumoService>();
 builder.Services.AddScoped<IRecetaService, RecetaService>();
 builder.Services.AddScoped<ICompraService, CompraService>();
+builder.Services.AddScoped<IFinanciacionService, FinanciacionService>();
 builder.Services.AddScoped<ISubRecetaService, SubRecetaService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddSingleton(new PushNotificationOptions
