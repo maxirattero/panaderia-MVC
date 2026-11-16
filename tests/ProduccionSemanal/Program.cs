@@ -10,6 +10,11 @@ using Panaderia.MVC.Controllers;
 
 // Solo PostgreSQL local y tablas temporales: no lee configuración ni datos de producción.
 var port = int.Parse(Environment.GetEnvironmentVariable("PEDIDOS_TEST_PORT") ?? "55439");
+if (args.Contains("--pan-dulce"))
+{
+    await PanDulceChecks.RunAsync(port, (ok, message) => { if (!ok) throw new Exception(message); Console.WriteLine("PASS: " + message); });
+    return;
+}
 await using var connection = new NpgsqlConnection($"Host=127.0.0.1;Port={port};Username=postgres;Database=postgres");
 await connection.OpenAsync();
 await new NpgsqlCommand("SET search_path TO pg_temp", connection).ExecuteNonQueryAsync();
@@ -192,6 +197,7 @@ Check(MismosTotales(await service.GetTotalesSemanaAsync(), empaques), "Un pedido
 pedidoEmpaques.Anulado = true;
 await db.SaveChangesAsync();
 Check(MismosTotales(await service.GetTotalesSemanaAsync(), vacio), "Anular un pedido retira sus cantidades del resumen y del desglose");
+await PanDulceChecks.RunAsync(port, Check);
 await ConfirmacionConcurrente.RunAsync(port, Check, args.Contains("--preview"));
 Console.WriteLine($"{checks} verificaciones de producción semanal correctas.");
 

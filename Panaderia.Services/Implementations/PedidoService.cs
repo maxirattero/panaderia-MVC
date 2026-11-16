@@ -1196,8 +1196,15 @@ namespace Panaderia.Services.Implementations
                     }
                 }
 
-                var masaKey = $"{(int)item.Producto.Masa}-{(item.Producto.Variedad.HasValue ? ((int)item.Producto.Variedad.Value).ToString() : "")}";
-                var nombreMasa = item.Producto.Masa.ToString() + (item.Producto.Variedad.HasValue ? " " + item.Producto.Variedad.Value.ToString() : "");
+                // Productos estacionales pueden no usar los tipos de masa de los panes habituales.
+                // Mantenerlos separados por producto evita agrupar recetas distintas como una misma masa.
+                var masa = item.Producto.Masa;
+                var masaKey = masa.HasValue
+                    ? $"{(int)masa.Value}-{(item.Producto.Variedad.HasValue ? ((int)item.Producto.Variedad.Value).ToString() : "")}"
+                    : $"producto-{item.IdProducto}";
+                var nombreMasa = masa.HasValue
+                    ? masa.Value.ToString() + (item.Producto.Variedad.HasValue ? " " + item.Producto.Variedad.Value.ToString() : "")
+                    : item.Producto.NombreVisible;
 
                 resultado.Add(new ProduccionProductoDetalle
                 {
