@@ -18,6 +18,11 @@ namespace Panaderia.Models.Entities
         public int? IdEmpaque { get; set; }
         public bool LlevaEtiqueta { get; set; } = false;
         public decimal CostoEmpaque { get; set; } = 0m;
+        // null identifica pedidos anteriores: no se les atribuyen materiales retroactivamente.
+        public string? MaterialesJson { get; set; }
+        [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+        [ValidateNever]
+        public List<Panaderia.Models.DTOs.MaterialPedidoSnapshot> Materiales => Panaderia.Models.DTOs.MaterialesPedido.Leer(MaterialesJson);
         public decimal? CostoIngredientes { get; set; }
         public DateTime? FechaCosto { get; set; }
 

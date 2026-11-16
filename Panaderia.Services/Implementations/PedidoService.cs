@@ -263,7 +263,7 @@ namespace Panaderia.Services.Implementations
 
             // El modo de cada línea pertenece al pedido guardado, no a los datos
             // enviados por el navegador ni a la configuración actual del producto.
-            var originales = existing.Detalles.ToDictionary(d => d.Id, d => new { d.IdProducto, d.ReservaStock });
+            var originales = existing.Detalles.ToDictionary(d => d.Id);
             var idsEditados = pedido.Detalles.Where(d => d.Id != 0).Select(d => d.Id).ToArray();
             if (idsEditados.Distinct().Count() != idsEditados.Length || idsEditados.Any(id => !originales.ContainsKey(id)))
                 throw new InvalidOperationException("El detalle del pedido cambió. Recargá la página antes de guardar.");
@@ -285,7 +285,7 @@ namespace Panaderia.Services.Implementations
             // selección no alcanza, todo se revierte y el pedido queda intacto.
             await RestituirStockReservadoAsync(existing.Detalles);
             await AplicarPrecioDeCostoAsync(pedido);
-            await AplicarCostoEmpaqueAsync(pedido.Detalles);
+            await AplicarCostoEmpaqueAsync(pedido.Detalles, originales);
             await ReservarStockAsync(detallesConStock);
 
             existing.DescuentoPorcentaje = pedido.DescuentoPorcentaje;
@@ -308,7 +308,8 @@ namespace Panaderia.Services.Implementations
                     PrecioUnitario = d.PrecioUnitario,
                     IdEmpaque = d.IdEmpaque,
                     LlevaEtiqueta = d.LlevaEtiqueta,
-                    CostoEmpaque = d.CostoEmpaque
+                    CostoEmpaque = d.CostoEmpaque,
+                    MaterialesJson = d.MaterialesJson
                 });
             }
 
@@ -1072,35 +1073,51 @@ namespace Panaderia.Services.Implementations
             pedido.MontoTotal = Math.Round(pedido.Detalles.Sum(d => d.Cantidad * d.PrecioUnitario), 0, MidpointRounding.AwayFromZero);
         }
 
-        private async Task AplicarCostoEmpaqueAsync(IEnumerable<DetallePedido> detalles)
+        private async Task AplicarCostoEmpaqueAsync(IEnumerable<DetallePedido> detalles, IReadOnlyDictionary<int, DetallePedido>? originales = null)
         {
-            decimal costoEtiqueta = 0m;
-            bool etiquetaCargada = false;
-
-            foreach (var detalle in detalles)
+            var lineas = detalles.ToList();
+            var pendientes = new List<DetallePedido>();
+            foreach (var d in lineas)
             {
-                decimal costoEmpaque = 0m;
-                if (detalle.IdEmpaque.HasValue)
+                if (originales != null && originales.TryGetValue(d.Id, out var anterior) && anterior.IdProducto == d.IdProducto
+                    && anterior.IdEmpaque == d.IdEmpaque && anterior.LlevaEtiqueta == d.LlevaEtiqueta)
                 {
-                    var insumoEmpaque = await _context.Insumos.FindAsync(detalle.IdEmpaque.Value);
-                    if (insumoEmpaque != null && insumoEmpaque.CantidadRendimiento > 0)
-                        costoEmpaque = insumoEmpaque.PrecioCompra / insumoEmpaque.CantidadRendimiento;
+                    d.CostoEmpaque = anterior.CostoEmpaque;
+                    d.MaterialesJson = anterior.MaterialesJson;
                 }
-
-                if (detalle.LlevaEtiqueta)
+                else pendientes.Add(d);
+            }
+            if (pendientes.Count == 0) return;
+            var ids = pendientes.Select(d => d.IdProducto).Distinct().ToArray();
+            var productos = await _context.Productos.AsNoTracking().Include(p => p.Materiales)
+                .Where(p => ids.Contains(p.Id)).ToDictionaryAsync(p => p.Id);
+            var insumoIds = productos.Values.SelectMany(p => p.Materiales).Select(m => m.IdInsumo)
+                .Concat(pendientes.Where(d => d.IdEmpaque.HasValue).Select(d => d.IdEmpaque!.Value)).Distinct().ToArray();
+            var insumos = await _context.Insumos.AsNoTracking()
+                .Where(i => insumoIds.Contains(i.Id) || (i.TipoInsumo == TipoInsumo.Etiqueta && i.Activo))
+                .ToDictionaryAsync(i => i.Id);
+            foreach (var d in pendientes)
+            {
+                if (!productos.TryGetValue(d.IdProducto, out var producto)) throw new InvalidOperationException("Producto inexistente.");
+                List<MaterialPedidoSnapshot> materiales;
+                if (originales != null && originales.TryGetValue(d.Id, out var anterior) && anterior.IdProducto == d.IdProducto)
                 {
-                    if (!etiquetaCargada)
-                    {
-                        var insumoEtiqueta = await _context.Insumos
-                            .FirstOrDefaultAsync(i => i.TipoInsumo == TipoInsumo.Etiqueta);
-                        if (insumoEtiqueta != null && insumoEtiqueta.CantidadRendimiento > 0)
-                            costoEtiqueta = insumoEtiqueta.PrecioCompra / insumoEtiqueta.CantidadRendimiento;
-                        etiquetaCargada = true;
-                    }
-                    costoEmpaque += costoEtiqueta;
+                    // Conservar los adicionales originales. Solo la bolsa o etiqueta cambiadas se vuelven a cotizar.
+                    var anteriores = anterior.Materiales;
+                    materiales = anteriores.Where(m => m.Uso == UsoMaterial.Adicional).Select(m => m with {
+                        CantidadIncluidaEnBolsa = d.IdEmpaque == m.IdInsumo ? Math.Min(1, m.Cantidad) : 0
+                    }).ToList();
+                    var cotizacion = new Producto { Materiales = producto.Materiales.Where(m => insumos.TryGetValue(m.IdInsumo, out var i) && i.TipoInsumo == TipoInsumo.Etiqueta).ToList() };
+                    var bolsaCambia = anterior.IdEmpaque != d.IdEmpaque || anterior.MaterialesJson == null;
+                    var etiquetaCambia = anterior.LlevaEtiqueta != d.LlevaEtiqueta || anterior.MaterialesJson == null;
+                    materiales.AddRange(PresentacionProducto.Calcular(cotizacion, insumos,
+                        bolsaCambia ? d.IdEmpaque : null, etiquetaCambia && d.LlevaEtiqueta));
+                    if (!bolsaCambia) materiales.AddRange(anteriores.Where(m => m.Uso == UsoMaterial.Bolsa));
+                    if (!etiquetaCambia) materiales.AddRange(anteriores.Where(m => m.Uso == UsoMaterial.Etiqueta));
                 }
-
-                detalle.CostoEmpaque = costoEmpaque;
+                else materiales = PresentacionProducto.Calcular(producto, insumos, d.IdEmpaque, d.LlevaEtiqueta);
+                d.CostoEmpaque = materiales.Sum(m => m.Costo);
+                d.MaterialesJson = MaterialesPedido.Guardar(materiales);
             }
         }
 

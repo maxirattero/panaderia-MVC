@@ -1,4 +1,5 @@
 using Panaderia.Models.Entities;
+using Panaderia.Models.DTOs;
 using Panaderia.Models.Enums;
 
 namespace Panaderia.Services.Implementations;
@@ -23,6 +24,7 @@ public static class UnificacionPedido
             var anterior = existente.Detalles.FirstOrDefault(d => d.IdProducto == linea.IdProducto &&
                 d.PrecioUnitario == linea.PrecioUnitario && d.IdEmpaque == linea.IdEmpaque &&
                 d.LlevaEtiqueta == linea.LlevaEtiqueta && d.CostoEmpaque == linea.CostoEmpaque &&
+                MaterialesPedido.Iguales(d.MaterialesJson, linea.MaterialesJson) &&
                 d.ReservaStock == linea.ReservaStock);
             if (anterior == null) existente.Detalles.Add(linea);
             else anterior.Cantidad = checked(anterior.Cantidad + linea.Cantidad);

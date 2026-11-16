@@ -1,0 +1,22 @@
+@model Panaderia.Models.Entities.Producto
+@using Panaderia.Models.DTOs
+@using System.Globalization
+@{
+    var cultura = CultureInfo.GetCultureInfo("es-AR");
+    var materiales = ViewBag.Presentacion as List<MaterialPedidoSnapshot> ?? [];
+    decimal? receta = ViewBag.CostoReceta;
+    var costoBase = receta ?? Model.CostoManual;
+}
+<div class="border-top pt-4 mt-4">
+    <div class="d-flex flex-wrap justify-content-between gap-2 mb-3">
+        <h3 class="h5 fw-bold">Materiales y presentación habitual</h3>
+        <a asp-action="Edit" asp-route-id="@Model.Id" asp-fragment="presentacionProducto" class="btn btn-mv-secondary btn-sm">Editar materiales y presentación</a>
+    </div>
+    @if (ViewBag.ErrorPresentacion is string error) { <p class="alert alert-warning">@error</p> }
+    <div class="table-responsive"><table class="table table-sm align-middle"><thead><tr><th>Concepto</th><th>Cantidad por producto</th><th class="text-end">Costo por producto</th></tr></thead><tbody>
+        <tr><td>Elaboración (@(receta.HasValue ? "receta" : "costo base manual"))</td><td>1</td><td class="text-end">@(costoBase.HasValue ? costoBase.Value.ToString("C2", cultura) : "Sin costo cargado")</td></tr>
+        @foreach (var m in materiales.Where(m => m.CantidadAplicada > 0))
+        { <tr><td>@m.Nombre <span class="text-muted small">· @(m.Uso == UsoMaterial.Bolsa ? "Bolsa principal" : m.Uso == UsoMaterial.Etiqueta ? "Etiqueta" : "Adicional")</span></td><td>@m.CantidadAplicada.ToString("0.####", cultura)</td><td class="text-end">@m.Costo.ToString("C2", cultura)</td></tr> }
+    </tbody><tfoot><tr class="fw-bold"><td colspan="2">Costo total por unidad</td><td class="text-end">@((costoBase.GetValueOrDefault() + materiales.Sum(m => m.Costo)).ToString("C2", cultura)) @if (!costoBase.HasValue || ViewBag.ErrorPresentacion != null) { <span class="text-warning">(incompleto)</span> }</td></tr></tfoot></table></div>
+    <p class="text-muted small mb-0">La bolsa y la etiqueta pueden cambiar en el pedido. Los adicionales se aplican por unidad. Los precios de venta se editan por separado.</p>
+</div>

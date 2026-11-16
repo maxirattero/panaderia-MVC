@@ -77,7 +77,13 @@
                 @foreach (var detalle in Model.Detalles)
                 {
                     <tr>
-                        <td>@detalle.NombreProducto</td>
+                        <td>@detalle.NombreProducto
+                            <details class="small text-muted mt-1"><summary>Materiales y costo de presentación</summary>
+                                @foreach (var m in detalle.Materiales.Where(m => m.CantidadAplicada > 0))
+                                { <div>@m.CantidadAplicada.ToString("0.####", System.Globalization.CultureInfo.GetCultureInfo("es-AR")) × @m.Nombre · @m.Costo.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("es-AR")) por producto</div> }
+                                <div class="fw-semibold">Total por producto: @detalle.CostoPresentacion.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("es-AR"))</div>
+                            </details>
+                        </td>
                         <td class="text-center">@detalle.Cantidad</td>
                         <td class="text-end">@detalle.PrecioUnitario.ToString("C0", new System.Globalization.CultureInfo("es-AR"))</td>
                         <td class="text-end">@detalle.Subtotal.ToString("C0", new System.Globalization.CultureInfo("es-AR"))</td>

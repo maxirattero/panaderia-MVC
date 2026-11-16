@@ -3,17 +3,17 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const view = fs.readFileSync('Panaderia.MVC/Views/Pedido/Edit.cshtml', 'utf8');
-const limits = view.slice(view.indexOf('function actualizarLimitesStock()'), view.indexOf('function clienteACosto()'));
+const limits = view.slice(view.indexOf('function esEncargoOriginal('), view.indexOf('function clienteACosto()'));
 
-function calculate(stock, quantities, reserved = 0, madeToOrder = false) {
-  const rows = quantities.map(quantity => {
+function calculate(stock, quantities, reserved = 0, madeToOrder = false, originalMadeToOrder = false) {
+  const rows = quantities.map((quantity, i) => {
     const input = { value: String(quantity), removeAttribute(key) { delete this[key]; } };
     const text = {};
     const select = { value: '3', selectedIndex: 0, options: [{ value: '3', dataset: { stock: String(stock), porEncargo: String(madeToOrder) } }] };
-    return { input, text, querySelector(selector) { return { '.prod-select': select, '.cant-input': input, '.stock-disponible': text }[selector]; } };
+    return { input, text, querySelector(selector) { return { '.prod-select': select, '.cant-input': input, '.stock-disponible': text, '.detalle-id': { value: String(i + 1) } }[selector]; } };
   });
   vm.runInNewContext(limits + '; actualizarLimitesStock();', {
-    tbody: { querySelectorAll() { return rows; } }, reservasIniciales: { 3: reserved }
+    tbody: { querySelectorAll() { return rows; } }, reservasIniciales: { 3: reserved }, encargosOriginales: originalMadeToOrder ? { 1: 3 } : {}
   });
   return rows;
 }
@@ -22,6 +22,12 @@ test('una línea por encargo anterior no inventa stock reservado', () => {
   const [row] = calculate(1, [1]);
   assert.equal(row.input.max, 1);
   assert.equal(row.input.value, '1');
+});
+
+test('un encargo original conserva su modo aunque ahora el producto requiera stock', () => {
+  const [row] = calculate(0, [3], 0, false, true);
+  assert.equal(row.input.max, undefined);
+  assert.equal(row.input.value, '3');
 });
 
 test('al editar se puede conservar la última unidad ya reservada', () => {

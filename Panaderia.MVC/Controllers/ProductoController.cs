@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Panaderia.Models.Entities;
+using Panaderia.Models.DTOs;
+using Panaderia.Models.Enums;
+using Panaderia.Services.Implementations;
 using Panaderia.Services.Interfaces;
 
 namespace Panaderia.MVC.Controllers
@@ -39,6 +42,9 @@ namespace Panaderia.MVC.Controllers
             ViewBag.Formatos = new SelectList(await _formatoService.GetAllAsync(), "Id", "Descripcion", producto?.IdFormato);
             ViewBag.Tamanos = new SelectList(await _tamanoService.GetAllAsync(), "Id", "Descripcion", producto?.IdTamano);
             ViewBag.Empaques = new SelectList(_insumoService == null ? [] : await _insumoService.GetEmpaquesAsync(), "Id", "Nombre", producto?.IdEmpaquePredeterminado);
+            ViewBag.InsumosMateriales = _insumoService == null ? new List<Insumo>() : (await _insumoService.GetAllAsync())
+                .Where(i => i.TipoInsumo != TipoInsumo.Ingrediente && (i.Activo || producto?.Materiales.Any(m => m.IdInsumo == i.Id) == true))
+                .OrderBy(i => i.Nombre).ToList();
 
             ViewBag.Etiquetas = await _etiquetaService.GetAllAsync();
             ViewBag.EtiquetasSeleccionadas = etiquetasSeleccionadas?.ToList()
@@ -67,6 +73,7 @@ namespace Panaderia.MVC.Controllers
                 return NotFound();
             }
 
+            await CargarCostos(producto);
             return View(producto);
         }
 
@@ -87,7 +94,13 @@ namespace Panaderia.MVC.Controllers
             if (ModelState.IsValid)
             {
                 producto.FechaCreacion = DateTime.UtcNow;
-                await _productoService.CreateAsync(producto);
+                try { await _productoService.CreateAsync(producto); }
+                catch (InvalidOperationException ex) {
+                    ModelState.AddModelError("", ex.Message);
+                    await CargarDropdowns(producto, idsEtiquetas);
+                    await CargarCostos(producto);
+                    return View(producto);
+                }
                 await _etiquetaService.AsignarAProductoAsync(producto.Id, idsEtiquetas ?? Array.Empty<int>());
 
                 var errorImagen = await GuardarImagenSubidaAsync(producto.Id, archivoImagen);
@@ -96,7 +109,7 @@ namespace Panaderia.MVC.Controllers
                 return RedirectToAction(nameof(Index));
             }
             await CargarDropdowns(producto, idsEtiquetas);
-            ViewBag.CostoReceta = null;
+            await CargarCostos(producto);
             return View(producto);
         }
 
@@ -114,8 +127,7 @@ namespace Panaderia.MVC.Controllers
                 return NotFound();
             }
             await CargarDropdowns(producto);
-            var receta = await _recetaService.GetByProductoIdAsync(producto.Id);
-            ViewBag.CostoReceta = receta?.CostoPorUnidad;
+            await CargarCostos(producto);
             return View(producto);
         }
 
@@ -132,7 +144,13 @@ namespace Panaderia.MVC.Controllers
                 var existe = await _productoService.GetByIdAsync(id);
                 if (existe == null) return NotFound();
 
-                await _productoService.UpdateAsync(producto);
+                try { await _productoService.UpdateAsync(producto); }
+                catch (InvalidOperationException ex) {
+                    ModelState.AddModelError("", ex.Message);
+                    await CargarDropdowns(producto, idsEtiquetas);
+                    await CargarCostos(producto);
+                    return View(producto);
+                }
                 await _etiquetaService.AsignarAProductoAsync(id, idsEtiquetas ?? Array.Empty<int>());
 
                 // Si subió un archivo, pisa la ImagenURL del form (GuardarImagenAsync la reescribe)
@@ -142,9 +160,18 @@ namespace Panaderia.MVC.Controllers
                 return RedirectToAction(nameof(Index));
             }
             await CargarDropdowns(producto, idsEtiquetas);
-            var recetaEdit = await _recetaService.GetByProductoIdAsync(producto.Id);
-            ViewBag.CostoReceta = recetaEdit?.CostoPorUnidad;
+            await CargarCostos(producto);
             return View(producto);
+        }
+
+        private async Task CargarCostos(Producto producto)
+        {
+            var receta = producto.Id > 0 ? await _recetaService.GetByProductoIdAsync(producto.Id) : null;
+            ViewBag.CostoReceta = receta?.CostoIngredientesPorUnidad;
+            var insumos = ViewBag.InsumosMateriales as List<Insumo>
+                ?? (_insumoService == null ? [] : (await _insumoService.GetAllAsync()).ToList());
+            try { ViewBag.Presentacion = PresentacionProducto.Calcular(producto, insumos.ToDictionary(i => i.Id), producto.IdEmpaquePredeterminado, producto.EtiquetaPredeterminada); }
+            catch (InvalidOperationException ex) { ViewBag.Presentacion = new List<MaterialPedidoSnapshot>(); ViewBag.ErrorPresentacion = ex.Message; }
         }
 
         //POST: Eliminar Producto

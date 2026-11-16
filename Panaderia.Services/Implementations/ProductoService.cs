@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Panaderia.Models.Data;
 using Panaderia.Models.Entities;
+using Panaderia.Models.Enums;
 using Panaderia.Services.Interfaces;
 
 namespace Panaderia.Services.Implementations
@@ -18,6 +19,9 @@ namespace Panaderia.Services.Implementations
         public async Task<IEnumerable<Producto>> GetAllAsync()
         {
             var productos = await _context.Productos
+                .AsSplitQuery()
+                .Include(p => p.Materiales).ThenInclude(m => m.Insumo)
+                .Include(p => p.EmpaquePredeterminado)
                 .Include(p => p.Categoria)
                 .Include(p => p.Formato)
                 .Include(p => p.Tamano)
@@ -36,6 +40,9 @@ namespace Panaderia.Services.Implementations
         public async Task<Producto?> GetByIdAsync(int id)
         {
             return await _context.Productos
+                .AsSplitQuery()
+                .Include(p => p.Materiales).ThenInclude(m => m.Insumo)
+                .Include(p => p.EmpaquePredeterminado)
                 .Include(p => p.Categoria)
                 .Include(p => p.Formato)
                 .Include(p => p.Tamano)
@@ -46,6 +53,7 @@ namespace Panaderia.Services.Implementations
         //Crear nuevo Producto
         public async Task CreateAsync(Producto producto)
         {
+            producto.Materiales = await ValidarMaterialesAsync(producto);
             producto.OcultoEnTienda = true;
             AplicarEstadoStock(producto);
             await _context.Productos.AddAsync(producto);
@@ -55,7 +63,8 @@ namespace Panaderia.Services.Implementations
         //Actualizar Producto existente
         public async Task UpdateAsync(Producto producto)
         {
-            var existe = await _context.Productos.FindAsync(producto.Id);
+            var materiales = await ValidarMaterialesAsync(producto);
+            var existe = await _context.Productos.Include(p => p.Materiales).FirstOrDefaultAsync(p => p.Id == producto.Id);
             if (existe == null) return;
 
             existe.IdCategoria = producto.IdCategoria;
@@ -72,6 +81,13 @@ namespace Panaderia.Services.Implementations
             existe.TieneDisponibilidadSemanal = producto.TieneDisponibilidadSemanal;
             existe.IdEmpaquePredeterminado = producto.IdEmpaquePredeterminado;
             existe.EtiquetaPredeterminada = producto.EtiquetaPredeterminada;
+            var anteriores = await _context.ProductosMateriales.Where(m => m.IdProducto == existe.Id).ToListAsync();
+            // Un llamador también puede pasar la entidad trackeada con filas nuevas aún sin guardar.
+            foreach (var nuevo in existe.Materiales.Where(m => _context.Entry(m).State == EntityState.Added || m.Id <= 0).ToList())
+                _context.Entry(nuevo).State = EntityState.Detached;
+            _context.ProductosMateriales.RemoveRange(anteriores);
+            existe.Materiales.Clear();
+            existe.Materiales.AddRange(materiales);
             existe.DescripcionTienda = producto.DescripcionTienda;
             existe.Ingredientes = producto.Ingredientes;
             existe.ImagenURL = producto.ImagenURL;
@@ -86,6 +102,7 @@ namespace Panaderia.Services.Implementations
         public async Task<Producto?> DuplicarAsync(int id)
         {
             var origen = await _context.Productos
+                .Include(p => p.Materiales)
                 .Include(p => p.Categoria)
                 .Include(p => p.ProductoEtiquetas)
                 .FirstOrDefaultAsync(p => p.Id == id);
@@ -116,6 +133,7 @@ namespace Panaderia.Services.Implementations
                 TieneDisponibilidadSemanal = origen.TieneDisponibilidadSemanal,
                 IdEmpaquePredeterminado = origen.IdEmpaquePredeterminado,
                 EtiquetaPredeterminada = origen.EtiquetaPredeterminada,
+                Materiales = origen.Materiales.Select(m => new ProductoMaterial { IdInsumo = m.IdInsumo, Cantidad = m.Cantidad }).ToList(),
                 DescripcionTienda = origen.DescripcionTienda,
                 Ingredientes = origen.Ingredientes,
                 ObservacionesElaboracion = origen.ObservacionesElaboracion,
@@ -166,6 +184,25 @@ namespace Panaderia.Services.Implementations
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
             return copia;
+        }
+
+        private async Task<List<ProductoMaterial>> ValidarMaterialesAsync(Producto producto)
+        {
+            var materiales = producto.Materiales ?? [];
+            if (materiales.Count > 50 || materiales.GroupBy(x => x.IdInsumo).Any(g => g.Count() > 1)
+                || materiales.Any(m => m.IdInsumo <= 0 || m.Cantidad <= 0 || m.Cantidad > 999999.9999m || m.Cantidad != decimal.Round(m.Cantidad, 4)))
+                throw new InvalidOperationException("Revisá los materiales: no pueden repetirse y cada cantidad debe ser positiva, con hasta cuatro decimales.");
+            var ids = materiales.Select(m => m.IdInsumo).ToList();
+            if (producto.IdEmpaquePredeterminado.HasValue) ids.Add(producto.IdEmpaquePredeterminado.Value);
+            var insumos = await _context.Insumos.AsNoTracking().Where(i => ids.Contains(i.Id)).ToDictionaryAsync(i => i.Id);
+            if (materiales.Any(m => !insumos.TryGetValue(m.IdInsumo, out var i) || !i.Activo || i.CantidadRendimiento <= 0
+                || i.TipoInsumo is not (TipoInsumo.Empaque or TipoInsumo.Consumible or TipoInsumo.Etiqueta)))
+                throw new InvalidOperationException("Elegí materiales activos de tipo empaque, etiqueta o consumible, con rendimiento válido.");
+            if (materiales.Count(m => insumos[m.IdInsumo].TipoInsumo == TipoInsumo.Etiqueta) > 1)
+                throw new InvalidOperationException("Elegí una sola etiqueta para el producto. Su inclusión se controla desde el pedido.");
+            if (producto.IdEmpaquePredeterminado is int bolsa && (!insumos.TryGetValue(bolsa, out var b) || !b.Activo || b.TipoInsumo != TipoInsumo.Empaque || b.CantidadRendimiento <= 0))
+                throw new InvalidOperationException("La bolsa predeterminada debe ser un empaque activo con rendimiento válido.");
+            return materiales.Select(m => new ProductoMaterial { IdInsumo = m.IdInsumo, Cantidad = m.Cantidad }).ToList();
         }
 
         //Eliminar Producto por Id

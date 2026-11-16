@@ -18,6 +18,7 @@ namespace Panaderia.Models.Data
         public DbSet<Formato> Formatos { get; set; }
         public DbSet<Proveedor> Proveedores { get; set; }
         public DbSet<Producto> Productos { get; set; }        
+        public DbSet<ProductoMaterial> ProductosMateriales { get; set; }
         public DbSet<Cliente> Clientes { get; set; }
         public DbSet<Pedido> Pedidos { get; set; }
         public DbSet<DetallePedido> DetallesPedido { get; set; }
@@ -51,6 +52,15 @@ namespace Panaderia.Models.Data
         {
             base.OnModelCreating(modelBuilder);
             FinanciacionMapping.Configurar(modelBuilder);
+            modelBuilder.Entity<ProductoMaterial>(e =>
+            {
+                e.Property(x => x.Cantidad).HasPrecision(18, 4);
+                e.HasIndex(x => new { x.IdProducto, x.IdInsumo }).IsUnique();
+                e.HasOne(x => x.Producto).WithMany(x => x.Materiales).HasForeignKey(x => x.IdProducto).OnDelete(DeleteBehavior.Cascade);
+                e.HasOne(x => x.Insumo).WithMany().HasForeignKey(x => x.IdInsumo).OnDelete(DeleteBehavior.Restrict);
+                e.ToTable("ProductosMateriales", t => t.HasCheckConstraint("CK_ProductoMaterial_Cantidad", "\"Cantidad\" > 0 AND \"Cantidad\" <= 999999.9999"));
+            });
+            modelBuilder.Entity<DetallePedido>().Property(x => x.MaterialesJson).HasColumnType("jsonb");
             // Mantener las longitudes de Identity tanto en el host MVC como al generar migraciones.
             modelBuilder.Entity<Microsoft.AspNetCore.Identity.IdentityUserLogin<string>>().Property(x => x.LoginProvider).HasMaxLength(128);
             modelBuilder.Entity<Microsoft.AspNetCore.Identity.IdentityUserLogin<string>>().Property(x => x.ProviderKey).HasMaxLength(128);

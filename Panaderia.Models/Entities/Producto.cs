@@ -53,6 +53,7 @@ namespace Panaderia.Models.Entities
         public bool TieneDisponibilidadSemanal { get; set; }
         public int? IdEmpaquePredeterminado { get; set; }
         public bool EtiquetaPredeterminada { get; set; }
+        public List<ProductoMaterial> Materiales { get; set; } = [];
 
         [ValidateNever]
         public Insumo? EmpaquePredeterminado { get; set; }

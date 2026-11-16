@@ -1,0 +1,30 @@
+@model Panaderia.Models.Entities.Producto
+@using Panaderia.Models.Entities
+@{
+    var insumos = ViewBag.InsumosMateriales as List<Insumo> ?? [];
+    var materiales = Model?.Materiales ?? [];
+}
+<div class="col-12" id="presentacionProducto">
+    <h3 class="h5 fw-bold">Materiales y presentación</h3>
+    <p class="text-muted small">Opcional. Agregá molde, moño, envoltorios adicionales u otros materiales, indicando la cantidad por una unidad del producto. La bolsa principal se elige debajo y se puede cambiar en el pedido. La etiqueta se incluye solo cuando está tildada.</p>
+    <div class="table-responsive"><table class="table align-middle"><thead><tr><th style="min-width:230px">Material</th><th style="min-width:150px">Cantidad por producto</th><th>Costo aplicado</th><th></th></tr></thead>
+        <tbody id="materialesProducto">
+        @for (var i = 0; i < materiales.Count; i++)
+        {
+            ViewData["IndiceMaterial"] = i.ToString();
+            <partial name="_MaterialFila" model="materiales[i]" />
+        }
+        </tbody></table></div>
+    <button type="button" class="btn btn-mv-secondary btn-sm" id="agregarMaterial">Agregar material</button>
+    <p class="text-muted small mt-2 mb-0">Los precios se toman de Insumos. Si una bolsa adicional coincide con la elegida como principal, esa unidad se cuenta una sola vez. Podés elegir una etiqueta específica; si no, se usa la etiqueta habitual.</p>
+    <div class="row g-2 mt-2 small" aria-live="polite">
+        <div class="col-sm-4">Adicionales: <strong id="costoAdicionales">—</strong></div>
+        <div class="col-sm-4">Bolsa principal: <strong id="costoBolsaPrincipal">—</strong></div>
+        <div class="col-sm-4">Etiqueta: <strong id="costoEtiquetaPresentacion">—</strong></div>
+    </div>
+    <template id="materialTemplate">
+        @{ ViewData["IndiceMaterial"] = "__INDEX__"; }
+        <partial name="_MaterialFila" model="new ProductoMaterial()" />
+    </template>
+    <script type="application/json" id="insumosPresentacion">@Html.Raw(Json.Serialize(insumos.Select(i => new { id = i.Id, nombre = i.Nombre, tipo = (int)i.TipoInsumo, costo = i.CostoPorUnidadBase, activo = i.Activo })))</script>
+</div>

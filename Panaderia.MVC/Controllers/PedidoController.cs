@@ -379,7 +379,9 @@ namespace Panaderia.MVC.Controllers
                     NombreProducto = d.Producto.NombreVisible,
                     Cantidad = d.Cantidad,
                     PrecioUnitario = d.PrecioUnitario,
-                    Subtotal = d.Cantidad * d.PrecioUnitario
+                    Subtotal = d.Cantidad * d.PrecioUnitario,
+                    CostoPresentacion = d.CostoEmpaque,
+                    Materiales = d.Materiales
                 }).ToList()
             };
 

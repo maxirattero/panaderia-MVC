@@ -13,7 +13,7 @@
 <div class="card card-custom p-4 mb-4">
     <form asp-action="Edit" enctype="multipart/form-data">
         <div class="row g-4">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div asp-validation-summary="All" class="text-danger"></div>
 
             <input asp-for="Id" type="hidden" />
             <input asp-for="FechaCreacion" type="hidden" />
@@ -132,6 +132,7 @@
                           placeholder="Ej.: harina integral de trigo, agua, aceite de oliva y sal."></textarea>
                 <span asp-validation-for="Ingredientes" class="text-danger"></span>
             </div>
+            <partial name="_MaterialesProducto" />
             <partial name="_EmpaquePredeterminado" />
 
 
@@ -169,11 +170,11 @@
             <partial name="_EtiquetasProducto" />
         </div>
 
-        @{ decimal? costoReceta = ViewBag.CostoReceta; var costoUnidad = costoReceta ?? Model?.CostoManual ?? 0m; }
+        @{ decimal? costoReceta = ViewBag.CostoReceta; var costoBase = costoReceta ?? Model?.CostoManual ?? 0m; var costoUnidad = costoBase + ((ViewBag.Presentacion as List<Panaderia.Models.DTOs.MaterialPedidoSnapshot>)?.Sum(m => m.Costo) ?? 0m); }
             <div id="calculadoraCosto" class="mt-3 p-3 rounded" style="background-color: #f5efe9;" hidden="@(costoUnidad <= 0)">
                 <div class="small text-muted mb-3">
-                    Costo por unidad (@(costoReceta.HasValue ? "receta" : "manual")):
-                    <strong data-tiene-receta="@costoReceta.HasValue.ToString().ToLowerInvariant()" data-costo="@costoUnidad.ToString("F10", System.Globalization.CultureInfo.InvariantCulture)">
+                    Costo total por unidad con presentación:
+                    <strong id="costoTotalPresentacion" data-costo-base="@costoBase.ToString("F10", System.Globalization.CultureInfo.InvariantCulture)" data-tiene-receta="@costoReceta.HasValue.ToString().ToLowerInvariant()" data-costo="@costoUnidad.ToString("F10", System.Globalization.CultureInfo.InvariantCulture)">
                         $@costoUnidad.ToString("N2")
                     </strong>
                 </div>
@@ -266,68 +267,6 @@
     ajustarMasa();
 })();
 </script>
-<script>
-(function () {
-    const costoEl = document.querySelector('[data-costo]');
-    if (!costoEl) return;
-
-    let costo = parseFloat(costoEl.dataset.costo) || 0;
-
-    const precioFinal   = document.getElementById('PrecioFinal');
-    const precioReventa = document.getElementById('PrecioReventa');
-    const cmvFinal      = document.getElementById('cmvFinal');
-    const markupFinal   = document.getElementById('markupFinal');
-    const cmvReventa    = document.getElementById('cmvReventa');
-    const markupReventa = document.getElementById('markupReventa');
-
-    function calcularDesde(fuente, precioEl, cmvEl, markupEl) {
-        if (costo <= 0) return;
-        const precio = parseFloat(precioEl.value) || 0;
-        const cmv    = parseFloat(cmvEl.value)    || 0;
-        const markup = parseFloat(markupEl.value) || 0;
-
-        if (fuente === 'precio' && precio > 0) {
-            cmvEl.value    = (costo / precio * 100).toFixed(2);
-            markupEl.value = ((precio - costo) / costo * 100).toFixed(2);
-        } else if (fuente === 'cmv' && cmv > 0) {
-            const p        = costo / (cmv / 100);
-            precioEl.value = Math.round(p);
-            markupEl.value = ((p - costo) / costo * 100).toFixed(2);
-        } else if (fuente === 'markup') {
-            const p        = costo * (1 + markup / 100);
-            precioEl.value = Math.round(p);
-            cmvEl.value    = (costo / p * 100).toFixed(2);
-        }
-    }
-
-    precioFinal.addEventListener('input',
-        () => calcularDesde('precio', precioFinal, cmvFinal, markupFinal));
-    cmvFinal.addEventListener('input',
-        () => calcularDesde('cmv', precioFinal, cmvFinal, markupFinal));
-    markupFinal.addEventListener('input',
-        () => calcularDesde('markup', precioFinal, cmvFinal, markupFinal));
-
-    precioReventa.addEventListener('input',
-        () => calcularDesde('precio', precioReventa, cmvReventa, markupReventa));
-    cmvReventa.addEventListener('input',
-        () => calcularDesde('cmv', precioReventa, cmvReventa, markupReventa));
-    markupReventa.addEventListener('input',
-        () => calcularDesde('markup', precioReventa, cmvReventa, markupReventa));
-
-    const costoManual = document.getElementById('CostoManual');
-    if (costoEl.dataset.tieneReceta !== 'true') {
-        costoManual.addEventListener('input', () => {
-            costo = parseFloat(costoManual.value) || 0;
-            document.getElementById('calculadoraCosto').hidden = costo <= 0;
-            costoEl.textContent = costo.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' });
-            calcularDesde('precio', precioFinal, cmvFinal, markupFinal);
-            calcularDesde('precio', precioReventa, cmvReventa, markupReventa);
-        });
-    }
-    if (parseFloat(precioFinal.value) > 0)
-        calcularDesde('precio', precioFinal, cmvFinal, markupFinal);
-    if (parseFloat(precioReventa.value) > 0)
-        calcularDesde('precio', precioReventa, cmvReventa, markupReventa);
-})();
-</script>
+<script src="~/js/producto-costos.js" asp-append-version="true"></script>
+<script src="~/js/producto-materiales.js" asp-append-version="true"></script>
 }
