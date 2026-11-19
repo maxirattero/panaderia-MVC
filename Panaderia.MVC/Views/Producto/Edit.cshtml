@@ -3,12 +3,28 @@
 
 @{
     ViewData["Title"] = "Editar Producto";
+    decimal? costoReceta = ViewBag.CostoReceta;
 }
 
 <!-- Heading -->
 <div class="mb-4">
     <h2 class="font-literata fw-bold titulo-pagina">Editar Producto</h2>
 </div>
+
+@if (TempData["ProductoDuplicado"] is true)
+{
+    <div class="alert alert-success" role="status">
+        @(costoReceta.HasValue ? "Producto y receta duplicados." : "Producto duplicado.")
+        La copia empieza con stock cero y está oculta en la tienda.
+    </div>
+}
+
+@if (costoReceta.HasValue)
+{
+    <a asp-controller="Receta" asp-action="Editar" asp-route-idProducto="@Model!.Id" class="btn btn-mv-secondary mb-3">
+        Editar receta de este producto
+    </a>
+}
 
 <div class="card card-custom p-4 mb-4">
     <form asp-action="Edit" enctype="multipart/form-data">
@@ -170,7 +186,7 @@
             <partial name="_EtiquetasProducto" />
         </div>
 
-        @{ decimal? costoReceta = ViewBag.CostoReceta; var costoBase = costoReceta ?? Model?.CostoManual ?? 0m; var costoUnidad = costoBase + ((ViewBag.Presentacion as List<Panaderia.Models.DTOs.MaterialPedidoSnapshot>)?.Sum(m => m.Costo) ?? 0m); }
+        @{ var costoBase = costoReceta ?? Model?.CostoManual ?? 0m; var costoUnidad = costoBase + ((ViewBag.Presentacion as List<Panaderia.Models.DTOs.MaterialPedidoSnapshot>)?.Sum(m => m.Costo) ?? 0m); }
             <div id="calculadoraCosto" class="mt-3 p-3 rounded" style="background-color: #f5efe9;" hidden="@(costoUnidad <= 0)">
                 <div class="small text-muted mb-3">
                     Costo total por unidad con presentación:

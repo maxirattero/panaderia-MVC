@@ -102,13 +102,17 @@ namespace Panaderia.Services.Implementations
         public async Task<Producto?> DuplicarAsync(int id)
         {
             var origen = await _context.Productos
+                .AsNoTracking()
+                .AsSplitQuery()
                 .Include(p => p.Materiales)
                 .Include(p => p.Categoria)
+                .Include(p => p.Formato)
                 .Include(p => p.ProductoEtiquetas)
                 .FirstOrDefaultAsync(p => p.Id == id);
             if (origen == null) return null;
 
             var recetaOrigen = await _context.Recetas
+                .AsNoTracking()
                 .Include(r => r.Detalles)
                 .FirstOrDefaultAsync(r => r.IdProducto == id);
             var imagenOrigen = await _context.ProductoImagenes
@@ -137,6 +141,7 @@ namespace Panaderia.Services.Implementations
                 DescripcionTienda = origen.DescripcionTienda,
                 Ingredientes = origen.Ingredientes,
                 ObservacionesElaboracion = origen.ObservacionesElaboracion,
+                ImagenURL = origen.ImagenURL,
                 FechaCreacion = DateTime.UtcNow
             };
             AplicarEstadoStock(copia);
@@ -159,7 +164,7 @@ namespace Panaderia.Services.Implementations
                     TamanioLote = recetaOrigen.TamanioLote,
                     PesoUnitario = recetaOrigen.PesoUnitario,
                     FechaCreacion = DateTime.UtcNow,
-                    Detalles = recetaOrigen.Detalles.Select(d => new RecetaDetalle
+                    Detalles = recetaOrigen.Detalles.OrderBy(d => d.Id).Select(d => new RecetaDetalle
                     {
                         IdInsumo = d.IdInsumo,
                         IdSubReceta = d.IdSubReceta,

@@ -83,7 +83,7 @@
         <form asp-action="Duplicar" asp-route-id="@Model.Id" method="post" class="d-inline">
             @Html.AntiForgeryToken()
             <button type="submit" class="btn btn-mv-secondary d-flex align-items-center justify-content-center gap-2">
-                <span class="material-symbols-outlined">content_copy</span>Duplicar
+                <span class="material-symbols-outlined" aria-hidden="true">content_copy</span>Duplicar producto y receta
             </button>
         </form>
         <button type="button"

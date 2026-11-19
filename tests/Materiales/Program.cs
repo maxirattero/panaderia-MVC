@@ -197,6 +197,63 @@ await using(var db=Db())
     var material=await db.Insumos.FindAsync(regaloId); material!.Activo=false; await db.SaveChangesAsync();
 }
 await Invalidar([new(){IdInsumo=regaloId,Cantidad=1}],"Rechaza materiales desactivados para configuraciones nuevas");
+
+await using (var db = Db())
+{
+    const string imagenExterna = "https://example.invalid/imagen.png";
+    var original = new Producto
+    {
+        IdCategoria = await db.Productos.Where(p => p.Id == productoId).Select(p => p.IdCategoria).SingleAsync(),
+        Formato = new Formato { Descripcion = "Molde navideño" },
+        Tamano = new Tamano { Descripcion = "500 g" },
+        PrecioFinal = 12000, PrecioReventa = 10000, Stock = 12, ImagenURL = imagenExterna,
+        IdEmpaquePredeterminado = papelId, EtiquetaPredeterminada = true,
+        Materiales = [new() { IdInsumo = moldeId, Cantidad = 1 }],
+        ProductoEtiquetas = [new() { Etiqueta = new Etiqueta { Nombre = "Especial de temporada" } }],
+        ObservacionesElaboracion = "Enfriar antes de embolsar"
+    };
+    var receta = new Receta
+    {
+        Producto = original, TamanioLote = 6, PesoUnitario = 500,
+        Detalles = [new() { IdInsumo = ingredienteId, PorcentajePanadero = 100 },
+            new() { IdInsumo = moldeId, CantidadFija = 1 },
+            new() { SubReceta = new SubReceta { Nombre = "Prefermento", Detalles = [new() { IdInsumo = ingredienteId, PorcentajePanadero = 100 }] }, PorcentajePanadero = 25 }]
+    };
+    db.Add(receta);
+    await db.SaveChangesAsync();
+    var productos = new ProductoService(db);
+    var recetas = new RecetaService(db);
+    var copia = (await productos.DuplicarAsync(original.Id))!;
+    db.ChangeTracker.Clear();
+    var productoCopiado = (await productos.GetByIdAsync(copia.Id))!;
+    var recetaCopiada = (await recetas.GetByProductoIdAsync(copia.Id))!;
+    Check(productoCopiado.Nombre == "Temporada Molde navideño (copia)" && productoCopiado.ImagenURL == imagenExterna,
+        "La copia conserva el nombre derivado del formato y la imagen externa");
+    Check(productoCopiado is { PrecioFinal: 12000, PrecioReventa: 10000, Stock: 0, OcultoEnTienda: true }
+        && productoCopiado.Materiales.Single().IdInsumo == moldeId && productoCopiado.Etiquetas.Single().Nombre == "Especial de temporada",
+        "La copia conserva precios, materiales y etiquetas y comienza oculta con stock cero");
+    Check(recetaCopiada.Id != receta.Id && recetaCopiada.TamanioLote == 6 && recetaCopiada.PesoUnitario == 500
+        && recetaCopiada.Detalles.OrderBy(d => d.Id).Select(d => (d.IdInsumo, d.IdSubReceta, d.PorcentajePanadero, d.CantidadFija))
+            .SequenceEqual(receta.Detalles.OrderBy(d => d.Id).Select(d => (d.IdInsumo, d.IdSubReceta, d.PorcentajePanadero, d.CantidadFija)))
+        && !recetaCopiada.Detalles.Select(d => d.Id).Intersect(receta.Detalles.Select(d => d.Id)).Any(),
+        "Receta propia con las mismas cantidades, porcentajes y subreceta del catálogo");
+    recetaCopiada.PesoUnitario = 550;
+    recetaCopiada.Detalles.Single(d => d.CantidadFija.HasValue).CantidadFija = 2;
+    await db.SaveChangesAsync();
+    db.ChangeTracker.Clear();
+    var recetaOriginal = (await recetas.GetByProductoIdAsync(original.Id))!;
+    Check(recetaOriginal.PesoUnitario == 500 && recetaOriginal.Detalles.Single(d => d.CantidadFija.HasValue).CantidadFija == 1,
+        "Editar la receta de la copia conserva la receta original");
+
+    byte[] imagen = [1, 2, 3];
+    await productos.GuardarImagenAsync(original.Id, imagen, "image/png");
+    var copiaConImagen = (await productos.DuplicarAsync(original.Id))!;
+    var imagenCopiada = (await productos.GetImagenAsync(copiaConImagen.Id))!;
+    Check(imagenCopiada.Datos.SequenceEqual(imagen) && imagenCopiada.ContentType == "image/png"
+        && copiaConImagen.ImagenURL!.StartsWith($"/Tienda/Imagen/{copiaConImagen.Id}?", StringComparison.Ordinal),
+        "Una imagen subida también se copia y se sirve desde el nuevo producto");
+}
+
 Directory.CreateDirectory(".artifacts/materiales-checks");
 await File.WriteAllTextAsync(".artifacts/materiales-checks/connection.txt",connection);
 Console.WriteLine($"{checks} comprobaciones correctas. Base local: {database}");

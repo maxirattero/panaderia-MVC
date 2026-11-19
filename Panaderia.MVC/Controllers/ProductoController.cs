@@ -174,7 +174,6 @@ namespace Panaderia.MVC.Controllers
             catch (InvalidOperationException ex) { ViewBag.Presentacion = new List<MaterialPedidoSnapshot>(); ViewBag.ErrorPresentacion = ex.Message; }
         }
 
-        //POST: Eliminar Producto
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Duplicar(int id)
@@ -182,7 +181,7 @@ namespace Panaderia.MVC.Controllers
             var copia = await _productoService.DuplicarAsync(id);
             if (copia == null) return NotFound();
 
-            TempData["Success"] = "Producto duplicado. Revisá sus datos antes de publicarlo en la tienda.";
+            TempData["ProductoDuplicado"] = true;
             return RedirectToAction(nameof(Edit), new { id = copia.Id });
         }
 
