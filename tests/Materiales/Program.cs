@@ -7,6 +7,7 @@ using Panaderia.Models.DTOs;
 using Panaderia.Models.Entities;
 using Panaderia.Models.Enums;
 using Panaderia.Services.Implementations;
+using SkiaSharp;
 
 // Base local nueva por ejecución. No usa secretos ni conexiones de producción.
 var database = "materiales_checks_" + Guid.NewGuid().ToString("N");
@@ -17,6 +18,15 @@ PanaderiaContext Db() => new(options);
 int checks = 0;
 void Check(bool ok, string message) { if (!ok) throw new Exception(message); Console.WriteLine("PASS: " + message); checks++; }
 async Task Reject(Func<Task> action, string message) { try { await action(); } catch (InvalidOperationException) { Check(true,message); return; } throw new Exception("No se rechazó: " + message); }
+byte[] CrearFoto(int ancho, int alto, SKColor color)
+{
+    using var bitmap = new SKBitmap(ancho, alto);
+    bitmap.Erase(color);
+    using var png = bitmap.Encode(SKEncodedImageFormat.Png, 100);
+    return png.ToArray();
+}
+
+var fotoHistorica = CrearFoto(640, 320, SKColors.Coral);
 int productoId, clienteId, legadoId, legadoDetalleId;
 int moldeId, monoId, cintaId, papelId, selladaId, regaloId, etiquetaId, habitualId, ingredienteId;
 await using (var db = Db())
@@ -28,6 +38,12 @@ await using (var db = Db())
     var legado = new Pedido { Cliente = cliente, FechaCreacion = DateTime.UtcNow, FechaEntrega = DateTime.UtcNow, MontoTotal = 3000 };
     db.AddRange(producto,legado); await db.SaveChangesAsync();
     productoId = producto.Id; clienteId = cliente.Id; legadoId = legado.Id;
+    producto.ImagenURL = $"/Tienda/Imagen/{productoId}?v=1";
+    await db.SaveChangesAsync();
+    await db.Database.ExecuteSqlInterpolatedAsync($"""
+        INSERT INTO "ProductoImagenes" ("IdProducto","Datos","ContentType","FechaCreacion")
+        VALUES ({productoId},{fotoHistorica},'image/png',now())
+        """);
     await db.Database.ExecuteSqlInterpolatedAsync($"""
         INSERT INTO "DetallesPedido" ("IdPedido","IdProducto","Cantidad","CantidadProducida","ReservaStock","PrecioUnitario","LlevaEtiqueta","CostoEmpaque")
         VALUES ({legadoId},{productoId},1,0,false,3000,false,12.3456)
@@ -43,6 +59,17 @@ await using (var db = Db())
         """);
     await db.Database.MigrateAsync();
     Check(!db.Database.HasPendingModelChanges(), "Modelo y migración coinciden");
+    var servicioFotos = new ProductoService(db);
+    var pendiente = (await servicioFotos.GetMiniaturaAsync(productoId))!.Value;
+    Check(pendiente.Pendiente && pendiente.Datos.SequenceEqual(fotoHistorica), "Una foto anterior sigue disponible mientras se prepara su miniatura");
+    await servicioFotos.CompletarMiniaturasAsync(CancellationToken.None);
+    var miniatura = (await servicioFotos.GetMiniaturaAsync(productoId))!.Value;
+    using var miniaturaDecodificada = SKBitmap.Decode(miniatura.Datos);
+    Check(!miniatura.Pendiente && miniatura.ContentType == "image/webp" && miniaturaDecodificada is { Width: 160, Height: 80 }
+        && miniatura.Datos.Length < fotoHistorica.Length, "Se guarda una miniatura WebP de 160 px con las proporciones de la foto anterior");
+    await servicioFotos.CompletarMiniaturasAsync(CancellationToken.None);
+    Check((await servicioFotos.GetMiniaturaAsync(productoId))!.Value.Datos.SequenceEqual(miniatura.Datos)
+        && (await servicioFotos.GetImagenAsync(productoId))!.Datos.SequenceEqual(fotoHistorica), "El reprocesamiento conserva la miniatura y los bytes originales");
     var viejo = await db.DetallesPedido.SingleAsync(); legadoDetalleId=viejo.Id;
     Check(viejo.MaterialesJson==null && viejo.CostoEmpaque==12.3456m, "Migración conserva costos anteriores sin inventar materiales");
     await using (var cmd=new NpgsqlCommand("SELECT rowsecurity FROM pg_tables WHERE schemaname='public' AND tablename='ProductosMateriales'",(NpgsqlConnection)db.Database.GetDbConnection())) {
@@ -245,13 +272,29 @@ await using (var db = Db())
     Check(recetaOriginal.PesoUnitario == 500 && recetaOriginal.Detalles.Single(d => d.CantidadFija.HasValue).CantidadFija == 1,
         "Editar la receta de la copia conserva la receta original");
 
-    byte[] imagen = [1, 2, 3];
+    var imagen = CrearFoto(320, 640, SKColors.SteelBlue);
     await productos.GuardarImagenAsync(original.Id, imagen, "image/png");
+    var versionImagen = (await productos.GetByIdAsync(original.Id))!.ImagenURL;
+    var miniaturaOriginal = (await productos.GetMiniaturaAsync(original.Id))!.Value;
+    using var miniaturaVertical = SKBitmap.Decode(miniaturaOriginal.Datos);
+    Check(!miniaturaOriginal.Pendiente && miniaturaOriginal.ContentType == "image/webp" && miniaturaVertical is { Width: 80, Height: 160 },
+        "Una carga nueva crea su miniatura en el mismo guardado");
     var copiaConImagen = (await productos.DuplicarAsync(original.Id))!;
     var imagenCopiada = (await productos.GetImagenAsync(copiaConImagen.Id))!;
     Check(imagenCopiada.Datos.SequenceEqual(imagen) && imagenCopiada.ContentType == "image/png"
         && copiaConImagen.ImagenURL!.StartsWith($"/Tienda/Imagen/{copiaConImagen.Id}?", StringComparison.Ordinal),
         "Una imagen subida también se copia y se sirve desde el nuevo producto");
+    await productos.GuardarImagenAsync(original.Id, fotoHistorica, "image/png");
+    Check((await productos.GetByIdAsync(original.Id))!.ImagenURL != versionImagen
+        && !(await productos.GetMiniaturaAsync(original.Id))!.Value.Datos.SequenceEqual(miniaturaOriginal.Datos)
+        && (await productos.GetMiniaturaAsync(copiaConImagen.Id))!.Value.Datos.SequenceEqual(miniaturaOriginal.Datos),
+        "Reemplazar una foto cambia la versión y la miniatura sin afectar la copia");
+
+    byte[] imagenNoDecodificable = [1, 2, 3];
+    await productos.GuardarImagenAsync(original.Id, imagenNoDecodificable, "image/png");
+    var alternativa = (await productos.GetMiniaturaAsync(original.Id))!.Value;
+    Check(!alternativa.Pendiente && alternativa.Datos.SequenceEqual(imagenNoDecodificable),
+        "Una imagen que no se puede convertir conserva la respuesta anterior");
 }
 
 Directory.CreateDirectory(".artifacts/materiales-checks");

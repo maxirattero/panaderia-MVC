@@ -12,6 +12,7 @@ namespace Panaderia.MVC.Controllers
     [AllowAnonymous]
     public class TiendaController : Controller
     {
+        public const string NombreEndpointImagen = "ImagenProducto";
         private const string CookieCarrito = "mv_carrito";
         private const string CookieDatosCliente = "mv_datos_cliente";
 
@@ -130,8 +131,18 @@ namespace Panaderia.MVC.Controllers
         }
 
         // GET: /Tienda/Imagen/5 — sirve la imagen del producto guardada en la DB
-        public async Task<IActionResult> Imagen(int id)
+        [AcceptVerbs("GET", "HEAD", Route = "/Tienda/Imagen/{id:int}", Name = NombreEndpointImagen)]
+        public async Task<IActionResult> Imagen(int id, bool miniatura = false)
         {
+            if (miniatura)
+            {
+                var archivo = await _productoService.GetMiniaturaAsync(id);
+                if (archivo is not { } foto) return NotFound();
+
+                Response.Headers.CacheControl = foto.Pendiente ? "no-cache" : "public, max-age=86400";
+                return File(foto.Datos, foto.ContentType);
+            }
+
             var imagen = await _productoService.GetImagenAsync(id);
             if (imagen == null) return NotFound();
 

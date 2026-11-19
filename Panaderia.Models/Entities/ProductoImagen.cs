@@ -10,6 +10,8 @@ namespace Panaderia.Models.Entities
         public int IdProducto { get; set; }
         public byte[] Datos { get; set; } = Array.Empty<byte>();
         public string ContentType { get; set; } = "image/jpeg";
+        // Null indica una imagen pendiente. Un arreglo vacío conserva el original como alternativa.
+        public byte[]? MiniaturaWebp { get; set; }
         public DateTime FechaCreacion { get; set; }
         public DateTime? FechaModificacion { get; set; }
 

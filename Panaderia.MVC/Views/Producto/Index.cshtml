@@ -3,6 +3,17 @@
 
 @{
     ViewData["Title"] = "Productos";
+    var filas = Model.Select((producto, indice) => (Producto: producto, Indice: indice)).ToList();
+}
+@functions {
+    private static string? UrlMiniatura(Panaderia.Models.Entities.Producto producto)
+    {
+        var url = producto.ImagenURL;
+        var ruta = $"/Tienda/Imagen/{producto.Id}";
+        if (url == ruta) return $"{url}?miniatura=true";
+        if (url?.StartsWith($"{ruta}?v=", StringComparison.OrdinalIgnoreCase) == true) return $"{url}&miniatura=true";
+        return url;
+    }
 }
     <!-- Header Section -->
     <div class="row align-items-end mb-5 gy-4">
@@ -66,14 +77,15 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var producto in Model)
+                        @foreach (var (producto, indice) in filas)
                         {
                             <tr data-busqueda="@producto.NombreVisible.ToLower()" data-categoria="@(producto.Categoria?.Id.ToString() ?? "")">
                                 <td>
                                     <div class="d-flex align-items-center gap-3">
                                         @if (!string.IsNullOrEmpty(producto.ImagenURL))
                                         {
-                                            <img src="@producto.ImagenURL" alt="@producto.NombreVisible" class="producto-thumb" />
+                                            <img src="@UrlMiniatura(producto)" alt="@producto.NombreVisible" class="producto-thumb"
+                                                 width="40" height="40" loading="@(indice < 4 ? "eager" : "lazy")" decoding="async" />
                                         }
                                         else
                                         {
@@ -185,13 +197,14 @@
     </div>
 
     <div id="mobileCards" class="d-md-none">
-        @foreach (var producto in Model)
+        @foreach (var (producto, indice) in filas)
         {
             <div class="card-custom p-3 mb-3 producto-card" data-busqueda="@producto.NombreVisible.ToLower()" data-categoria="@(producto.Categoria?.Id.ToString() ?? "")">
                 <div class="d-flex align-items-center gap-3 mb-2">
                     @if (!string.IsNullOrEmpty(producto.ImagenURL))
                     {
-                        <img src="@producto.ImagenURL" alt="@producto.NombreVisible" class="producto-thumb" />
+                        <img src="@UrlMiniatura(producto)" alt="@producto.NombreVisible" class="producto-thumb"
+                             width="40" height="40" loading="@(indice < 4 ? "eager" : "lazy")" decoding="async" />
                     }
                     else
                     {

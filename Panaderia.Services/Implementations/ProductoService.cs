@@ -181,6 +181,7 @@ namespace Panaderia.Services.Implementations
                     IdProducto = copia.Id,
                     Datos = imagenOrigen.Datos,
                     ContentType = imagenOrigen.ContentType,
+                    MiniaturaWebp = imagenOrigen.MiniaturaWebp,
                     FechaCreacion = DateTime.UtcNow
                 });
                 copia.ImagenURL = $"/Tienda/Imagen/{copia.Id}?v={DateTime.UtcNow.Ticks}";
@@ -258,6 +259,7 @@ namespace Panaderia.Services.Implementations
             var producto = await _context.Productos.FindAsync(idProducto);
             if (producto == null) return;
 
+            var ahora = DateTime.UtcNow;
             var imagen = await _context.ProductoImagenes
                 .FirstOrDefaultAsync(i => i.IdProducto == idProducto);
 
@@ -266,22 +268,23 @@ namespace Panaderia.Services.Implementations
                 imagen = new ProductoImagen
                 {
                     IdProducto = idProducto,
-                    FechaCreacion = DateTime.UtcNow
+                    FechaCreacion = ahora
                 };
                 await _context.ProductoImagenes.AddAsync(imagen);
             }
             else
             {
-                imagen.FechaModificacion = DateTime.UtcNow;
+                imagen.FechaModificacion = ahora;
             }
 
             imagen.Datos = datos;
             imagen.ContentType = contentType;
+            imagen.MiniaturaWebp = MiniaturaProducto.Generar(datos);
 
             // La tienda sirve la imagen desde la DB vía /Tienda/Imagen/{id}.
-            // El ?v= (ticks) burla la caché del navegador al reemplazar la imagen.
-            producto.ImagenURL = $"/Tienda/Imagen/{idProducto}?v={DateTime.UtcNow.Ticks}";
-            producto.FechaModificacion = DateTime.UtcNow;
+            // Una URL nueva invalida la caché del navegador al reemplazar la imagen.
+            producto.ImagenURL = $"/Tienda/Imagen/{idProducto}?v={Guid.NewGuid():N}";
+            producto.FechaModificacion = ahora;
 
             await _context.SaveChangesAsync();
         }
@@ -292,6 +295,41 @@ namespace Panaderia.Services.Implementations
             return await _context.ProductoImagenes
                 .AsNoTracking()
                 .FirstOrDefaultAsync(i => i.IdProducto == idProducto);
+        }
+
+        public async Task<(byte[] Datos, string ContentType, bool Pendiente)?> GetMiniaturaAsync(int idProducto)
+        {
+            var imagen = await _context.ProductoImagenes
+                .Where(i => i.IdProducto == idProducto)
+                .Select(i => new
+                {
+                    Datos = i.MiniaturaWebp != null && i.MiniaturaWebp.Length > 0 ? i.MiniaturaWebp : i.Datos,
+                    ContentType = i.MiniaturaWebp != null && i.MiniaturaWebp.Length > 0 ? "image/webp" : i.ContentType,
+                    Pendiente = i.MiniaturaWebp == null
+                })
+                .SingleOrDefaultAsync();
+
+            return imagen == null ? null : (imagen.Datos, imagen.ContentType, imagen.Pendiente);
+        }
+
+        public async Task CompletarMiniaturasAsync(CancellationToken cancellationToken)
+        {
+            var pendientes = _context.ProductoImagenes.Where(i => i.MiniaturaWebp == null);
+            var ids = await pendientes.OrderBy(i => i.Id).Select(i => i.Id).ToListAsync(cancellationToken);
+
+            foreach (var id in ids)
+            {
+                var imagen = await pendientes.Where(i => i.Id == id)
+                    .Select(i => new { i.Datos, i.FechaCreacion, i.FechaModificacion })
+                    .SingleOrDefaultAsync(cancellationToken);
+                if (imagen == null) continue;
+
+                var miniatura = MiniaturaProducto.Generar(imagen.Datos);
+                // Una carga o reemplazo simultáneo conserva su propia miniatura.
+                await pendientes.Where(i => i.Id == id && i.FechaCreacion == imagen.FechaCreacion
+                        && i.FechaModificacion == imagen.FechaModificacion)
+                    .ExecuteUpdateAsync(s => s.SetProperty(i => i.MiniaturaWebp, miniatura), cancellationToken);
+            }
         }
     }
 }

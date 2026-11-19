@@ -2,6 +2,8 @@ using System.Globalization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Panaderia.MVC.Controllers;
+using Panaderia.MVC.Services;
 using Panaderia.Models.Data;
 using Panaderia.Models.Entities;
 using Panaderia.Services.Implementations;
@@ -80,6 +82,20 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.AccessDeniedPath  = "/Account/Login";
     options.ExpireTimeSpan    = TimeSpan.FromDays(30);
     options.SlidingExpiration = true;
+
+    options.Events.OnCheckSlidingExpiration = context =>
+    {
+        if (EsImagenPublica(context.HttpContext)) context.ShouldRenew = false;
+        return Task.CompletedTask;
+    };
+    options.Events.OnValidatePrincipal = context =>
+    {
+        if (!EsImagenPublica(context.HttpContext)) return SecurityStampValidator.ValidatePrincipalAsync(context);
+
+        // Las fotos son públicas. Tratarlas como anónimas evita renovar o emitir cookies.
+        context.RejectPrincipal();
+        return Task.CompletedTask;
+    };
 });
 
 builder.Services.AddScoped<IProveedorService, ProveedorService>();
@@ -92,6 +108,7 @@ builder.Services.AddScoped<ICategoriaService, CategoriaService>();
 builder.Services.AddScoped<IFormatoService, FormatoService>();
 builder.Services.AddScoped<ITamanoService, TamanoService>();
 builder.Services.AddScoped<IProductoService, ProductoService>();
+builder.Services.AddHostedService<PrepararMiniaturasProductos>();
 builder.Services.AddScoped<IEtiquetaService, EtiquetaService>();
 builder.Services.AddScoped<IConfiguracionTiendaService, ConfiguracionTiendaService>();
 builder.Services.AddScoped<IInsumoService, InsumoService>();
@@ -194,3 +211,6 @@ app.MapControllerRoute(
 
 
 app.Run();
+
+static bool EsImagenPublica(HttpContext context) =>
+    context.GetEndpoint()?.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName == TiendaController.NombreEndpointImagen;

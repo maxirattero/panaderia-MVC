@@ -1161,6 +1161,9 @@ namespace Panaderia.Models.Migrations
                     b.Property<int>("IdProducto")
                         .HasColumnType("integer");
 
+                    b.Property<byte[]>("MiniaturaWebp")
+                        .HasColumnType("bytea");
+
                     b.HasKey("Id");
 
                     b.HasIndex("IdProducto")

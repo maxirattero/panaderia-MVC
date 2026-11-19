@@ -36,5 +36,7 @@ namespace Panaderia.Services.Interfaces
 
         //Obtener la imagen del Producto (o null si no tiene)
         Task<ProductoImagen?> GetImagenAsync(int idProducto);
+        Task<(byte[] Datos, string ContentType, bool Pendiente)?> GetMiniaturaAsync(int idProducto);
+        Task CompletarMiniaturasAsync(CancellationToken cancellationToken);
     }
 }
